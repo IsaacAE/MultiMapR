@@ -2,19 +2,19 @@
 % Please edit documentation in R/cli_menu.R
 \name{prompt_states_and_colors}
 \alias{prompt_states_and_colors}
-\title{Solicita al usuario qué estados de un carácter quiere incluir y sus colores}
+\title{Prompts the user which states of a character to include and their colors}
 \usage{
-prompt_states_and_colors(datos_ord, caracter)
+prompt_states_and_colors(aligned_data, character)
 }
 \arguments{
-\item{datos_ord}{Data.frame de datos ya alineado con la filogenia.}
+\item{aligned_data}{Data.frame aligned with the phylogeny.}
 
-\item{caracter}{Nombre de la columna del carácter a configurar.}
+\item{character}{Name of the character column to configure.}
 }
 \value{
-Named character vector estado → color, o invisible(NULL) si cancela.
+Named character vector state -> color, or invisible(NULL) if cancelled.
 }
 \description{
-Muestra los estados únicos del carácter, permite elegir un subconjunto
-(o todos con la opción 0) y luego solicita un color para cada uno.
+Displays the unique states of the character, allows choosing a subset
+(or all with option 0), then requests a color for each one.
 }

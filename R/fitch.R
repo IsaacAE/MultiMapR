@@ -1,217 +1,217 @@
 ################################################################################
 # fitch.R
 #
-# Adaptador del algoritmo de Fitch para su uso como 'algoritmo_externo'
-# dentro del paquete MultiMapR.
+# Adapter for the Fitch algorithm for use as 'external_algorithm'
+# within the MultiMapR package.
 #
-# Cuando MultiMapR pregunte por el algoritmo, selecciona opción 2 (Fitch).
-# El modo de optimización se elige interactivamente desde la terminal:
-#   1 = ACCTRAN     (cambios acelerados — hacia las hojas)
-#   2 = DELTRAN     (cambios retrasados — hacia la raíz)
-#   3 = Unambiguous (solo nodos con estado único tras los dos pasos de Fitch)
+# When MultiMapR asks for the algorithm, select option 2 (Fitch).
+# The optimization mode is chosen interactively from the terminal:
+#   1 = ACCTRAN     (accelerated transformations — toward the tips)
+#   2 = DELTRAN     (delayed transformations — toward the root)
+#   3 = Unambiguous (only nodes with a unique state after both Fitch passes)
 #
-# FIRMA que MultiMapR espera:
-#   algoritmo_externo(tree, tip_colors, edge_colors, config) → edge_colors
+# SIGNATURE expected by MultiMapR:
+#   external_algorithm(tree, tip_colors, edge_colors, config) → edge_colors
 #
-#   - tree        : objeto phylo
-#   - tip_colors  : vector nombrado (color por cada tip, en el orden de tip.label)
-#   - edge_colors : vector inicializado con "gray70" (longitud == nrow(tree$edge))
-#   - config      : lista de configuración de MultiMapR; se usa config$modo_fitch
-#                   (string: "acctran", "deltran" o "unambiguous") para
-#                   determinar el método de optimización. Valor por defecto: "deltran".
+#   - tree        : phylo object
+#   - tip_colors  : named vector (color per tip, in tip.label order)
+#   - edge_colors : vector initialized with "gray70" (length == nrow(tree$edge))
+#   - config      : MultiMapR configuration list; config$fitch_mode is used
+#                   (string: "acctran", "deltran" or "unambiguous") to
+#                   determine the optimization method. Default: "deltran".
 #
-# NOTA: tip_colors ya contiene el color asignado por el usuario a cada estado;
-#       esta función invierte ese mapeo color→estado para correr Fitch y luego
-#       devuelve los colores de ramas resultantes en el mismo formato.
+# NOTE: tip_colors already contains the color assigned by the user to each state;
+#       this function inverts that color→state mapping to run Fitch and then
+#       returns the resulting branch colors in the same format.
 ################################################################################
 
 # ============================================================================ #
-# PASO DESCENDENTE (pass de hojas → raíz)
+# DOWNPASS (tips → root)
 # ============================================================================ #
-.fitch_paso_descendente <- function(phylo, estados_tips) {
-  n_tips       <- Ntip(phylo)
-  n_nodes      <- phylo$Nnode
-  total_nodes  <- n_tips + n_nodes
+.fitch_downpass <- function(phylo, tip_states) {
+  n_tips      <- Ntip(phylo)
+  n_nodes     <- phylo$Nnode
+  total_nodes <- n_tips + n_nodes
 
-  # Estados únicos reales (excluye "?" y "-")
-  all_states <- sort(unique(estados_tips[!estados_tips %in% c("?", "-")]))
+  # Unique real states (excludes "?" and "-")
+  all_states <- sort(unique(tip_states[!tip_states %in% c("?", "-")]))
 
-  conjuntos   <- vector("list", total_nodes)
-  operaciones <- character(total_nodes)
+  sets       <- vector("list", total_nodes)
+  operations <- character(total_nodes)
 
-  # Inicializar terminales
+  # Initialize terminals
   for (i in seq_len(n_tips)) {
-    st <- estados_tips[i]
+    st <- tip_states[i]
     if (is.na(st) || st == "?" || st == "-" || trimws(st) == "") {
-      conjuntos[[i]] <- all_states          # desconocido = todos los estados
+      sets[[i]] <- all_states          # unknown = all states
     } else {
       if (grepl("^[0-9]+$", st) && nchar(st) > 1) {
-        # Polimorfismos numéricos sin separador (ej. "01" -> "0", "1")
-        conjuntos[[i]] <- unique(strsplit(st, "")[[1]])
+        # Numeric polymorphisms without separator (e.g. "01" -> "0", "1")
+        sets[[i]] <- unique(strsplit(st, "")[[1]])
       } else if (grepl("[,/&|]", st)) {
-        # Polimorfismos con separador explícito (ej. "0/1" o "urbano,bosque")
-        conjuntos[[i]] <- unique(trimws(strsplit(st, "[,/&|]")[[1]]))
+        # Polymorphisms with explicit separator (e.g. "0/1" or "urban,forest")
+        sets[[i]] <- unique(trimws(strsplit(st, "[,/&|]")[[1]]))
       } else {
-        # Palabras enteras o estados de un solo caracter ("bosque", "granivoro", "0", "A")
-        conjuntos[[i]] <- st
+        # Whole words or single-character states ("forest", "granivore", "0", "A")
+        sets[[i]] <- st
       }
     }
-    operaciones[i] <- "terminal"
+    operations[i] <- "terminal"
   }
 
-  # Ordenar nodos internos de hojas a raíz (post-order por n° de descendientes)
-  nodos_int <- (n_tips + 1):total_nodes
-  contar_desc <- function(nd) {
+  # Sort internal nodes from tips to root (post-order by descendant count)
+  internal_nodes <- (n_tips + 1):total_nodes
+  count_desc <- function(nd) {
     if (nd <= n_tips) return(1L)
-    hijos <- phylo$edge[phylo$edge[, 1] == nd, 2]
-    sum(sapply(hijos, contar_desc))
+    children <- phylo$edge[phylo$edge[, 1] == nd, 2]
+    sum(sapply(children, count_desc))
   }
-  desc_counts     <- sapply(nodos_int, contar_desc)
-  orden_postorder <- nodos_int[order(desc_counts)]
+  desc_counts    <- sapply(internal_nodes, count_desc)
+  postorder_seq  <- internal_nodes[order(desc_counts)]
 
-  for (nd in orden_postorder) {
-    hijos <- phylo$edge[phylo$edge[, 1] == nd, 2]
-    # Fitch generalizado: funciona con politomías (2 o más hijos)
-    inter <- Reduce(intersect, lapply(hijos, function(h) conjuntos[[h]]))
+  for (nd in postorder_seq) {
+    children <- phylo$edge[phylo$edge[, 1] == nd, 2]
+    # Generalized Fitch: works with polytomies (2 or more children)
+    inter <- Reduce(intersect, lapply(children, function(h) sets[[h]]))
 
     if (length(inter) > 0) {
-      conjuntos[[nd]]  <- inter
-      operaciones[nd]  <- "inter"
+      sets[[nd]]       <- inter
+      operations[nd]   <- "inter"
     } else {
-      conjuntos[[nd]]  <- Reduce(union, lapply(hijos, function(h) conjuntos[[h]]))
-      operaciones[nd]  <- "union"
+      sets[[nd]]       <- Reduce(union, lapply(children, function(h) sets[[h]]))
+      operations[nd]   <- "union"
     }
   }
 
-  list(conjuntos   = conjuntos,
-       operaciones = operaciones,
-       n_tips      = n_tips,
-       n_nodes     = n_nodes)
+  list(sets       = sets,
+       operations = operations,
+       n_tips     = n_tips,
+       n_nodes    = n_nodes)
 }
 
 
 # ============================================================================ #
-# PASO ASCENDENTE (pass de raíz → hojas)
+# UPPASS (root → tips)
 #
-# Implementa la regla de Swofford & Maddison (1987) para calcular los
-# conjuntos MPR de cada nodo:
-#   - Si el nodo fue UNIÓN en el paso descendente:
-#       MPR(nd) = union(s_down[nd], MPR(padre))
-#   - Si el nodo fue INTERSECCIÓN en el paso descendente:
-#       MPR(nd) = union(s_down[nd], intersect(MPR(padre), estados_hijos))
-#       donde estados_hijos = estados de todos los hijos en s_down
+# Implements the Swofford & Maddison (1987) rule to compute the MPR sets
+# for each node:
+#   - If the node was a UNION in the downpass:
+#       MPR(nd) = union(s_down[nd], MPR(parent))
+#   - If the node was an INTERSECTION in the downpass:
+#       MPR(nd) = union(s_down[nd], intersect(MPR(parent), child_states))
+#       where child_states = states of all children in s_down
 # ============================================================================ #
-.fitch_paso_ascendente <- function(phylo, res_desc) {
-  s_down      <- res_desc$conjuntos
-  operaciones <- res_desc$operaciones
-  n_tips      <- res_desc$n_tips
+.fitch_uppass <- function(phylo, down_result) {
+  s_down     <- down_result$sets
+  operations <- down_result$operations
+  n_tips     <- down_result$n_tips
 
-  raiz <- n_tips + 1L
-  s_up <- s_down  # Inicializamos MPR como copia del paso descendente
+  root  <- n_tips + 1L
+  s_up  <- s_down  # Initialize MPR as a copy of the downpass
 
   preorder_int <- function(nd) {
-    res   <- nd
-    hijos <- phylo$edge[phylo$edge[, 1] == nd, 2]
-    for (h in hijos) if (h > n_tips) res <- c(res, preorder_int(h))
+    res      <- nd
+    children <- phylo$edge[phylo$edge[, 1] == nd, 2]
+    for (h in children) if (h > n_tips) res <- c(res, preorder_int(h))
     res
   }
-  orden_pre <- preorder_int(raiz)
+  preorder_seq <- preorder_int(root)
 
-  for (nd in orden_pre[-1]) {
-    padre <- phylo$edge[phylo$edge[, 2] == nd, 1][1]
+  for (nd in preorder_seq[-1]) {
+    parent <- phylo$edge[phylo$edge[, 2] == nd, 1][1]
 
-    c_nodo  <- s_down[[nd]]
-    c_padre <- s_up[[padre]] # El MPR definitivo del padre
+    c_node   <- s_down[[nd]]
+    c_parent <- s_up[[parent]]  # Definitive MPR of the parent
 
-    if (operaciones[nd] == "union") {
-      s_up[[nd]] <- union(c_nodo, c_padre)
+    if (operations[nd] == "union") {
+      s_up[[nd]] <- union(c_node, c_parent)
     } else {
-      hijos <- phylo$edge[phylo$edge[, 1] == nd, 2]
-      estados_hijos <- unlist(lapply(hijos, function(h) s_down[[h]]))
-      validos <- intersect(c_padre, estados_hijos)
-      s_up[[nd]] <- union(c_nodo, validos)
+      children      <- phylo$edge[phylo$edge[, 1] == nd, 2]
+      child_states  <- unlist(lapply(children, function(h) s_down[[h]]))
+      valid         <- intersect(c_parent, child_states)
+      s_up[[nd]]    <- union(c_node, valid)
     }
   }
 
-  res_desc$conjuntos <- s_up
-  res_desc
+  down_result$sets <- s_up
+  down_result
 }
 
 
 # ============================================================================ #
-# OPTIMIZACIÓN (ACCTRAN / DELTRAN / Unambiguous) → un estado único por nodo
+# OPTIMIZATION (ACCTRAN / DELTRAN / Unambiguous) → one unique state per node
 #
-# modo_actual (derivado de config$modo_fitch dentro de la función):
-#   "acctran"     — en ambigüedades, usa conjuntos del paso DESCENDENTE;
-#                   si el estado del padre está en el conjunto del hijo,
-#                   lo hereda (acelera cambios hacia las hojas).
-#   "deltran"     — en ambigüedades, usa conjuntos MPR del paso ASCENDENTE;
-#                   si el estado del padre está en el conjunto del hijo,
-#                   lo hereda (retrasa cambios hacia la raíz).
-#   "unambiguous" — un nodo es inambiguo EXCLUSIVAMENTE cuando ACCTRAN y
-#                   DELTRAN le asignan exactamente el mismo estado; el resto
-#                   queda como NA. La raíz es inambigua solo si su conjunto
-#                   MPR tiene exactamente un elemento.
+# current_mode (derived from config$fitch_mode inside the function):
+#   "acctran"     — on ambiguities, uses DOWNPASS sets;
+#                   if the parent state is in the child's set,
+#                   it is inherited (accelerates changes toward the tips).
+#   "deltran"     — on ambiguities, uses MPR UPPASS sets;
+#                   if the parent state is in the child's set,
+#                   it is inherited (delays changes toward the root).
+#   "unambiguous" — a node is unambiguous EXCLUSIVELY when ACCTRAN and
+#                   DELTRAN assign exactly the same state; the rest
+#                   remain as NA. The root is unambiguous only if its MPR
+#                   set has exactly one element.
 #
-# REGLA DE NEGOCIO ESTRICTA (inambiguo):
-#   Un nodo es inambiguo si y solo si acc[nd] == del[nd] (misma cadena, sin NA).
-#   No se relaja esta condición: si comparten estado es inambiguo; si difieren
-#   — aunque ambos sean válidos — el nodo queda como NA.
+# STRICT BUSINESS RULE (unambiguous):
+#   A node is unambiguous if and only if acc[nd] == del[nd] (same string, no NA).
+#   This condition is not relaxed: if they share a state it is unambiguous; if
+#   they differ — even if both are valid — the node remains NA.
 #
-# Los terminales son siempre intocables: se copian directamente desde
-# estados_tips y el recorrido pre-order opera solo sobre nodos internos.
+# Terminals are always untouched: copied directly from tip_states,
+# and the pre-order traversal operates only on internal nodes.
 # ============================================================================ #
-.fitch_optimizar <- function(phylo, res_desc, res_asc, estados_tips,
-                             config = NULL) {
-  s_down  <- res_desc$conjuntos
-  s_up    <- res_asc$conjuntos
-  n_tips  <- res_desc$n_tips
-  n_nodes <- res_desc$n_nodes
+.fitch_optimize <- function(phylo, down_result, up_result, tip_states,
+                            config = NULL) {
+  s_down  <- down_result$sets
+  s_up    <- up_result$sets
+  n_tips  <- down_result$n_tips
+  n_nodes <- down_result$n_nodes
   total   <- n_tips + n_nodes
-  raiz    <- n_tips + 1L
+  root    <- n_tips + 1L
 
   # ------------------------------------------------------------------
-  # OPCIONES LOCALES: extraer modo desde config (nunca desde un global)
+  # LOCAL OPTIONS: extract mode from config (never from a global)
   # ------------------------------------------------------------------
-  modo_actual <- tolower(config$modo_fitch %||% "deltran")
+  current_mode <- tolower(config$fitch_mode %||% "deltran")
 
   # ------------------------------------------------------------------
-  # Helper: calcula la optimización para ACCTRAN o DELTRAN
-  # Argumento `m`: "acctran" o "deltran"
+  # Helper: computes the optimization for ACCTRAN or DELTRAN
+  # Argument `m`: "acctran" or "deltran"
   # ------------------------------------------------------------------
-  calc_modo <- function(m) {
+  calc_mode <- function(m) {
     opt <- character(total)
-    opt[seq_len(n_tips)] <- estados_tips  # Terminales: siempre intocables
+    opt[seq_len(n_tips)] <- tip_states  # Terminals: always untouched
 
-    # La raíz toma el primer elemento del conjunto MPR (único punto de arranque)
-    opt[raiz] <- s_up[[raiz]][1]
+    # Root takes the first element of the MPR set (single starting point)
+    opt[root] <- s_up[[root]][1]
 
-    # Recorrido pre-order exclusivo sobre nodos internos
+    # Pre-order traversal exclusively over internal nodes
     preorder_int <- function(nd) {
-      res   <- nd
-      hijos <- phylo$edge[phylo$edge[, 1] == nd, 2]
-      for (h in hijos) if (h > n_tips) res <- c(res, preorder_int(h))
+      res      <- nd
+      children <- phylo$edge[phylo$edge[, 1] == nd, 2]
+      for (h in children) if (h > n_tips) res <- c(res, preorder_int(h))
       res
     }
-    orden_pre <- preorder_int(raiz)
+    preorder_seq <- preorder_int(root)
 
-    for (nd in orden_pre[-1]) {
-      padre    <- phylo$edge[phylo$edge[, 2] == nd, 1][1]
-      st_padre <- opt[padre]
+    for (nd in preorder_seq[-1]) {
+      parent    <- phylo$edge[phylo$edge[, 2] == nd, 1][1]
+      st_parent <- opt[parent]
 
       c_nd_up   <- s_up[[nd]]
       c_nd_down <- s_down[[nd]]
 
       if (length(c_nd_up) == 1L) {
-        # Nodo inambiguo en el MPR: asignación directa
+        # Unambiguous node in MPR: direct assignment
         opt[nd] <- c_nd_up[1]
       } else if (m == "acctran") {
-        # ACCTRAN: hereda padre si está en el conjunto DESCENDENTE
-        if (!is.na(st_padre) && st_padre %in% c_nd_down) opt[nd] <- st_padre
+        # ACCTRAN: inherit parent if it is in the DOWNPASS set
+        if (!is.na(st_parent) && st_parent %in% c_nd_down) opt[nd] <- st_parent
         else opt[nd] <- c_nd_down[1]
       } else {
-        # DELTRAN: hereda padre si está en el conjunto MPR ASCENDENTE
-        if (!is.na(st_padre) && st_padre %in% c_nd_up) opt[nd] <- st_padre
+        # DELTRAN: inherit parent if it is in the MPR UPPASS set
+        if (!is.na(st_parent) && st_parent %in% c_nd_up) opt[nd] <- st_parent
         else opt[nd] <- c_nd_up[1]
       }
     }
@@ -219,27 +219,27 @@
   }
 
   # ------------------------------------------------------------------
-  # Despacho según modo_actual
+  # Dispatch according to current_mode
   # ------------------------------------------------------------------
-  if (modo_actual %in% c("acctran", "deltran")) {
-    return(calc_modo(modo_actual))
+  if (current_mode %in% c("acctran", "deltran")) {
+    return(calc_mode(current_mode))
   }
 
-  # Unambiguous: inambiguo EXCLUSIVAMENTE si ACCTRAN y DELTRAN coinciden
-  acc <- calc_modo("acctran")
-  del <- calc_modo("deltran")
+  # Unambiguous: unambiguous EXCLUSIVELY if ACCTRAN and DELTRAN agree
+  acc      <- calc_mode("acctran")
+  del      <- calc_mode("deltran")
   opt_unamb <- character(total)
 
-  # Terminales: siempre intocables
-  opt_unamb[seq_len(n_tips)] <- estados_tips
+  # Terminals: always untouched
+  opt_unamb[seq_len(n_tips)] <- tip_states
 
   for (nd in (n_tips + 1L):total) {
-    if (nd == raiz) {
-      # La raíz es inambigua solo si su conjunto MPR tiene exactamente un elemento
-      if (length(s_up[[raiz]]) == 1L) opt_unamb[raiz] <- s_up[[raiz]][1]
-      else                            opt_unamb[raiz] <- NA_character_
+    if (nd == root) {
+      # Root is unambiguous only if its MPR set has exactly one element
+      if (length(s_up[[root]]) == 1L) opt_unamb[root] <- s_up[[root]][1]
+      else                             opt_unamb[root] <- NA_character_
     } else {
-      # Nodo interno: inambiguo si y solo si ACCTRAN == DELTRAN (sin NA)
+      # Internal node: unambiguous if and only if ACCTRAN == DELTRAN (no NA)
       if (!is.na(acc[nd]) && !is.na(del[nd]) && acc[nd] == del[nd]) {
         opt_unamb[nd] <- acc[nd]
       } else {
@@ -252,61 +252,61 @@
 
 
 # ============================================================================ #
-# FUNCIÓN PÚBLICA — firma compatible con MultiMapR
+# PUBLIC FUNCTION — signature compatible with MultiMapR
 #
-#   algoritmo_externo(tree, tip_colors, edge_colors, config) → edge_colors
+#   external_algorithm(tree, tip_colors, edge_colors, config) → edge_colors
 #
-# tip_colors : vector nombrado (nombre = estado del tip, valor = color).
-#              Si names(tip_colors) está disponible, se usa directamente como
-#              paleta estado→color, incluido el color asignado a "?" o "-".
-# edge_colors: vector de colores inicializado (se sobreescribe completamente).
+# tip_colors : named vector (name = tip state, value = color).
+#              If names(tip_colors) is available, it is used directly as the
+#              state→color palette, including the color assigned to "?" or "-".
+# edge_colors: initialized color vector (completely overwritten).
 # ============================================================================ #
-algoritmo_externo <- function(tree, tip_colors, edge_colors, config = NULL) {
+external_algorithm <- function(tree, tip_colors, edge_colors, config = NULL) {
   n_tips <- Ntip(tree)
 
-  estados_tips <- names(tip_colors)
+  tip_states <- names(tip_colors)
 
-  if (!is.null(estados_tips)) {
-    # Extraer paleta directa desde los nombres del vector
-    paleta <- setNames(as.character(tip_colors), estados_tips)
-    paleta <- paleta[!duplicated(names(paleta))]
+  if (!is.null(tip_states)) {
+    # Extract palette directly from vector names
+    palette <- setNames(as.character(tip_colors), tip_states)
+    palette <- palette[!duplicated(names(palette))]
 
-    # Conservar el color asignado a la ambigüedad / datos faltantes
-    color_ambiguo <- "gray70"
+    # Preserve the color assigned to ambiguity / missing data
+    ambiguous_color <- "gray70"
     for (m in c("?", "-")) {
-      if (m %in% names(paleta) && paleta[[m]] != "gray70") {
-        color_ambiguo <- paleta[[m]]
+      if (m %in% names(palette) && palette[[m]] != "gray70") {
+        ambiguous_color <- palette[[m]]
         break
       }
     }
   } else {
-    # Fallback por seguridad cuando tip_colors no tiene nombres
-    colores_unicos <- unique(tip_colors[tip_colors != "gray70"])
-    estados_etiq   <- as.character(seq_len(length(colores_unicos)) - 1L)
-    paleta         <- setNames(colores_unicos, estados_etiq)
-    color_a_estado <- setNames(estados_etiq, colores_unicos)
+    # Safety fallback when tip_colors has no names
+    unique_colors  <- unique(tip_colors[tip_colors != "gray70"])
+    state_labels   <- as.character(seq_len(length(unique_colors)) - 1L)
+    palette        <- setNames(unique_colors, state_labels)
+    color_to_state <- setNames(state_labels, unique_colors)
 
-    estados_tips <- vapply(tip_colors, function(col) {
+    tip_states <- vapply(tip_colors, function(col) {
       if (col == "gray70" || is.na(col)) "?"
-      else color_a_estado[col]
+      else color_to_state[col]
     }, character(1))
-    names(estados_tips) <- NULL
-    color_ambiguo <- "gray70"
+    names(tip_states) <- NULL
+    ambiguous_color   <- "gray70"
   }
 
-  res_desc <- .fitch_paso_descendente(tree, estados_tips)
-  res_asc  <- .fitch_paso_ascendente(tree, res_desc)
-  estados  <- .fitch_optimizar(tree, res_desc, res_asc, estados_tips, config = config)
+  down_result <- .fitch_downpass(tree, tip_states)
+  up_result   <- .fitch_uppass(tree, down_result)
+  states      <- .fitch_optimize(tree, down_result, up_result, tip_states, config = config)
 
   for (i in seq_len(nrow(tree$edge))) {
-    hijo        <- tree$edge[i, 2]
-    estado_hijo <- estados[hijo]
+    child       <- tree$edge[i, 2]
+    child_state <- states[child]
 
-    if (!is.na(estado_hijo) && estado_hijo %in% names(paleta)) {
-      edge_colors[i] <- paleta[estado_hijo]
+    if (!is.na(child_state) && child_state %in% names(palette)) {
+      edge_colors[i] <- palette[child_state]
     } else {
-      # Usa el color preservado de "?" en lugar de forzar siempre gris
-      edge_colors[i] <- color_ambiguo
+      # Use the preserved color for "?" instead of always forcing gray
+      edge_colors[i] <- ambiguous_color
     }
   }
 

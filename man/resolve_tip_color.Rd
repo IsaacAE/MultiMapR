@@ -4,14 +4,14 @@
 \alias{resolve_tip_color}
 \title{Resolves the tip figure color given its state value}
 \usage{
-resolve_tip_color(valor, colores_sel, color_na = "gray70")
+resolve_tip_color(value, color_map, color_na = "gray70")
 }
 \arguments{
+\item{color_na}{Fallback color for NA or unrecognized states.}
+
 \item{valor}{Character state value.}
 
 \item{colores_sel}{Named vector: state → color.}
-
-\item{color_na}{Fallback color for NA or unrecognized states.}
 }
 \value{
 A single color string.

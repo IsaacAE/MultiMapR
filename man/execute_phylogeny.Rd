@@ -2,31 +2,55 @@
 % Please edit documentation in R/MultiMapR.R
 \name{execute_phylogeny}
 \alias{execute_phylogeny}
-\title{Orquestador principal de MultiMapR}
+\title{Main orchestrator of MultiMapR}
 \usage{
 execute_phylogeny(
-  filogenia,
-  datos_caracteres,
-  grosor = NULL,
-  label_offset = 0.3
+  phylogeny,
+  character_data,
+  branch_width = NULL,
+  label_offset = 0.3,
+  sep = ",",
+  species_col = 1,
+  normalize_spaces = FALSE,
+  tree_format = "auto",
+  strict = FALSE
 )
 }
 \arguments{
-\item{filogenia}{Objeto phylo — O — ruta (string) al archivo de árbol.}
+\item{phylogeny}{phylo object — OR — string path to the tree file.}
 
-\item{datos_caracteres}{Data.frame con columna "Species" — O — ruta (string)
-al archivo CSV de caracteres.}
+\item{character_data}{Data.frame with a "Species" column — OR — string path
+to the character CSV file.}
 
-\item{grosor}{Grosor de ramas (default NULL = el usuario lo elige
-en el menú). Un número positivo sobreescribe el menú.}
+\item{branch_width}{Branch width (default NULL = chosen by the user in
+the menu). A positive number overrides the menu.}
 
-\item{label_offset}{Distancia entre terminales y etiquetas (default 0.3).}
+\item{label_offset}{Distance between tips and labels (default 0.3).}
+
+\item{sep}{CSV field separator (default ",").
+Only used when file paths are passed.}
+
+\item{species_col}{Species column in the CSV: integer index or column
+name (default 1).
+Only used when file paths are passed.}
+
+\item{normalize_spaces}{If TRUE converts spaces to "\emph{" in species names in
+the CSV (useful when the tree uses "}" and the CSV
+uses spaces). Default FALSE.
+Only used when file paths are passed.}
+
+\item{tree_format}{Tree file format: "auto" (default), "newick" or "nexus".
+Only used when file paths are passed.}
+
+\item{strict}{If TRUE raises an error on tree/CSV discrepancies;
+if FALSE (default) only warns.
+Only used when file paths are passed.}
 }
 \value{
 Invisible NULL.
 }
 \description{
-Soporta polimorfismo de argumentos: si \code{filogenia} y \code{datos_caracteres}
-son cadenas de texto (rutas a archivos en disco), los datos se cargan
-automáticamente a través de \code{load_data()} antes de configurar el mapeo.
+Supports argument polymorphism: if \code{phylogeny} and \code{character_data}
+are strings (file paths on disk), the data are loaded automatically
+through \code{load_data()} before configuring the mapping.
 }

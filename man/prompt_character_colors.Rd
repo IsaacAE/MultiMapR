@@ -2,19 +2,19 @@
 % Please edit documentation in R/cli_menu.R
 \name{prompt_character_colors}
 \alias{prompt_character_colors}
-\title{Solicita al usuario los colores para todos los estados de un carácter}
+\title{Prompts the user for colors for all states of a character}
 \usage{
-prompt_character_colors(estados_ordenados, nombre_caracter)
+prompt_character_colors(sorted_states, character_name)
 }
 \arguments{
-\item{estados_ordenados}{Vector de estados ya ordenados.}
+\item{sorted_states}{Vector of already-sorted states.}
 
-\item{nombre_caracter}{String con el nombre del carácter (para el encabezado).}
+\item{character_name}{String with the character name (for the header).}
 }
 \value{
-Named character vector estado → color.
+Named character vector state -> color.
 }
 \description{
-Itera sobre cada estado en \code{estados_ordenados} llamando a
-\code{prompt_state_color()} y construye un named vector estado → color.
+Iterates over each state in \code{sorted_states} calling
+\code{prompt_state_color()} and builds a named vector state -> color.
 }

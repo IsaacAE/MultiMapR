@@ -1,6 +1,6 @@
 ################################################################################
 # MultiMapR — Core Rendering Controllers
-# Módulo de renderizado y asignación de estados evolutivos
+# Rendering and evolutionary state assignment module
 ################################################################################
 
 
@@ -14,10 +14,10 @@
 #' @param colores_sel    Named vector: state → color.
 #' @param color_na       Fallback color for NA or unrecognized states.
 #' @return A single color string.
-resolve_tip_color <- function(valor, colores_sel, color_na = "gray70") {
-  valor <- as.character(valor)
-  if (is.na(valor) || valor == "") return(color_na)
-  if (valor %in% names(colores_sel)) return(colores_sel[[valor]])
+resolve_tip_color <- function(value, color_map, color_na = "gray70") {
+  value <- as.character(value)
+  if (is.na(value) || value == "") return(color_na)
+  if (value %in% names(color_map)) return(color_map[[value]])
   return(color_na)
 }
 
@@ -74,12 +74,12 @@ plot_simple_mapping <- function(filogenia, config) {
   exportar  <- !is.null(config$export_filename)
   fn_export <- config$export_filename
 
-  cat("\n=== Generando gráfico (Mapeo Simple) ===\n")
-  if (exportar) cat("    \u2192 Exportando a:",
+  cat("\n=== Generating plot (Simple Mapping) ===\n")
+  if (exportar) cat("    \u2192 Exporting to:",
                     paste0(fn_export, ".", config$export_format %||% "png"), "\n")
 
   # ── Helper: draws the legend in blocks (same as plot_superimposed_characters) ──
-  .dibujar_leyenda_simple <- function(pos_ley) {
+  .draw_simple_legend <- function(pos_ley) {
     usr        <- par("usr")
     going_down <- grepl("top",  pos_ley)
     x_start    <- if (grepl("left", pos_ley)) usr[1L] else usr[2L]
@@ -115,12 +115,12 @@ plot_simple_mapping <- function(filogenia, config) {
   }
 
   # ── Helper: measures the total legend width (plot=FALSE) ────────────────────
-  .medir_ancho_leyenda <- function(pos_ley) {
+  .measure_legend_width <- function(pos_ley) {
     usr      <- par("usr")
     on_right <- grepl("right", pos_ley)
     x_ref    <- if (on_right) usr[2L] else usr[1L]
     y_ref    <- if (grepl("top", pos_ley)) usr[4L] else usr[3L]
-    ancho_max <- 0
+    max_width <- 0
     for (i in seq_along(caracteres)) {
       car    <- caracteres[i]
       col_e  <- colores_por_car[[car]]
@@ -135,15 +135,15 @@ plot_simple_mapping <- function(filogenia, config) {
                    xjust  = if (on_right) 1 else 0,
                    yjust  = 1,
                    plot   = FALSE)
-      ancho_max <- max(ancho_max, lg$rect$w)
+      max_width <- max(max_width, lg$rect$w)
     }
-    ancho_max
+    max_width
   }
 
   # ── Main render function ─────────────────────────────────────────────────────
   # xlim_extra: if not NULL, passed as x.lim to plot() to expand the viewport
   # to the right to accommodate table + legend.
-  .render_mapeo_simple <- function(xlim_extra = NULL) {
+  .render_simple_mapping <- function(xlim_extra = NULL) {
 
     op <- par(no.readonly = TRUE)
     on.exit(par(op))
@@ -253,7 +253,7 @@ plot_simple_mapping <- function(filogenia, config) {
       }
       par(xpd = old_xpd)
 
-      .dibujar_leyenda_simple(pos_leyenda)
+      .draw_simple_legend(pos_leyenda)
 
       # ==========================================================================
       # PHYLOGRAM / CLADOGRAM
@@ -305,16 +305,16 @@ plot_simple_mapping <- function(filogenia, config) {
       }
       points(fig_x, fig_y, pch = pch_fig, bg = fig_col, col = "black", cex = tam_fig)
 
-      .dibujar_leyenda_simple(pos_leyenda)
+      .draw_simple_legend(pos_leyenda)
     }
 
     invisible(NULL)
-  }  # end .render_mapeo_simple
+  }  # end .render_simple_mapping
 
 
   # ── PHASE 1: off-screen probe ───────────────────────────────────────────────
   .fan_coords_explorador <- NULL
-  xlim_calculado <- NULL
+  computed_xlim <- NULL
 
   if (tipo_arbol == "fan") {
     pdf(NULL, width = 7, height = 7)
@@ -334,13 +334,13 @@ plot_simple_mapping <- function(filogenia, config) {
 
   if (tipo_arbol != "fan") {
     n_tips_tmp    <- n_tips
-    alto_default  <- n_tips_tmp * 0.25 + 2
-    ancho_default <- 12
-    alto_in_tmp   <- if (!is.null(config$height)) config$height else alto_default
-    ancho_in_tmp  <- if (!is.null(config$width))  config$width  else ancho_default
+    default_height  <- n_tips_tmp * 0.25 + 2
+    default_width <- 12
+    height_in_tmp   <- if (!is.null(config$height)) config$height else default_height
+    width_in_tmp  <- if (!is.null(config$width))  config$width  else default_width
 
-    pdf(NULL, width = ancho_in_tmp, height = alto_in_tmp)
-    xlim_calculado <- tryCatch({
+    pdf(NULL, width = width_in_tmp, height = height_in_tmp)
+    computed_xlim <- tryCatch({
 
       par(mar = c(1, 1, 2, 1), xpd = FALSE)
       plot(filogenia,
@@ -371,7 +371,7 @@ plot_simple_mapping <- function(filogenia, config) {
       pos_ley_s  <- if (!is.null(config$legend_corner)) config$legend_corner else "topright"
       on_right_s <- grepl("right", pos_ley_s)
 
-      ancho_ley <- 0
+      legend_width <- 0
       y_ref_s   <- if (grepl("top", pos_ley_s)) usr_s[4L] else usr_s[3L]
       for (i in seq_along(caracteres)) {
         car_i   <- caracteres[i]
@@ -385,10 +385,10 @@ plot_simple_mapping <- function(filogenia, config) {
                        bty    = "n", cex = cex_aj, horiz = FALSE,
                        pt.cex = tam_fig, xjust = 0, yjust = 1,
                        plot   = FALSE)
-        ancho_ley <- max(ancho_ley, lg_i$rect$w)
+        legend_width <- max(legend_width, lg_i$rect$w)
       }
 
-      x_max_total <- x_max_tabla + ancho_ley * 1.1
+      x_max_total <- x_max_tabla + legend_width * 1.1
 
       if (x_max_total > usr_s[2L]) {
         c(usr_s[1L], x_max_total)
@@ -402,15 +402,15 @@ plot_simple_mapping <- function(filogenia, config) {
 
   # ── PHASE 2: export or draw on screen ───────────────────────────────────────
   if (exportar) {
-    .exportar_dispositivo(fn_export, config$export_format %||% "png",
+    .export_device(fn_export, config$export_format %||% "png",
                           filogenia, tipo_arbol,
                           {
-                            .render_mapeo_simple(xlim_extra = xlim_calculado)
+                            .render_simple_mapping(xlim_extra = computed_xlim)
                           },
                           width  = config$width,
                           height = config$height)
   } else {
-    .render_mapeo_simple()
+    .render_simple_mapping()
   }
 }
 
@@ -444,26 +444,26 @@ init_edge_colors <- function(filogenia) {
 apply_ancestral_algorithm <- function(tree, tip_colors, edge_colors, config) {
 
   if (config$algoritmo == 1) {
-    if (!exists("algoritmo_default", mode = "function"))
-      stop("La función 'algoritmo_default' no está disponible. ",
-           "Asegúrese de que default_alg.R forma parte del paquete.")
-    algoritmo_default(tree, tip_colors, edge_colors)
+    if (!exists("default_algorithm", mode = "function"))
+      stop("Function 'default_algorithm' is not available. ",
+           "Make sure default_alg.R is part of the package.")
+    default_algorithm(tree, tip_colors, edge_colors)
 
   } else if (config$algoritmo == 2) {
-    if (!exists("algoritmo_externo", mode = "function"))
-      stop("La función 'algoritmo_externo' no está disponible. ",
-           "Asegúrese de que fitch.R forma parte del paquete.")
-    algoritmo_externo(tree, tip_colors, edge_colors, config)
+    if (!exists("external_algorithm", mode = "function"))
+      stop("Function 'external_algorithm' is not available. ",
+           "Make sure fitch.R is part of the package.")
+    external_algorithm(tree, tip_colors, edge_colors, config)
 
   } else {
-    stop("Algoritmo no reconocido.")
+    stop("Unrecognized algorithm.")
   }
 }
 
 
 # ------------------------------------------------------------------------------
 # 3.2  Drawing engine — Blank Canvas
-# (dibujar_filograma_canvas is kept in English as it was already named so)
+# (dibujar_filograma_canvas retained as legacy name)
 # ------------------------------------------------------------------------------
 
 #' Draws a phylogram using the "Blank Canvas" strategy
@@ -623,10 +623,10 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
   fn_export  <- config$export_filename
   tipo_arbol <- config$tipo_arbol
 
-  cat("\n=== Generando gráfico (Reconstrucción Ancestral) ===\n")
+  cat("\n=== Generating plot (Ancestral Reconstruction) ===\n")
 
   if (exportar) {
-    cat("    \u2192 Exportando a:", paste0(fn_export, ".", config$export_format %||% "png"), "\n")
+    cat("    \u2192 Exporting to:", paste0(fn_export, ".", config$export_format %||% "png"), "\n")
 
     ley_data <- if (!is.null(colores_estado) && length(colores_estado) > 0)
       list(labels = names(colores_estado), colors = unname(colores_estado))
@@ -686,13 +686,13 @@ plot_ancestral_reconstruction <- function(filogenia, config) {
     return("gray70")
   }
 
-  # funcion_multi == 2: reconstrucción ancestral + figuras en terminales
+  # funcion_multi == 2: ancestral reconstruction + terminal figures
   if (!is.null(config$funcion_multi) && config$funcion_multi == 2) {
     plot_ancestral_with_terminals(filogenia, config)
     return(invisible(NULL))
   }
 
-  # funcion_multi == 1 (o no definido): solo superposición en ramas
+  # funcion_multi == 1 (or undefined): branch superimposition only
   if (length(caracteres) == 1) {
     car            <- caracteres[1]
     colores_estado <- colores_por_car[[car]]
@@ -740,7 +740,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
   caracteres      <- config$caracteres
   colores_por_car <- config$colores_por_caracter
   tipo_arbol      <- config$tipo_arbol
-  pch_fig         <- config$pch_figura %||% 22L   # 22 = square (recuadro)
+  pch_fig         <- config$pch_figura %||% 22L   # 22 = square
   tam_fig         <- config$tam_figura %||% 1
   exportar        <- !is.null(config$export_filename)
   fn_export       <- config$export_filename
@@ -753,7 +753,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
     return("gray70")
   }
 
-  cat("\n=== Generando gr\u00e1fico (Reconstrucci\u00f3n Ancestral + Figuras en Terminales) ===\n")
+  cat("\n=== Generating plot (Ancestral Reconstruction + Terminal Figures) ===\n")
 
   # ── Step 1: compute ancestral edge colors for each character ────────────────
   lista_ec <- lapply(caracteres, function(car) {
@@ -770,16 +770,16 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
   # ── Helper: overlay tip figures on an already-rendered phylogeny ────────────
   # Reads tip coordinates from .PlotPhyloEnv after the base plot is drawn.
   # ── Helper: overlay tip figures ──────────────────────────────────────────────
-  # pp, cex_aj, lbl_off: cuando se llama desde overlay_fn (exportación) se
-  # reciben del motor de export_multimapr_tree, que ya los calculó con los
-  # factores de escala correctos. Cuando se llama desde pantalla (NULL) se
-  # leen de .PlotPhyloEnv y adjust_cex() respectivamente.
+  # pp, cex_aj, lbl_off: when called from overlay_fn (export) they are
+  # received from the export_multimapr_tree engine, which already computed them
+  # with the correct scale factors. When called from screen (NULL) they are
+  # read from .PlotPhyloEnv and adjust_cex() respectively.
   .superponer_figuras_terminales <- function(pp       = NULL,
                                              cex_aj   = NULL,
                                              lbl_off  = NULL,
-                                             R_tips   = NULL,   # radio de cada terminal (fan)
+                                             R_tips   = NULL,   # radius of each terminal (fan)
                                              gap_u    = NULL) { # gap laboral base (fan)
-    # gap_u_fan: nombre local para no chocar con el parámetro R_tips/gap_u
+    # gap_u_fan: local name to avoid conflict with R_tips/gap_u parameters
     gap_u_fan <- gap_u
 
     if (is.null(pp))
@@ -789,24 +789,24 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
     xx_tip <- pp$xx[seq_len(n_tips)]
     yy_tip <- pp$yy[seq_len(n_tips)]
 
-    # cex_aj: usar el valor del motor de exportación si se pasa, o recalcular
+    # cex_aj: use the value from the export engine if passed, otherwise recalculate
     if (is.null(cex_aj))
       cex_aj <- max(1 / (1 + n_tips / 50), 0.2)
 
     old_xpd <- par("xpd"); par(xpd = TRUE)
 
     if (tipo_arbol == "fan") {
-      # Fan: replica exacta de la geometría del modo simple (plot_simple_mapping).
+      # Fan: exact replica of the simple mapping geometry (plot_simple_mapping).
       #
-      # Geometría (idéntica al modo simple):
+      # Geometry (identical to simple mode):
       #   max_tip_radius   = max(R_tips)
-      #   radio_base       = max_tip_radius * 1.06   ← primer anillo
-      #   incremento_radio = max_tip_radius * 0.10   ← separación entre anillos
+      #   radio_base       = max_tip_radius * 1.06   <- first ring
+      #   incremento_radio = max_tip_radius * 0.10   <- spacing between rings
       #   radio_actual[i]  = radio_base + (i-1) * incremento_radio
-      #   gap_tan          = incremento_radio * 0.55  ← offset tangencial de "C_i"
+      #   gap_tan          = incremento_radio * 0.55  <- tangential offset for "C_i"
       #   radio_nombres    = radio_ultimo + incremento_radio * 0.5
       #
-      # R_tips puede venir del motor de exportación (overlay_fn) o se calcula aquí.
+      # R_tips may come from the export engine (overlay_fn) or be computed here.
       angulos <- atan2(yy_tip, xx_tip)
       if (is.null(R_tips)) R_tips <- sqrt(xx_tip^2 + yy_tip^2)
       max_tip_radius   <- max(R_tips)
@@ -824,12 +824,12 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
                                colores_estado = colores_por_car[[caracteres[i]]])
         radio_actual <- radio_base + (i - 1L) * incremento_radio
 
-        # ── Figuras del anillo i ──────────────────────────────────────────────
+        # ── Ring i figures ───────────────────────────────────────────────────
         points(radio_actual * cos(angulos),
                radio_actual * sin(angulos),
                pch = pch_fig, bg = col_tips, col = "black", cex = tam_fig)
 
-        # ── Etiqueta "C_i" tangencial (igual que modo simple) ─────────────────
+        # ── Tangential "C_i" label (same as simple mode) ────────────────────
         for (j in seq_len(n_tips)) {
           ang_j  <- angulos[j]
           deg_j  <- ang_j * 180 / pi
@@ -848,7 +848,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
         }
       }
 
-      # ── Etiquetas de especie (paralelas al radio, más afuera del último anillo)
+      # ── Species labels (parallel to radius, beyond the last ring)
       for (j in seq_len(n_tips)) {
         ang_j  <- angulos[j]
         deg_j  <- ang_j * 180 / pi
@@ -866,7 +866,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
 
     } else {
       # Phylogram / cladogram: figures placed to the right of each tip label.
-      # lbl_off: del motor de exportación si disponible, o proporcional a x_max
+      # lbl_off: from the export engine if available, or proportional to x_max
       max_tip_x <- max(xx_tip)
       if (is.null(lbl_off))
         lbl_off <- config$label_offset %||% (max_tip_x * 0.025)
@@ -876,7 +876,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       start_x    <- max_tip_x + lbl_off + max_lbl_w + max_tip_x * 0.02
       x_columnas <- start_x + seq(0, length(caracteres) - 1L) * sep_col
 
-      # ── Encabezados de columna rotados 45° (igual que modo simple) ───────────
+      # ── Column headers rotated 45 degrees (same as simple mode) ─────────────
       y_range  <- diff(range(yy_tip))
       y_header <- max(yy_tip) + y_range * 0.04
       old_xpd2 <- par("xpd"); par(xpd = NA)
@@ -888,7 +888,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
            font   = 2L)
       par(xpd = old_xpd2)
 
-      # ── Figuras por columna ───────────────────────────────────────────────────
+      # ── Figures per column ────────────────────────────────────────────────────
       for (i in seq_along(caracteres)) {
         col_tips <- sapply(datos_ord[[caracteres[i]]], resolver_color,
                            colores_estado = colores_por_car[[caracteres[i]]])
@@ -902,14 +902,13 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
   }
 
   # ── Step 3a: export to file ─────────────────────────────────────────────────
-  # Se delega completamente en export_multimapr_tree(), que gestiona el
-  # dispositivo, las dimensiones, la leyenda y las coordenadas. Las figuras en
-  # terminales se inyectan vía overlay_fn, que recibe pp, cex_aj y
-  # label_offset_aj ya calculados con los factores de escala del export,
-  # garantizando que las figuras queden posicionadas correctamente junto a las
-  # etiquetas y no encima de ellas.
+  # Fully delegated to export_multimapr_tree(), which manages the device,
+  # dimensions, legend, and coordinates. Terminal figures are injected via
+  # overlay_fn, which receives pp, cex_aj and label_offset_aj already computed
+  # with the correct export scale factors, ensuring figures are positioned
+  # correctly next to labels rather than on top of them.
   if (exportar) {
-    cat("    \u2192 Exportando a:", paste0(fn_export, ".", config$export_format %||% "png"), "\n")
+    cat("    \u2192 Exporting to:", paste0(fn_export, ".", config$export_format %||% "png"), "\n")
 
     export_multimapr_tree(
       tree            = filogenia,
@@ -920,11 +919,11 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       lwd             = config$grosor,
       width           = config$width,
       height          = config$height,
-      rango_desfase   = config$rango_desfase %||% 0.1,
+      offset_range    = config$rango_desfase %||% 0.1,
       legend_by_char  = ley_data$by_char,
       legend_corner   = config$legend_corner %||% "bottomleft",
-      # En fan, ocultamos las etiquetas del motor y las redibujaremos
-      # en el overlay más afuera, después de todas las figuras.
+      # For fan, hide engine labels and redraw them in the overlay,
+      # further out, after all figures.
       hide_fan_labels = (tipo_arbol == "fan"),
       overlay_fn      = function(pp, cex_aj, label_offset_aj,
                                  R_tips = NULL, gap_u = NULL) {
@@ -939,14 +938,14 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
 
   # ── Step 3b: screen render ──────────────────────────────────────────────────
   # Always render to screen regardless of export flag.
-  # En fan, hide_fan_labels = TRUE delega las etiquetas al overlay, que las
-  # redibuja más afuera de los anillos de figuras.
+  # For fan, hide_fan_labels = TRUE delegates labels to the overlay, which
+  # redraws them further out, beyond the figure rings.
   plot_multimapr_screen(
     tree            = filogenia,
     color_list      = lista_ec,
     type            = tipo_arbol,
     lwd             = config$grosor,
-    rango_desfase   = config$rango_desfase %||% 0.1,
+    offset_range    = config$rango_desfase %||% 0.1,
     legend_by_char  = ley_data$by_char,
     legend_corner   = config$legend_corner %||% "bottomleft",
     hide_fan_labels = (tipo_arbol == "fan"),
@@ -1075,7 +1074,7 @@ plot_superimposed_characters <- function(filogenia, config,
   ley_data  <- .build_legend_data(colores_por_car, caracteres)
 
   if (exportar) {
-    cat("    \u2192 Exportando a:", paste0(fn_export, ".", config$export_format %||% "png"), "\n")
+    cat("    \u2192 Exporting to:", paste0(fn_export, ".", config$export_format %||% "png"), "\n")
     export_multimapr_tree(
       tree           = filogenia,
       color_list     = lista_ec,
@@ -1083,7 +1082,7 @@ plot_superimposed_characters <- function(filogenia, config,
       type           = tipo_arbol,
       format         = config$export_format %||% "png",
       lwd            = grosor1,
-      rango_desfase  = config$rango_desfase %||% 0.1,
+      offset_range   = config$rango_desfase %||% 0.1,
       legend_by_char = ley_data$by_char,
       legend_corner  = config$legend_corner %||% "bottomleft"
     )
@@ -1095,7 +1094,7 @@ plot_superimposed_characters <- function(filogenia, config,
     color_list     = lista_ec,
     type           = tipo_arbol,
     lwd            = grosor1,
-    rango_desfase  = config$rango_desfase %||% 0.1,
+    offset_range   = config$rango_desfase %||% 0.1,
     legend_by_char = ley_data$by_char,
     legend_corner  = config$legend_corner %||% "bottomleft"
   )

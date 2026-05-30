@@ -2,10 +2,10 @@
 % Please edit documentation in R/export_multimapr_tree.R
 \name{.emtree_get_PlotPhyloEnv}
 \alias{.emtree_get_PlotPhyloEnv}
-\title{Recupera .PlotPhyloEnv desde el namespace de ape de forma segura}
+\title{Safely retrieves .PlotPhyloEnv from the ape namespace}
 \usage{
 .emtree_get_PlotPhyloEnv()
 }
 \description{
-Recupera .PlotPhyloEnv desde el namespace de ape de forma segura
+Safely retrieves .PlotPhyloEnv from the ape namespace
 }

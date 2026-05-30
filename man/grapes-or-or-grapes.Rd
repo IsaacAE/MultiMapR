@@ -2,10 +2,10 @@
 % Please edit documentation in R/data_utils.R
 \name{\%||\%}
 \alias{\%||\%}
-\title{Operador null-coalescing: devuelve x si no es NULL, y en caso contrario}
+\title{Null-coalescing operator: returns x if not NULL, otherwise y}
 \usage{
 x \%||\% y
 }
 \description{
-Operador null-coalescing: devuelve x si no es NULL, y en caso contrario
+Null-coalescing operator: returns x if not NULL, otherwise y
 }

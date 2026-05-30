@@ -2,7 +2,7 @@
 % Please edit documentation in R/data_utils.R
 \name{sort_states}
 \alias{sort_states}
-\title{Sorts the unique states of a character (letters → numbers → other)}
+\title{Sorts the unique states of a character (letters -> numbers -> other)}
 \usage{
 sort_states(states)
 }

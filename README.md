@@ -36,7 +36,7 @@ execute_phylogeny("my_tree.tre", "my_characters.csv")
 
 # Option B — load objects first, then map
 data <- load_data("my_tree.tre", "my_characters.csv")
-execute_phylogeny(data$arbol, data$caracteres)
+execute_phylogeny(data$tree, data$characters)
 ```
 
 Calling `execute_phylogeny()` opens an **interactive console menu** that
@@ -55,19 +55,19 @@ d <- load_data("tree.tre", "characters.csv")
 
 # Semicolon-separated CSV, species column identified by name
 d <- load_data("tree.nex", "data.csv",
-               sep = ";", col_especies = "Taxon")
+               sep = ";", species_col = "Taxon")
 
 # Normalise spaces to underscores when tree uses "_" but CSV uses " "
-d <- load_data("tree.tre", "data.csv", normalizar_espacios = TRUE)
+d <- load_data("tree.tre", "data.csv", normalize_spaces = TRUE)
 
 # Raise an error (instead of a warning) on tree/CSV mismatches
-d <- load_data("tree.tre", "data.csv", estricto = TRUE)
+d <- load_data("tree.tre", "data.csv", strict = TRUE)
 ```
 
 `load_data()` returns a list with two elements:
 
-- `$arbol` — a `phylo` object ready for ape and MultiMapR.
-- `$caracteres` — a data frame with a `Species` column and one column
+- `$tree` — a `phylo` object ready for ape and MultiMapR.
+- `$characters` — a data frame with a `Species` column and one column
   per character.
 
 ### Supported input formats
@@ -219,7 +219,8 @@ never appear too small or overlap.
     │   ├── core_render.R            ← Rendering engines and reconstruction
     │   ├── export_multimapr_tree.R  ← Universal export (PNG / PDF)
     │   ├── default_alg.R            ← Default reconstruction algorithm
-    │   └── fitch.R                  ← Fitch algorithm (ACCTRAN/DELTRAN/Unambiguous)
+    │   └── fitch.R                  ← Fitch algorithm (ACCTRAN/DELTRAN/Unambiguous),
+    │                                   exported as external_algorithm()
     │
     └── DESCRIPTION                  ← Imports: ape (>= 5.0), tools
 
@@ -227,6 +228,19 @@ Each module has a single responsibility. `core_render.R` never touches
 disk; `load_data.R` never draws; `cli_menu.R` only handles user input.
 Private helpers carry a `.` prefix and are not exported to the
 namespace.
+
+### Internal dispatch
+
+`core_render.R` dispatches ancestral reconstruction via
+`apply_ancestral_algorithm()`:
+
+| `config$algoritmo` | Function called | Config key used |
+|----|----|----|
+| `1` | `default_algorithm(tree, tip_colors, edge_colors)` | — |
+| `2` | `external_algorithm(tree, tip_colors, edge_colors, config)` | `config$fitch_mode` |
+
+`config$fitch_mode` is a string (`"acctran"`, `"deltran"`, or
+`"unambiguous"`) set by `cli_menu.R`.
 
 ## Function reference
 
@@ -236,15 +250,15 @@ namespace.
 | `load_data(tree_path, csv_path, ...)` | Loads and validates tree + character matrix. |
 | `read_tree(path, format = "auto")` | Reads a tree file independently. |
 | `read_csv_characters(path, ...)` | Reads a character CSV independently. |
-| `validar_compatibilidad(tree, data)` | Checks tip-name/species-name agreement. |
+| `validate_compatibility(tree, data)` | Checks tip-name/species-name agreement. |
 
 ## FAQ
 
 **What R version is required?** R ≥ 4.1.0 and `ape` ≥ 5.0.
 
 **My species names have spaces in the CSV but underscores in the tree.**
-Use `load_data(..., normalizar_espacios = TRUE)` to convert spaces to
-`_` automatically before matching.
+Use `load_data(..., normalize_spaces = TRUE)` to convert spaces to `_`
+automatically before matching.
 
 **How many characters can I map at once?** Simple mapping has no limit.
 Ancestral reconstruction supports up to **3 characters** to keep the

@@ -2,17 +2,17 @@
 % Please edit documentation in R/cli_menu.R
 \name{prompt_state_color}
 \alias{prompt_state_color}
-\title{Solicita al usuario un color para un estado dado}
+\title{Prompts the user for a color for a given state}
 \usage{
-prompt_state_color(estado)
+prompt_state_color(state)
 }
 \arguments{
-\item{estado}{String con el nombre del estado cuyo color se solicita.}
+\item{state}{String with the name of the state whose color is requested.}
 }
 \value{
-String con el color elegido, o invisible(NULL) si el usuario cancela.
+String with the chosen color, or invisible(NULL) if the user cancels.
 }
 \description{
-Repite el prompt hasta que el usuario ingrese un color válido reconocido
-por R (nombre o hexadecimal) o escriba 'exit' para cancelar.
+Repeats the prompt until the user enters a valid color recognized
+by R (name or hex) or types 'exit' to cancel.
 }

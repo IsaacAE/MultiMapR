@@ -1,47 +1,47 @@
-#' Orquestador principal de MultiMapR
+#' Main orchestrator of MultiMapR
 #'
-#' @param filogenia Ruta al archivo de árbol o un objeto phylo.
-#' @param datos_caracteres Ruta al archivo CSV o un data.frame.
-#' @param grosor Grosor opcional de las ramas.
-#' @param label_offset Desfase dinámico de las etiquetas.
+#' @param phylogeny         Path to the tree file or a phylo object.
+#' @param character_data    Path to the CSV file or a data.frame.
+#' @param branch_width      Optional branch width.
+#' @param label_offset      Dynamic label offset.
 #' @import ape
 #' @export
-.exportar_dispositivo <- function(filename, format, filogenia, tipo_arbol, expr,
-                                  width = NULL, height = NULL) {
-  n_tips        <- Ntip(filogenia)
-  alto_default  <- n_tips * 0.25 + 2
-  ancho_default <- 12
-  if (tipo_arbol == "fan") {
-    alto_default  <- max(alto_default, ancho_default)
-    ancho_default <- alto_default
+.export_device <- function(filename, format, phylogeny, tree_type, expr,
+                           width = NULL, height = NULL) {
+  n_tips         <- Ntip(phylogeny)
+  height_default <- n_tips * 0.25 + 2
+  width_default  <- 12
+  if (tree_type == "fan") {
+    height_default <- max(height_default, width_default)
+    width_default  <- height_default
   }
-  alto_in  <- if (!is.null(height)) height else alto_default
-  ancho_in <- if (!is.null(width))  width  else ancho_default
+  height_in <- if (!is.null(height)) height else height_default
+  width_in  <- if (!is.null(width))  width  else width_default
 
   dir.create("Exports", showWarnings = FALSE, recursive = TRUE)
-  ruta <- file.path("Exports", paste0(basename(filename), ".", format))
+  path <- file.path("Exports", paste0(basename(filename), ".", format))
   if (format == "pdf") {
-    pdf(file = ruta, width = ancho_in, height = alto_in)
+    pdf(file = path, width = width_in, height = height_in)
   } else {
-    png(filename = ruta,
-        width    = ancho_in,
-        height   = alto_in,
+    png(filename = path,
+        width    = width_in,
+        height   = height_in,
         units    = "in",
         res      = 300,
         bg       = "white")
   }
   tryCatch(
     force(expr),
-    error   = function(e) stop(sprintf("[MultiMapR] Error exportando %s: %s",
+    error   = function(e) stop(sprintf("[MultiMapR] Error exporting %s: %s",
                                        toupper(format), conditionMessage(e))),
     finally = dev.off()
   )
-  dims_origen <- if (!is.null(width) || !is.null(height)) " [custom]" else " [auto]"
-  message(sprintf("[MultiMapR] Archivo exportado: %s  (%.1f \u00d7 %.1f in%s%s)",
-                  ruta, ancho_in, alto_in,
+  dims_origin <- if (!is.null(width) || !is.null(height)) " [custom]" else " [auto]"
+  message(sprintf("[MultiMapR] File exported: %s  (%.1f \u00d7 %.1f in%s%s)",
+                  path, width_in, height_in,
                   if (format == "png") " @ 300 dpi" else "",
-                  dims_origen))
-  invisible(ruta)
+                  dims_origin))
+  invisible(path)
 }
 
 
@@ -49,96 +49,95 @@
 # MAIN FUNCTION — ORCHESTRATOR
 # ==============================================================================
 
-#' Orquestador principal de MultiMapR
+#' Main orchestrator of MultiMapR
 #'
-#' Soporta polimorfismo de argumentos: si `filogenia` y `datos_caracteres`
-#' son cadenas de texto (rutas a archivos en disco), los datos se cargan
-#' automáticamente a través de `load_data()` antes de configurar el mapeo.
+#' Supports argument polymorphism: if `phylogeny` and `character_data`
+#' are strings (file paths on disk), the data are loaded automatically
+#' through `load_data()` before configuring the mapping.
 #'
-#' @param filogenia            Objeto phylo — O — ruta (string) al archivo de árbol.
-#' @param datos_caracteres     Data.frame con columna "Species" — O — ruta (string)
-#'                             al archivo CSV de caracteres.
-#' @param grosor               Grosor de ramas (default NULL = el usuario lo elige
-#'                             en el menú). Un número positivo sobreescribe el menú.
-#' @param label_offset         Distancia entre terminales y etiquetas (default 0.3).
-#' @param sep                  Separador de campos del CSV (default ",").
-#'                             Solo se usa cuando se pasan rutas de archivos.
-#' @param col_especies         Columna de especies en el CSV: índice entero o nombre
-#'                             de columna (default 1).
-#'                             Solo se usa cuando se pasan rutas de archivos.
-#' @param normalizar_espacios  Si TRUE convierte espacios a "_" en los nombres de
-#'                             especie del CSV (útil cuando el árbol usa "_" y el
-#'                             CSV usa espacios). Default FALSE.
-#'                             Solo se usa cuando se pasan rutas de archivos.
-#' @param formato_arbol        Formato del archivo de árbol: "auto" (default),
-#'                             "newick" o "nexus".
-#'                             Solo se usa cuando se pasan rutas de archivos.
-#' @param estricto             Si TRUE lanza error ante discrepancias árbol/CSV;
-#'                             si FALSE (default) solo advierte.
-#'                             Solo se usa cuando se pasan rutas de archivos.
+#' @param phylogeny          phylo object — OR — string path to the tree file.
+#' @param character_data     Data.frame with a "Species" column — OR — string path
+#'                           to the character CSV file.
+#' @param branch_width       Branch width (default NULL = chosen by the user in
+#'                           the menu). A positive number overrides the menu.
+#' @param label_offset       Distance between tips and labels (default 0.3).
+#' @param sep                CSV field separator (default ",").
+#'                           Only used when file paths are passed.
+#' @param species_col        Species column in the CSV: integer index or column
+#'                           name (default 1).
+#'                           Only used when file paths are passed.
+#' @param normalize_spaces   If TRUE converts spaces to "_" in species names in
+#'                           the CSV (useful when the tree uses "_" and the CSV
+#'                           uses spaces). Default FALSE.
+#'                           Only used when file paths are passed.
+#' @param tree_format        Tree file format: "auto" (default), "newick" or "nexus".
+#'                           Only used when file paths are passed.
+#' @param strict             If TRUE raises an error on tree/CSV discrepancies;
+#'                           if FALSE (default) only warns.
+#'                           Only used when file paths are passed.
 #' @return Invisible NULL.
 #' @export
-execute_phylogeny <- function(filogenia, datos_caracteres,
-                              grosor               = NULL,
+execute_phylogeny <- function(phylogeny, character_data,
+                              branch_width         = NULL,
                               label_offset         = 0.3,
                               sep                  = ",",
-                              col_especies         = 1,
-                              normalizar_espacios  = FALSE,
-                              formato_arbol        = "auto",
-                              estricto             = FALSE) {
+                              species_col          = 1,
+                              normalize_spaces     = FALSE,
+                              tree_format          = "auto",
+                              strict               = FALSE) {
   tryCatch({
 
-    # POLIMORFISMO: Si se pasan rutas de archivos (character), cargar los datos automáticamente
-    if (is.character(filogenia) && is.character(datos_caracteres)) {
-      cat("\n[MultiMapR] Detectadas rutas de archivos. Cargando datos automáticamente...\n")
-      datos_cargados   <- load_data(ruta_arbol           = filogenia,
-                                    ruta_csv             = datos_caracteres,
-                                    sep                  = sep,
-                                    col_especies         = col_especies,
-                                    normalizar_espacios  = normalizar_espacios,
-                                    formato_arbol        = formato_arbol,
-                                    estricto             = estricto)
-      filogenia        <- datos_cargados$arbol
-      datos_caracteres <- datos_cargados$caracteres
+    # POLYMORPHISM: If file paths (character) are passed, load data automatically
+    if (is.character(phylogeny) && is.character(character_data)) {
+      cat("\n[MultiMapR] File paths detected. Loading data automatically...\n")
+      loaded_data      <- load_data(tree_path        = phylogeny,
+                                    csv_path         = character_data,
+                                    sep              = sep,
+                                    species_col      = species_col,
+                                    normalize_spaces = normalize_spaces,
+                                    tree_format      = tree_format,
+                                    strict           = strict)
+      phylogeny        <- loaded_data$tree
+      character_data   <- loaded_data$characters
     }
 
-    # Continuar con el flujo normal del sistema usando la interfaz modular
-    config <- setup_mapping_config(filogenia, datos_caracteres)
+    # Continue with the normal system flow using the modular interface
+    config <- setup_mapping_config(phylogeny, character_data)
     if (is.null(config)) return(invisible(NULL))
 
-    # Forzar ramas uniformes si el usuario lo solicitó en el menú
+    # Force uniform branches if the user requested it in the menu
     if (isFALSE(config$use_edge_length)) {
-      filogenia$edge.length <- NULL
+      phylogeny$edge.length <- NULL
     }
 
-    # Configuración externa de grosor si se pasa por argumento
-    if (!is.null(grosor) && is.numeric(grosor) && grosor > 0) {
-      config$grosor <- grosor
-      factor_offset <- switch(config$tipo_arbol %||% "phylogram",
+    # External branch width configuration if passed as argument
+    if (!is.null(branch_width) && is.numeric(branch_width) && branch_width > 0) {
+      config$grosor <- branch_width
+      offset_factor <- switch(config$tipo_arbol %||% "phylogram",
                               "phylogram" = 0.012, "cladogram" = 0.012, "fan" = 0.003, 0.012)
-      config$rango_desfase <- max(0.05, grosor * factor_offset)
+      config$rango_desfase <- max(0.05, branch_width * offset_factor)
     }
 
-    # Calcular profundidad geométrica del árbol para asignar un offset proporcional del 2.5%
-    phy_tmp <- filogenia
+    # Calculate tree geometric depth to assign a proportional 2.5% offset
+    phy_tmp <- phylogeny
     if (is.null(phy_tmp$edge.length)) {
       phy_tmp$edge.length <- rep(1, nrow(phy_tmp$edge))
     }
-    profundidad_max <- max(node.depth.edgelength(phy_tmp))
-    config$label_offset <- profundidad_max * 0.025
+    max_depth <- max(node.depth.edgelength(phy_tmp))
+    config$label_offset <- max_depth * 0.025
 
-    # Despachar al controlador gráfico correspondiente (core_render.R)
-    # plot_ancestral_reconstruction() maneja internamente funcion_multi:
-    #   funcion_multi == 1 → superposición en ramas
-    #   funcion_multi == 2 → reconstrucción ancestral + figuras en terminales
-    if (config$tipo_mapeo == 1) {
-      plot_simple_mapping(filogenia, config)
+    # Dispatch to the corresponding graphics controller (core_render.R)
+    # plot_ancestral_reconstruction() internally handles multi_function:
+    #   multi_function == 1 → branch overlay
+    #   multi_function == 2 → ancestral reconstruction + tip figures
+    if (config$mapping_type == 1) {
+      plot_simple_mapping(phylogeny, config)
     } else {
-      plot_ancestral_reconstruction(filogenia, config)
+      plot_ancestral_reconstruction(phylogeny, config)
     }
 
   }, error = function(e) {
-    cat("Error crítico en la ejecución:", e$message, "\n")
+    cat("Critical error during execution:", e$message, "\n")
     return(invisible(NULL))
   })
 }

@@ -628,7 +628,7 @@ installed automatically as a dependency.</p>
 <span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a></span>
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co"># Option B — load objects first, then map</span></span>
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;my_tree.tre&quot;</span>, <span class="st">&quot;my_characters.csv&quot;</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">execute_phylogeny</span>(data<span class="sc">$</span>arbol, data<span class="sc">$</span>caracteres)</span></code></pre></div>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">execute_phylogeny</span>(data<span class="sc">$</span>tree, data<span class="sc">$</span>characters)</span></code></pre></div>
 <p>Calling <code>execute_phylogeny()</code> opens an <strong>interactive
 console menu</strong> that guides you through every option: mapping
 type, colours per state, algorithm, tree topology, and export settings.
@@ -641,18 +641,18 @@ a single call:</p>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
 <span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># Semicolon-separated CSV, species column identified by name</span></span>
 <span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.nex&quot;</span>, <span class="st">&quot;data.csv&quot;</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>               <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>, <span class="at">col_especies =</span> <span class="st">&quot;Taxon&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>               <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>, <span class="at">species_col =</span> <span class="st">&quot;Taxon&quot;</span>)</span>
 <span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
 <span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co"># Normalise spaces to underscores when tree uses &quot;_&quot; but CSV uses &quot; &quot;</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.tre&quot;</span>, <span class="st">&quot;data.csv&quot;</span>, <span class="at">normalizar_espacios =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.tre&quot;</span>, <span class="st">&quot;data.csv&quot;</span>, <span class="at">normalize_spaces =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a></span>
 <span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co"># Raise an error (instead of a warning) on tree/CSV mismatches</span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.tre&quot;</span>, <span class="st">&quot;data.csv&quot;</span>, <span class="at">estricto =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.tre&quot;</span>, <span class="st">&quot;data.csv&quot;</span>, <span class="at">strict =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 <p><code>load_data()</code> returns a list with two elements:</p>
 <ul>
-<li><code>$arbol</code> — a <code>phylo</code> object ready for ape and
+<li><code>$tree</code> — a <code>phylo</code> object ready for ape and
 MultiMapR.</li>
-<li><code>$caracteres</code> — a data frame with a <code>Species</code>
+<li><code>$characters</code> — a data frame with a <code>Species</code>
 column and one column per character.</li>
 </ul>
 <h3 id="supported-input-formats">Supported input formats</h3>
@@ -824,13 +824,41 @@ so labels never appear too small or overlap.</p>
 │   ├── core_render.R            ← Rendering engines and reconstruction
 │   ├── export_multimapr_tree.R  ← Universal export (PNG / PDF)
 │   ├── default_alg.R            ← Default reconstruction algorithm
-│   └── fitch.R                  ← Fitch algorithm (ACCTRAN/DELTRAN/Unambiguous)
+│   └── fitch.R                  ← Fitch algorithm (ACCTRAN/DELTRAN/Unambiguous),
+│                                   exported as external_algorithm()
 │
 └── DESCRIPTION                  ← Imports: ape (&gt;= 5.0), tools</code></pre>
 <p>Each module has a single responsibility. <code>core_render.R</code>
 never touches disk; <code>load_data.R</code> never draws;
 <code>cli_menu.R</code> only handles user input. Private helpers carry a
 <code>.</code> prefix and are not exported to the namespace.</p>
+<h3 id="internal-dispatch">Internal dispatch</h3>
+<p><code>core_render.R</code> dispatches ancestral reconstruction via
+<code>apply_ancestral_algorithm()</code>:</p>
+<table>
+<thead>
+<tr>
+<th><code>config$algoritmo</code></th>
+<th>Function called</th>
+<th>Config key used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>1</code></td>
+<td><code>default_algorithm(tree, tip_colors, edge_colors)</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>external_algorithm(tree, tip_colors, edge_colors, config)</code></td>
+<td><code>config$fitch_mode</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>config$fitch_mode</code> is a string (<code>&quot;acctran&quot;</code>,
+<code>&quot;deltran&quot;</code>, or <code>&quot;unambiguous&quot;</code>) set by
+<code>cli_menu.R</code>.</p>
 <h2 id="function-reference">Function reference</h2>
 <table>
 <thead>
@@ -857,7 +885,7 @@ never touches disk; <code>load_data.R</code> never draws;
 <td>Reads a character CSV independently.</td>
 </tr>
 <tr>
-<td><code>validar_compatibilidad(tree, data)</code></td>
+<td><code>validate_compatibility(tree, data)</code></td>
 <td>Checks tip-name/species-name agreement.</td>
 </tr>
 </tbody>
@@ -867,8 +895,8 @@ never touches disk; <code>load_data.R</code> never draws;
 <code>ape</code> ≥ 5.0.</p>
 <p><strong>My species names have spaces in the CSV but underscores in
 the tree.</strong> Use
-<code>load_data(..., normalizar_espacios = TRUE)</code> to convert
-spaces to <code>_</code> automatically before matching.</p>
+<code>load_data(..., normalize_spaces = TRUE)</code> to convert spaces
+to <code>_</code> automatically before matching.</p>
 <p><strong>How many characters can I map at once?</strong> Simple
 mapping has no limit. Ancestral reconstruction supports up to <strong>3
 characters</strong> to keep the superimposition readable.</p>

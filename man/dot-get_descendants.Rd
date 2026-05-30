@@ -2,19 +2,19 @@
 % Please edit documentation in R/default_alg.R
 \name{.get_descendants}
 \alias{.get_descendants}
-\title{Obtiene todos los descendientes de un nodo (iterativo)}
+\title{Gets all descendants of a node (iterative)}
 \usage{
 .get_descendants(tree, node)
 }
 \arguments{
-\item{tree}{Objeto phylo.}
+\item{tree}{phylo object.}
 
-\item{node}{Número del nodo de partida.}
+\item{node}{Index of the starting node.}
 }
 \value{
-Vector de índices de nodos descendientes.
+Integer vector of descendant node indices.
 }
 \description{
-Versión iterativa de getDescendants() que evita problemas de recursión
-en árboles grandes y no usa <<-.
+Iterative version of getDescendants() that avoids recursion problems
+in large trees and does not use <<-.
 }

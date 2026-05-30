@@ -2,30 +2,30 @@
 % Please edit documentation in R/cli_menu.R
 \name{prompt_characters}
 \alias{prompt_characters}
-\title{Solicita al usuario que seleccione uno o varios caracteres de una lista}
+\title{Prompts the user to select one or several characters from a list}
 \usage{
 prompt_characters(
-  caracteres_disp,
+  available_chars,
   prompt_n,
   min_n = 1,
-  max_n = length(caracteres_disp)
+  max_n = length(available_chars)
 )
 }
 \arguments{
-\item{caracteres_disp}{Vector de nombres de caracteres disponibles.}
+\item{available_chars}{Vector of available character names.}
 
-\item{prompt_n}{Texto del prompt para pedir el número de caracteres.}
+\item{prompt_n}{Prompt text asking for the number of characters.}
 
-\item{min_n}{Mínimo de caracteres a seleccionar (default 1).}
+\item{min_n}{Minimum number of characters to select (default 1).}
 
-\item{max_n}{Máximo de caracteres a seleccionar (default todos).}
+\item{max_n}{Maximum number of characters to select (default all).}
 }
 \value{
-Character vector con los nombres de los caracteres seleccionados,
-o invisible(NULL) si el usuario cancela.
+Character vector with selected character names,
+or invisible(NULL) if the user cancels.
 }
 \description{
-Muestra los caracteres disponibles numerados y permite elegir entre
-\code{min_n} y \code{max_n} de ellos.  Si solo hay un carácter disponible
-o \code{min_n == max_n == 1}, lo devuelve directamente sin preguntar.
+Displays the available characters numbered and allows choosing between
+\code{min_n} and \code{max_n} of them. If only one character is available
+or \code{min_n == max_n == 1}, returns it directly without asking.
 }
