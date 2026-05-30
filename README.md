@@ -1,0 +1,268 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# MultiMapR
+
+<!-- badges: start -->
+
+<!-- badges: end -->
+
+**MultiMapR** is an R package for mapping and visualizing discrete
+characters on phylogenies. It projects one or more morphological,
+ecological, or molecular characters directly onto a tree — either at the
+terminals or through ancestral state reconstruction — with support for
+three topologies (phylogram, cladogram, fan) and export to
+publication-ready PNG and PDF files.
+
+## Installation
+
+You can install the development version of MultiMapR from GitHub:
+
+``` r
+# install.packages("remotes")
+remotes::install_github("your-username/MultiMapR")
+```
+
+MultiMapR requires the `ape` package (\>= 5.0), which is installed
+automatically as a dependency.
+
+## Quick start
+
+``` r
+library(MultiMapR)
+
+# Option A — pass file paths directly (recommended)
+execute_phylogeny("my_tree.tre", "my_characters.csv")
+
+# Option B — load objects first, then map
+data <- load_data("my_tree.tre", "my_characters.csv")
+execute_phylogeny(data$arbol, data$caracteres)
+```
+
+Calling `execute_phylogeny()` opens an **interactive console menu** that
+guides you through every option: mapping type, colours per state,
+algorithm, tree topology, and export settings. Type `exit` at any prompt
+to cancel.
+
+## Loading data
+
+`load_data()` handles tree and character matrix reading in a single
+call:
+
+``` r
+# Basic usage — auto-detects format, header, and BOM
+d <- load_data("tree.tre", "characters.csv")
+
+# Semicolon-separated CSV, species column identified by name
+d <- load_data("tree.nex", "data.csv",
+               sep = ";", col_especies = "Taxon")
+
+# Normalise spaces to underscores when tree uses "_" but CSV uses " "
+d <- load_data("tree.tre", "data.csv", normalizar_espacios = TRUE)
+
+# Raise an error (instead of a warning) on tree/CSV mismatches
+d <- load_data("tree.tre", "data.csv", estricto = TRUE)
+```
+
+`load_data()` returns a list with two elements:
+
+- `$arbol` — a `phylo` object ready for ape and MultiMapR.
+- `$caracteres` — a data frame with a `Species` column and one column
+  per character.
+
+### Supported input formats
+
+**Phylogenetic tree**
+
+| Extension               | Format | Parser              |
+|-------------------------|--------|---------------------|
+| `.tre`, `.tree`, `.nwk` | Newick | `ape::read.tree()`  |
+| `.nex`, `.nexus`        | NEXUS  | `ape::read.nexus()` |
+
+Format is detected automatically from the file extension. Mesquite-style
+numeric comments (`[0]`, `[1]`…) and Windows line endings (`\r\n`) are
+cleaned before parsing.
+
+**Character matrix (CSV)**
+
+- First column: species names (header auto-detected).
+- Remaining columns: discrete characters (text or numbers).
+- Configurable separator (default `,`).
+- Excel UTF-8 BOM removed automatically.
+- Inapplicable (`-`) and unknown (`?`) states preserved and rendered in
+  grey.
+- Polymorphisms supported: `"0/1"`, `"urban,forest"`, `"01"` (numeric
+  without separator).
+
+Example CSV **with** header:
+
+    Species,diet,locomotion,habitat
+    Homo_sapiens,omnivore,bipedalism,terrestrial
+    Pan_troglodytes,omnivore,quadrupedalism,arboreal
+    Gorilla_gorilla,herbivore,quadrupedalism,terrestrial
+
+Example CSV **without** header:
+
+    Homo_sapiens,0,1,2
+    Pan_troglodytes,0,0,1
+    Gorilla_gorilla,1,0,0
+
+## Mapping modes
+
+### Simple mapping
+
+Draws the tree in neutral grey and places **coloured symbols** (circle,
+square, triangle, or diamond) at each terminal — one column per
+character. Ideal for comparing state distributions without ancestral
+inference.
+
+- Supports **one or more characters simultaneously**.
+- **Fan** topology: concentric rings of symbols around the tree.
+- **Phylogram / cladogram**: symbol table to the right of tip labels.
+
+### Ancestral reconstruction — single character
+
+Colours the **branches** of the tree according to the state inferred at
+each internal node, using the algorithm chosen in the menu.
+
+### Ancestral reconstruction — multi-character (up to 3)
+
+Superimposes the reconstruction of several characters on the same tree
+using **isotropic offsets** (equal in X and Y, computed at render time
+from the actual canvas dimensions) so that each evolutionary history
+remains readable without overlap.
+
+## Ancestral reconstruction algorithms
+
+### Default algorithm (depth-weighted majority)
+
+Traverses internal nodes in post-order and assigns each edge the colour
+that predominates among its descendants, prioritising the closest
+internal nodes in the hierarchy. Fast, requires no extra parameters, and
+works well for trees with many states.
+
+### Fitch algorithm
+
+Full implementation of the Fitch parsimony algorithm (Swofford &
+Maddison, 1987) with three ambiguity-resolution modes:
+
+| Mode | Behaviour |
+|----|----|
+| **ACCTRAN** | Uses descending-pass sets for ambiguous nodes. Accelerates changes towards the tips (places them as early as possible). |
+| **DELTRAN** | Uses MPR sets from the ascending pass. Delays changes towards the root (places them as late as possible). |
+| **Unambiguous** | A node receives a state only when ACCTRAN and DELTRAN agree exactly. All others remain grey. |
+
+The algorithm handles polytomies, polymorphic states, and missing data
+out of the box.
+
+## Interactive menu (console walkthrough)
+
+    === Welcome to MultiMapR ===
+
+    Mapping type:
+      1: Simple mapping — coloured symbols at terminals
+      2: Ancestral reconstruction — branch colouring
+    Select (1/2, or 'exit' to quit): _
+
+    [ancestral reconstruction]
+
+    Visualisation mode:
+      1: Branch superimposition (one or more characters)
+      2: Terminal symbols + coloured tree
+
+    Reconstruction algorithm:
+      1: Default (depth-weighted majority)
+      2: Fitch (ACCTRAN / DELTRAN / Unambiguous)
+
+    Fitch optimisation mode:
+      1: ACCTRAN     (accelerated changes — towards tips)
+      2: DELTRAN     (delayed changes — towards root)
+      3: Unambiguous (only unambiguous nodes coloured)
+
+    Branch width (positive number; Enter = 2):
+      Reference: thin ≈ 1, normal ≈ 2, thick ≈ 4, very thick ≈ 8
+
+    Tree type: phylogram / cladogram / fan
+
+    Export the figure?
+      1: Yes — save as file
+      2: No — display in R window
+
+    Output format:
+      1: PNG (recommended for screen / presentations)
+      2: PDF (vector, ideal for publications)
+
+## Export
+
+Exported files are saved to an `Exports/` folder in the current working
+directory, created automatically if it does not exist.
+
+Default dimensions scale with tip count:
+
+    height  = n_tips × 0.25 + 2  (inches)
+    width   = 12                  (inches)
+    resolution = 300 dpi          (PNG only)
+
+Fan trees use equal width and height. When custom dimensions are
+specified, the text size (`cex`) is rescaled proportionally so labels
+never appear too small or overlap.
+
+## Package architecture
+
+    MultiMapR/
+    │
+    ├── R/
+    │   ├── main_MultiMapR.R         ← Orchestrator: execute_phylogeny()
+    │   ├── load_data.R              ← Data reading and validation
+    │   ├── cli_menu.R               ← Interactive console menus
+    │   ├── data_utils.R             ← Pure utilities (colours, alignment, cex)
+    │   ├── core_render.R            ← Rendering engines and reconstruction
+    │   ├── export_multimapr_tree.R  ← Universal export (PNG / PDF)
+    │   ├── default_alg.R            ← Default reconstruction algorithm
+    │   └── fitch.R                  ← Fitch algorithm (ACCTRAN/DELTRAN/Unambiguous)
+    │
+    └── DESCRIPTION                  ← Imports: ape (>= 5.0), tools
+
+Each module has a single responsibility. `core_render.R` never touches
+disk; `load_data.R` never draws; `cli_menu.R` only handles user input.
+Private helpers carry a `.` prefix and are not exported to the
+namespace.
+
+## Function reference
+
+| Function | Description |
+|----|----|
+| `execute_phylogeny(tree, data, ...)` | Main orchestrator. Accepts file paths or in-memory objects. |
+| `load_data(tree_path, csv_path, ...)` | Loads and validates tree + character matrix. |
+| `read_tree(path, format = "auto")` | Reads a tree file independently. |
+| `read_csv_characters(path, ...)` | Reads a character CSV independently. |
+| `validar_compatibilidad(tree, data)` | Checks tip-name/species-name agreement. |
+
+## FAQ
+
+**What R version is required?** R ≥ 4.1.0 and `ape` ≥ 5.0.
+
+**My species names have spaces in the CSV but underscores in the tree.**
+Use `load_data(..., normalizar_espacios = TRUE)` to convert spaces to
+`_` automatically before matching.
+
+**How many characters can I map at once?** Simple mapping has no limit.
+Ancestral reconstruction supports up to **3 characters** to keep the
+superimposition readable.
+
+**The figure looks fine on screen but tip labels are tiny in the PNG.**
+Increase the height in inches via the custom dimensions menu. MultiMapR
+rescales `cex` automatically to match your chosen canvas size.
+
+**Fitch Unambiguous mode shows many grey branches.** That is the
+intended behaviour: only nodes where ACCTRAN and DELTRAN agree receive a
+colour. Use ACCTRAN or DELTRAN if you need full branch coverage.
+
+**Where are exported files saved?** In an `Exports/` folder inside your
+current working directory (`getwd()`).
+
+## Reference
+
+Swofford, D. L. & Maddison, W. P. (1987). Reconstructing ancestral
+character states under Wagner parsimony. *Systematic Zoology*, 36(4),
+367–379.
