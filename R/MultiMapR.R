@@ -55,21 +55,49 @@
 #' son cadenas de texto (rutas a archivos en disco), los datos se cargan
 #' automáticamente a través de `load_data()` antes de configurar el mapeo.
 #'
-#' @param filogenia        Objeto phylo — O — ruta (string) al archivo de árbol.
-#' @param datos_caracteres Data.frame con columna "Species" — O — ruta (string)
-#'                         al archivo CSV de caracteres.
-#' @param grosor           Grosor de ramas (default NULL = el usuario lo elige
-#'                         en el menú). Un número positivo sobreescribe el menú.
-#' @param label_offset     Distancia entre terminales y etiquetas (default 0.3).
+#' @param filogenia            Objeto phylo — O — ruta (string) al archivo de árbol.
+#' @param datos_caracteres     Data.frame con columna "Species" — O — ruta (string)
+#'                             al archivo CSV de caracteres.
+#' @param grosor               Grosor de ramas (default NULL = el usuario lo elige
+#'                             en el menú). Un número positivo sobreescribe el menú.
+#' @param label_offset         Distancia entre terminales y etiquetas (default 0.3).
+#' @param sep                  Separador de campos del CSV (default ",").
+#'                             Solo se usa cuando se pasan rutas de archivos.
+#' @param col_especies         Columna de especies en el CSV: índice entero o nombre
+#'                             de columna (default 1).
+#'                             Solo se usa cuando se pasan rutas de archivos.
+#' @param normalizar_espacios  Si TRUE convierte espacios a "_" en los nombres de
+#'                             especie del CSV (útil cuando el árbol usa "_" y el
+#'                             CSV usa espacios). Default FALSE.
+#'                             Solo se usa cuando se pasan rutas de archivos.
+#' @param formato_arbol        Formato del archivo de árbol: "auto" (default),
+#'                             "newick" o "nexus".
+#'                             Solo se usa cuando se pasan rutas de archivos.
+#' @param estricto             Si TRUE lanza error ante discrepancias árbol/CSV;
+#'                             si FALSE (default) solo advierte.
+#'                             Solo se usa cuando se pasan rutas de archivos.
 #' @return Invisible NULL.
 #' @export
-execute_phylogeny <- function(filogenia, datos_caracteres, grosor = NULL, label_offset = 0.3) {
+execute_phylogeny <- function(filogenia, datos_caracteres,
+                              grosor               = NULL,
+                              label_offset         = 0.3,
+                              sep                  = ",",
+                              col_especies         = 1,
+                              normalizar_espacios  = FALSE,
+                              formato_arbol        = "auto",
+                              estricto             = FALSE) {
   tryCatch({
 
     # POLIMORFISMO: Si se pasan rutas de archivos (character), cargar los datos automáticamente
     if (is.character(filogenia) && is.character(datos_caracteres)) {
       cat("\n[MultiMapR] Detectadas rutas de archivos. Cargando datos automáticamente...\n")
-      datos_cargados   <- load_data(ruta_arbol = filogenia, ruta_csv = datos_caracteres)
+      datos_cargados   <- load_data(ruta_arbol           = filogenia,
+                                    ruta_csv             = datos_caracteres,
+                                    sep                  = sep,
+                                    col_especies         = col_especies,
+                                    normalizar_espacios  = normalizar_espacios,
+                                    formato_arbol        = formato_arbol,
+                                    estricto             = estricto)
       filogenia        <- datos_cargados$arbol
       datos_caracteres <- datos_cargados$caracteres
     }
@@ -100,14 +128,13 @@ execute_phylogeny <- function(filogenia, datos_caracteres, grosor = NULL, label_
     config$label_offset <- profundidad_max * 0.025
 
     # Despachar al controlador gráfico correspondiente (core_render.R)
+    # plot_ancestral_reconstruction() maneja internamente funcion_multi:
+    #   funcion_multi == 1 → superposición en ramas
+    #   funcion_multi == 2 → reconstrucción ancestral + figuras en terminales
     if (config$tipo_mapeo == 1) {
       plot_simple_mapping(filogenia, config)
     } else {
-      if (config$funcion_multi == 2) {
-        plot_multicharacter_figure(filogenia, config)
-      } else {
-        plot_ancestral_reconstruction(filogenia, config)
-      }
+      plot_ancestral_reconstruction(filogenia, config)
     }
 
   }, error = function(e) {
@@ -115,4 +142,3 @@ execute_phylogeny <- function(filogenia, datos_caracteres, grosor = NULL, label_
     return(invisible(NULL))
   })
 }
-

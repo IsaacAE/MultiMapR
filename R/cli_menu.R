@@ -280,14 +280,23 @@ setup_mapping_config <- function(filogenia, datos_caracteres) {
     config$colores_por_caracter <- colores_por_car
     
     if (fun_sel == 2) {
-      fig <- readline(prompt = "Tipo de figura ('circulo' / 'recuadro', o 'exit' para salir): ")
-      if (check_exit(fig)) return(invisible(NULL))
-      while (!fig %in% c("circulo", "recuadro")) {
-        cat("Inv\u00e1lido. Use 'circulo' o 'recuadro'.\n")
-        fig <- readline(prompt = "Tipo de figura: ")
-        if (check_exit(fig)) return(invisible(NULL))
+      cat("\nTipo de figura en los terminales:\n")
+      cat("  1: C\u00edrculo   (pch = 21)\n")
+      cat("  2: Cuadrado  (pch = 22)\n")
+      cat("  3: Tri\u00e1ngulo (pch = 24)\n")
+      cat("  4: Rombo     (pch = 23)\n")
+      fig_str <- readline(prompt = "Seleccione (1\u20134, Enter = 1): ")
+      if (check_exit(fig_str)) return(invisible(NULL))
+      pch_map <- c(`1` = 21L, `2` = 22L, `3` = 24L, `4` = 23L)
+      config$pch_figura <- if (nchar(trimws(fig_str)) == 0 || is.na(pch_map[fig_str]))
+        21L else pch_map[fig_str]
+      
+      tam_str <- readline(prompt = "Tama\u00f1o de las figuras (n\u00famero positivo, Enter = 1): ")
+      if (check_exit(tam_str)) return(invisible(NULL))
+      config$tam_figura <- if (nchar(trimws(tam_str)) == 0) 1 else {
+        t <- suppressWarnings(as.numeric(tam_str))
+        if (is.na(t) || t <= 0) { cat("Valor inv\u00e1lido, usando 1.\n"); 1 } else t
       }
-      config$tipo_figura <- fig
     }
     
     cat("\nAlgoritmo de reconstrucci\u00f3n ancestral:\n")

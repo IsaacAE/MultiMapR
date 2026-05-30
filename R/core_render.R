@@ -665,6 +665,12 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
 
 #' FULL ANCESTRAL RECONSTRUCTION — orchestrates 3.1 and 3.3
 #'
+#' Dispatches to the appropriate render function based on config$funcion_multi:
+#'   1 → branch superimposition only (plot_superimposed_characters /
+#'         plot_ancestral_branches for single character)
+#'   2 → ancestral reconstruction on branches PLUS simple terminal figures
+#'         (plot_ancestral_with_terminals)
+#'
 #' @param filogenia  phylo object.
 #' @param config     Configuration list from setup_mapping_config().
 #' @return Invisible NULL.
@@ -680,6 +686,13 @@ plot_ancestral_reconstruction <- function(filogenia, config) {
     return("gray70")
   }
 
+  # funcion_multi == 2: reconstrucción ancestral + figuras en terminales
+  if (!is.null(config$funcion_multi) && config$funcion_multi == 2) {
+    plot_ancestral_with_terminals(filogenia, config)
+    return(invisible(NULL))
+  }
+
+  # funcion_multi == 1 (o no definido): solo superposición en ramas
   if (length(caracteres) == 1) {
     car            <- caracteres[1]
     colores_estado <- colores_por_car[[car]]
@@ -696,6 +709,258 @@ plot_ancestral_reconstruction <- function(filogenia, config) {
   } else {
     plot_superimposed_characters(filogenia, config)
   }
+}
+
+
+# ------------------------------------------------------------------------------
+# 3.4  Ancestral reconstruction + terminal figures
+# ------------------------------------------------------------------------------
+
+#' Ancestral reconstruction on branches PLUS simple terminal figures
+#'
+#' Combines two visualization layers in a single plot:
+#'   Layer 1 — Branches painted with the ancestral reconstruction result
+#'             (using the algorithm selected in config$algoritmo).
+#'   Layer 2 — Colored figures (circles or squares) at the tips showing the
+#'             observed tip states (equivalent to the simple mapping squares).
+#'
+#' The function uses plot_multimapr_screen (and export_multimapr_tree for
+#' file output) to draw the ancestral layer, then overlays tip figures
+#' with par(new = TRUE) / points() on the same coordinate system.
+#'
+#' @param filogenia  phylo object.
+#' @param config     Configuration list from setup_mapping_config().
+#'                   Must contain: datos_ord, caracteres, colores_por_caracter,
+#'                   algoritmo, tipo_arbol, grosor, pch_figura, tam_figura,
+#'                   and optionally export_filename / export_format.
+#' @return Invisible NULL. Draws on the active graphics device.
+plot_ancestral_with_terminals <- function(filogenia, config) {
+
+  datos_ord       <- config$datos_ord
+  caracteres      <- config$caracteres
+  colores_por_car <- config$colores_por_caracter
+  tipo_arbol      <- config$tipo_arbol
+  pch_fig         <- config$pch_figura %||% 22L   # 22 = square (recuadro)
+  tam_fig         <- config$tam_figura %||% 1
+  exportar        <- !is.null(config$export_filename)
+  fn_export       <- config$export_filename
+  n_tips          <- Ntip(filogenia)
+
+  resolver_color <- function(valor, colores_estado) {
+    valor <- as.character(valor)
+    if (is.na(valor) || valor == "") return("gray70")
+    if (valor %in% names(colores_estado)) return(colores_estado[[valor]])
+    return("gray70")
+  }
+
+  cat("\n=== Generando gr\u00e1fico (Reconstrucci\u00f3n Ancestral + Figuras en Terminales) ===\n")
+
+  # ── Step 1: compute ancestral edge colors for each character ────────────────
+  lista_ec <- lapply(caracteres, function(car) {
+    col_e      <- colores_por_car[[car]]
+    tip_colors <- sapply(datos_ord[[car]], resolver_color, colores_estado = col_e)
+    ec         <- init_edge_colors(filogenia)
+    ec         <- apply_ancestral_algorithm(filogenia, tip_colors, ec, config)
+    ec
+  })
+
+  # ── Step 2: build legend data (branches block, grouped by character) ─────────
+  ley_data <- .build_legend_data(colores_por_car, caracteres)
+
+  # ── Helper: overlay tip figures on an already-rendered phylogeny ────────────
+  # Reads tip coordinates from .PlotPhyloEnv after the base plot is drawn.
+  # ── Helper: overlay tip figures ──────────────────────────────────────────────
+  # pp, cex_aj, lbl_off: cuando se llama desde overlay_fn (exportación) se
+  # reciben del motor de export_multimapr_tree, que ya los calculó con los
+  # factores de escala correctos. Cuando se llama desde pantalla (NULL) se
+  # leen de .PlotPhyloEnv y adjust_cex() respectivamente.
+  .superponer_figuras_terminales <- function(pp       = NULL,
+                                             cex_aj   = NULL,
+                                             lbl_off  = NULL,
+                                             R_tips   = NULL,   # radio de cada terminal (fan)
+                                             gap_u    = NULL) { # gap laboral base (fan)
+    # gap_u_fan: nombre local para no chocar con el parámetro R_tips/gap_u
+    gap_u_fan <- gap_u
+
+    if (is.null(pp))
+      pp <- get("last_plot.phylo",
+                envir = get(".PlotPhyloEnv", envir = asNamespace("ape")))
+
+    xx_tip <- pp$xx[seq_len(n_tips)]
+    yy_tip <- pp$yy[seq_len(n_tips)]
+
+    # cex_aj: usar el valor del motor de exportación si se pasa, o recalcular
+    if (is.null(cex_aj))
+      cex_aj <- max(1 / (1 + n_tips / 50), 0.2)
+
+    old_xpd <- par("xpd"); par(xpd = TRUE)
+
+    if (tipo_arbol == "fan") {
+      # Fan: replica exacta de la geometría del modo simple (plot_simple_mapping).
+      #
+      # Geometría (idéntica al modo simple):
+      #   max_tip_radius   = max(R_tips)
+      #   radio_base       = max_tip_radius * 1.06   ← primer anillo
+      #   incremento_radio = max_tip_radius * 0.10   ← separación entre anillos
+      #   radio_actual[i]  = radio_base + (i-1) * incremento_radio
+      #   gap_tan          = incremento_radio * 0.55  ← offset tangencial de "C_i"
+      #   radio_nombres    = radio_ultimo + incremento_radio * 0.5
+      #
+      # R_tips puede venir del motor de exportación (overlay_fn) o se calcula aquí.
+      angulos <- atan2(yy_tip, xx_tip)
+      if (is.null(R_tips)) R_tips <- sqrt(xx_tip^2 + yy_tip^2)
+      max_tip_radius   <- max(R_tips)
+
+      radio_base       <- max_tip_radius * 1.06
+      incremento_radio <- max_tip_radius * 0.10
+      n_car_ov         <- length(caracteres)
+      radio_ultimo     <- radio_base + (n_car_ov - 1L) * incremento_radio
+      gap_etiq         <- incremento_radio * 0.5
+      radio_nombres    <- radio_ultimo + gap_etiq
+      gap_tan          <- incremento_radio * 0.55
+
+      for (i in seq_len(n_car_ov)) {
+        col_tips     <- sapply(datos_ord[[caracteres[i]]], resolver_color,
+                               colores_estado = colores_por_car[[caracteres[i]]])
+        radio_actual <- radio_base + (i - 1L) * incremento_radio
+
+        # ── Figuras del anillo i ──────────────────────────────────────────────
+        points(radio_actual * cos(angulos),
+               radio_actual * sin(angulos),
+               pch = pch_fig, bg = col_tips, col = "black", cex = tam_fig)
+
+        # ── Etiqueta "C_i" tangencial (igual que modo simple) ─────────────────
+        for (j in seq_len(n_tips)) {
+          ang_j  <- angulos[j]
+          deg_j  <- ang_j * 180 / pi
+          lado_d <- cos(ang_j) >= 0
+          srt_j  <- if (lado_d) deg_j else deg_j + 180
+          tan_x  <- -sin(ang_j)
+          tan_y  <-  cos(ang_j)
+          cx     <- radio_actual * cos(ang_j) + tan_x * gap_tan
+          cy     <- radio_actual * sin(ang_j) + tan_y * gap_tan
+          text(cx, cy,
+               labels = paste0("C", i),
+               adj    = c(0.5, 0.5),
+               cex    = cex_aj * 0.65,
+               font   = 2L,
+               srt    = srt_j)
+        }
+      }
+
+      # ── Etiquetas de especie (paralelas al radio, más afuera del último anillo)
+      for (j in seq_len(n_tips)) {
+        ang_j  <- angulos[j]
+        deg_j  <- ang_j * 180 / pi
+        lado_d <- cos(ang_j) >= 0
+        srt_j  <- if (lado_d) deg_j else deg_j + 180
+        adj_j  <- if (lado_d) c(0, 0.5) else c(1, 0.5)
+        text(radio_nombres * cos(ang_j),
+             radio_nombres * sin(ang_j),
+             labels = filogenia$tip.label[j],
+             adj    = adj_j,
+             cex    = cex_aj,
+             srt    = srt_j,
+             font   = 3L)
+      }
+
+    } else {
+      # Phylogram / cladogram: figures placed to the right of each tip label.
+      # lbl_off: del motor de exportación si disponible, o proporcional a x_max
+      max_tip_x <- max(xx_tip)
+      if (is.null(lbl_off))
+        lbl_off <- config$label_offset %||% (max_tip_x * 0.025)
+
+      max_lbl_w  <- max(strwidth(filogenia$tip.label, cex = cex_aj))
+      sep_col    <- strwidth("M", cex = cex_aj) * 2.5
+      start_x    <- max_tip_x + lbl_off + max_lbl_w + max_tip_x * 0.02
+      x_columnas <- start_x + seq(0, length(caracteres) - 1L) * sep_col
+
+      # ── Encabezados de columna rotados 45° (igual que modo simple) ───────────
+      y_range  <- diff(range(yy_tip))
+      y_header <- max(yy_tip) + y_range * 0.04
+      old_xpd2 <- par("xpd"); par(xpd = NA)
+      text(x_columnas, y_header,
+           labels = caracteres,
+           cex    = cex_aj * 0.9,
+           srt    = 45,
+           adj    = c(0, 0.5),
+           font   = 2L)
+      par(xpd = old_xpd2)
+
+      # ── Figuras por columna ───────────────────────────────────────────────────
+      for (i in seq_along(caracteres)) {
+        col_tips <- sapply(datos_ord[[caracteres[i]]], resolver_color,
+                           colores_estado = colores_por_car[[caracteres[i]]])
+        points(rep(x_columnas[i], n_tips), yy_tip,
+               pch = pch_fig, bg = col_tips, col = "black", cex = tam_fig)
+      }
+    }
+
+    par(xpd = old_xpd)
+    invisible(NULL)
+  }
+
+  # ── Step 3a: export to file ─────────────────────────────────────────────────
+  # Se delega completamente en export_multimapr_tree(), que gestiona el
+  # dispositivo, las dimensiones, la leyenda y las coordenadas. Las figuras en
+  # terminales se inyectan vía overlay_fn, que recibe pp, cex_aj y
+  # label_offset_aj ya calculados con los factores de escala del export,
+  # garantizando que las figuras queden posicionadas correctamente junto a las
+  # etiquetas y no encima de ellas.
+  if (exportar) {
+    cat("    \u2192 Exportando a:", paste0(fn_export, ".", config$export_format %||% "png"), "\n")
+
+    export_multimapr_tree(
+      tree            = filogenia,
+      color_list      = lista_ec,
+      filename        = fn_export,
+      type            = tipo_arbol,
+      format          = config$export_format %||% "png",
+      lwd             = config$grosor,
+      width           = config$width,
+      height          = config$height,
+      rango_desfase   = config$rango_desfase %||% 0.1,
+      legend_by_char  = ley_data$by_char,
+      legend_corner   = config$legend_corner %||% "bottomleft",
+      # En fan, ocultamos las etiquetas del motor y las redibujaremos
+      # en el overlay más afuera, después de todas las figuras.
+      hide_fan_labels = (tipo_arbol == "fan"),
+      overlay_fn      = function(pp, cex_aj, label_offset_aj,
+                                 R_tips = NULL, gap_u = NULL) {
+        .superponer_figuras_terminales(pp      = pp,
+                                       cex_aj  = cex_aj,
+                                       lbl_off = label_offset_aj,
+                                       R_tips  = R_tips,
+                                       gap_u   = gap_u)
+      }
+    )
+  }
+
+  # ── Step 3b: screen render ──────────────────────────────────────────────────
+  # Always render to screen regardless of export flag.
+  # En fan, hide_fan_labels = TRUE delega las etiquetas al overlay, que las
+  # redibuja más afuera de los anillos de figuras.
+  plot_multimapr_screen(
+    tree            = filogenia,
+    color_list      = lista_ec,
+    type            = tipo_arbol,
+    lwd             = config$grosor,
+    rango_desfase   = config$rango_desfase %||% 0.1,
+    legend_by_char  = ley_data$by_char,
+    legend_corner   = config$legend_corner %||% "bottomleft",
+    hide_fan_labels = (tipo_arbol == "fan"),
+    overlay_fn      = function(pp, cex_aj, label_offset_aj,
+                               R_tips = NULL, gap_u = NULL) {
+      .superponer_figuras_terminales(pp      = pp,
+                                     cex_aj  = cex_aj,
+                                     lbl_off = label_offset_aj,
+                                     R_tips  = R_tips,
+                                     gap_u   = gap_u)
+    }
+  )
+
+  invisible(NULL)
 }
 
 

@@ -678,7 +678,18 @@ export_multimapr_tree <- function(tree,
                                   legend_labels  = NULL,
                                   legend_colors  = NULL,
                                   legend_corner  = "bottomleft",
-                                  legend_title   = NULL) {
+                                  legend_title   = NULL,
+                                  # ── OVERLAY CALLBACK ──────────────────────────────────
+                                  # Función opcional que se ejecuta DESPUÉS de la leyenda,
+                                  # dentro del mismo dispositivo abierto y con par("usr")
+                                  # ya establecido. Recibe pp, cex_aj, label_offset_aj,
+                                  # R_tips y gap_u para posicionar elementos con las
+                                  # coordenadas exactas del render de exportación.
+                                  overlay_fn      = NULL,
+                                  # hide_fan_labels: cuando TRUE omite el bloque 5b
+                                  # (etiquetas radiales del fan), delegando su dibujo
+                                  # al overlay_fn que las reposiciona más afuera de las figuras.
+                                  hide_fan_labels = FALSE) {
 
   # ── 0. Validación de argumentos ─────────────────────────────────────────────
   .emtree_validar_arbol(tree)
@@ -809,28 +820,62 @@ export_multimapr_tree <- function(tree,
   xlim_final <- NULL
   ylim_final <- NULL
 
-  if (tiene_leyenda) {
+  if (tiene_leyenda || (type == "fan" && hide_fan_labels && !is.null(overlay_fn))) {
     pdf(NULL, width = ancho_in, height = alto_in)   # off-screen, sin archivo
     tryCatch({
       .render_canvas()   # solo para establecer par("usr")
 
-      med <- .emtree_medir_leyenda(
-        corner         = legend_corner,
-        legend_by_char = if (tiene_leyenda_agrupada) legend_by_char else NULL,
-        legend_labels  = if (!tiene_leyenda_agrupada) legend_labels else NULL,
-        legend_title   = if (!tiene_leyenda_agrupada) legend_title  else NULL,
-        cex_ley        = cex_ley
-      )
+      if (tiene_leyenda) {
+        med <- .emtree_medir_leyenda(
+          corner         = legend_corner,
+          legend_by_char = if (tiene_leyenda_agrupada) legend_by_char else NULL,
+          legend_labels  = if (!tiene_leyenda_agrupada) legend_labels else NULL,
+          legend_title   = if (!tiene_leyenda_agrupada) legend_title  else NULL,
+          cex_ley        = cex_ley
+        )
+      } else {
+        med <- list(dx = 0, dy = 0, on_right = FALSE, going_down = FALSE)
+      }
 
       usr <- par("usr")
 
       if (type == "fan") {
         expansion <- max(med$dx, med$dy)
-        xlim_final <- if (med$on_right) c(usr[1L], usr[2L] + expansion)
-        else              c(usr[1L] - expansion, usr[2L])
-        ylim_final <- c(usr[3L], usr[4L])
-        if (med$going_down) ylim_final[2L] <- ylim_final[2L] + med$dy * 0.5
-        else                ylim_final[1L] <- ylim_final[1L] - med$dy * 0.5
+
+        # Si el overlay dibujará anillos (hide_fan_labels = TRUE), el viewport
+        # debe acomodar también esos anillos + etiquetas de especie.
+        # Geometría idéntica a .superponer_figuras_terminales / modo simple:
+        #   R_max            = max(sqrt(pp$xx^2 + pp$yy^2)) de los terminales
+        #   radio_base       = R_max * 1.06
+        #   incremento_radio = R_max * 0.10
+        #   radio_nombres    = radio_base + (n_car-1)*incremento + 0.5*incremento
+        #                    = R_max * (1.06 + 0.10*n_car)
+        #   + estimación del ancho de la etiqueta más larga
+        if (hide_fan_labels && !is.null(overlay_fn)) {
+          pp_tmp       <- get("last_plot.phylo", envir = .emtree_get_PlotPhyloEnv())
+          xx_t         <- pp_tmp$xx[seq_len(n_tips)]
+          yy_t         <- pp_tmp$yy[seq_len(n_tips)]
+          R_max_ov     <- max(sqrt(xx_t^2 + yy_t^2))
+          n_car_ov     <- length(color_list)   # número de caracteres = número de historias
+          radio_nom_ov <- R_max_ov * (1.06 + 0.10 * n_car_ov)
+          max_nc       <- max(nchar(tree$tip.label))
+          lbl_est      <- max_nc * R_max_ov * 0.018 * cex_aj
+          radio_total_ov <- radio_nom_ov + lbl_est + R_max_ov * 0.05
+          # El canvas del fan es simétrico; queremos que radio_total_ov quepa
+          expansion_ov <- max(0, radio_total_ov - usr[2L])
+          expansion    <- max(expansion, expansion_ov)
+        }
+
+        # Canvas simétrico para fan: expandir igualmente en todas las direcciones
+        # para que los anillos del overlay no se corten en ningún cuadrante.
+        # Si hay leyenda adicional en una esquina, se añade sólo en ese eje.
+        xlim_final <- c(usr[1L] - expansion, usr[2L] + expansion)
+        ylim_final <- c(usr[3L] - expansion, usr[4L] + expansion)
+        # Añadir espacio extra en el lado de la leyenda si aplica
+        if (tiene_leyenda && med$dx > 0) {
+          if (med$on_right) xlim_final[2L] <- xlim_final[2L] + med$dx
+          else              xlim_final[1L] <- xlim_final[1L] - med$dx
+        }
       } else {
         xlim_final <- if (med$on_right) c(usr[1L], usr[2L] + med$dx)
         else              c(usr[1L] - med$dx, usr[2L])
@@ -867,23 +912,25 @@ export_multimapr_tree <- function(tree,
       R_tips  <- sqrt(xx_tips^2 + yy_tips^2)
       gap_u   <- strwidth("m", cex = cex_aj) * 1.5
 
-      old_xpd <- par("xpd")
-      par(xpd = NA)
-      for (j in seq_len(n_tips)) {
-        ang_j  <- angulos[j]
-        R_j    <- R_tips[j] + gap_u
-        lado_d <- cos(ang_j) >= 0
-        srt_j  <- ang_j * 180 / pi
-        adj_j  <- if (lado_d) c(0, 0.5) else { srt_j <- srt_j + 180; c(1, 0.5) }
-        text(R_j * cos(ang_j),
-             R_j * sin(ang_j),
-             labels = tree$tip.label[j],
-             adj    = adj_j,
-             cex    = cex_aj,
-             font   = 3L,        # <--- Itálica activada
-             srt    = srt_j)
+      if (!hide_fan_labels) {
+        old_xpd <- par("xpd")
+        par(xpd = NA)
+        for (j in seq_len(n_tips)) {
+          ang_j  <- angulos[j]
+          R_j    <- R_tips[j] + gap_u
+          lado_d <- cos(ang_j) >= 0
+          srt_j  <- ang_j * 180 / pi
+          adj_j  <- if (lado_d) c(0, 0.5) else { srt_j <- srt_j + 180; c(1, 0.5) }
+          text(R_j * cos(ang_j),
+               R_j * sin(ang_j),
+               labels = tree$tip.label[j],
+               adj    = adj_j,
+               cex    = cex_aj,
+               font   = 3L,        # <--- Itálica activada
+               srt    = srt_j)
+        }
+        par(xpd = old_xpd)
       }
-      par(xpd = old_xpd)
     }
 
     # ── 6. Leyenda — dibujada dentro del viewport expandido ───────────────────
@@ -896,6 +943,25 @@ export_multimapr_tree <- function(tree,
         legend_title   = legend_title,
         cex_ley        = cex_ley
       )
+    }
+
+    # ── 7. Overlay opcional — figuras adicionales sobre el render ───────────────
+    if (!is.null(overlay_fn)) {
+      # Calcular R_tips y gap_u para el fan (NULL para otras topologías)
+      if (type == "fan") {
+        .ov_xx   <- pp$xx[seq_len(n_tips)]
+        .ov_yy   <- pp$yy[seq_len(n_tips)]
+        .ov_Rtips <- sqrt(.ov_xx^2 + .ov_yy^2)
+        .ov_gapu  <- strwidth("m", cex = cex_aj) * 1.5
+      } else {
+        .ov_Rtips <- NULL
+        .ov_gapu  <- NULL
+      }
+      overlay_fn(pp             = pp,
+                 cex_aj         = cex_aj,
+                 label_offset_aj = label_offset_aj,
+                 R_tips         = .ov_Rtips,
+                 gap_u          = .ov_gapu)
     }
 
     # Indicar si las dimensiones son automáticas o definidas por el usuario
@@ -1026,7 +1092,17 @@ plot_multimapr_screen <- function(tree,
                                   legend_labels  = NULL,
                                   legend_colors  = NULL,
                                   legend_corner  = "bottomleft",
-                                  legend_title   = NULL) {
+                                  legend_title   = NULL,
+                                  # ── OVERLAY CALLBACK ──────────────────────────────────
+                                  # Función opcional que se ejecuta DESPUÉS de la leyenda,
+                                  # dentro del mismo dispositivo abierto y con par("usr")
+                                  # ya establecido. Recibe pp, cex_aj, label_offset_aj,
+                                  # R_tips y gap_u para posicionar elementos con las
+                                  # coordenadas exactas del render de pantalla.
+                                  overlay_fn      = NULL,
+                                  # hide_fan_labels: cuando TRUE omite las etiquetas
+                                  # radiales del fan, delegando su dibujo al overlay_fn.
+                                  hide_fan_labels = FALSE) {
 
   .emtree_validar_arbol(tree)
   .emtree_validar_color_list(color_list, nrow(tree$edge))
@@ -1095,17 +1171,19 @@ plot_multimapr_screen <- function(tree,
     R_tips  <- sqrt(xx_tips^2 + yy_tips^2)
     gap_u   <- strwidth("m", cex = cex_aj) * 1.5
 
-    old_xpd <- par("xpd"); par(xpd = NA)
-    for (j in seq_len(n_tips)) {
-      ang_j  <- angulos[j]
-      R_j    <- R_tips[j] + gap_u
-      lado_d <- cos(ang_j) >= 0
-      srt_j  <- ang_j * 180 / pi
-      adj_j  <- if (lado_d) c(0, 0.5) else { srt_j <- srt_j + 180; c(1, 0.5) }
-      text(R_j * cos(ang_j), R_j * sin(ang_j),
-           labels = tree$tip.label[j], adj = adj_j, cex = cex_aj, font = 3L, srt = srt_j)
+    if (!hide_fan_labels) {
+      old_xpd <- par("xpd"); par(xpd = NA)
+      for (j in seq_len(n_tips)) {
+        ang_j  <- angulos[j]
+        R_j    <- R_tips[j] + gap_u
+        lado_d <- cos(ang_j) >= 0
+        srt_j  <- ang_j * 180 / pi
+        adj_j  <- if (lado_d) c(0, 0.5) else { srt_j <- srt_j + 180; c(1, 0.5) }
+        text(R_j * cos(ang_j), R_j * sin(ang_j),
+             labels = tree$tip.label[j], adj = adj_j, cex = cex_aj, font = 3L, srt = srt_j)
+      }
+      par(xpd = old_xpd)
     }
-    par(xpd = old_xpd)
   }
 
   # Dibujar leyenda si corresponde
@@ -1121,6 +1199,24 @@ plot_multimapr_screen <- function(tree,
       legend_title   = legend_title,
       cex_ley        = cex_ley
     )
+  }
+
+  # ── Overlay opcional — figuras adicionales sobre el render de pantalla ────────
+  if (!is.null(overlay_fn)) {
+    if (type == "fan") {
+      .ov_xx    <- pp$xx[seq_len(n_tips)]
+      .ov_yy    <- pp$yy[seq_len(n_tips)]
+      .ov_Rtips <- sqrt(.ov_xx^2 + .ov_yy^2)
+      .ov_gapu  <- strwidth("m", cex = cex_aj) * 1.5
+    } else {
+      .ov_Rtips <- NULL
+      .ov_gapu  <- NULL
+    }
+    overlay_fn(pp              = pp,
+               cex_aj          = cex_aj,
+               label_offset_aj = label_offset_aj,
+               R_tips          = .ov_Rtips,
+               gap_u           = .ov_gapu)
   }
 
   invisible(NULL)
