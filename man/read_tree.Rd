@@ -4,17 +4,17 @@
 \alias{read_tree}
 \title{Reads a phylogenetic tree file (Newick or NEXUS)}
 \usage{
-read_tree(ruta_arbol, formato_arbol = "auto")
+read_tree(tree_path, tree_format = "auto")
 }
 \arguments{
-\item{ruta_arbol}{Ruta al archivo de árbol.}
+\item{tree_path}{Path to the tree file.}
 
-\item{formato_arbol}{"auto" (default), "newick" o "nexus".}
+\item{tree_format}{"auto" (default), "newick" or "nexus".}
 }
 \value{
-Objeto phylo.
+phylo object.
 }
 \description{
-Compatible con archivos de Mesquite, TNT, WinClada y otros programas
-que producen variantes no estándar del formato NEXUS/Newick.
+Compatible with files from Mesquite, TNT, WinClada and other programs
+that produce non-standard variants of the NEXUS/Newick format.
 }

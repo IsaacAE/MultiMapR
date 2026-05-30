@@ -15,5 +15,9 @@ plot_ancestral_reconstruction(filogenia, config)
 Invisible NULL.
 }
 \description{
-FULL ANCESTRAL RECONSTRUCTION — orchestrates 3.1 and 3.3
+Dispatches to the appropriate render function based on config$funcion_multi:
+1 → branch superimposition only (plot_superimposed_characters /
+plot_ancestral_branches for single character)
+2 → ancestral reconstruction on branches PLUS simple terminal figures
+(plot_ancestral_with_terminals)
 }

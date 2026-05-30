@@ -5,62 +5,63 @@
 \title{Loads a tree and a character CSV ready to use with MultiMapR}
 \usage{
 load_data(
-  ruta_arbol,
-  ruta_csv,
+  tree_path,
+  csv_path,
   sep = ",",
-  col_especies = 1,
-  normalizar_espacios = FALSE,
-  formato_arbol = "auto",
-  estricto = FALSE
+  species_col = 1,
+  normalize_spaces = FALSE,
+  tree_format = "auto",
+  strict = FALSE
 )
 }
 \arguments{
-\item{ruta_arbol}{Ruta al archivo de árbol (.tre, .nwk, .nex, .nexus, …).}
+\item{tree_path}{Path to the tree file (.tre, .nwk, .nex, .nexus, ...).}
 
-\item{ruta_csv}{Ruta al archivo CSV de caracteres.}
+\item{csv_path}{Path to the character CSV file.}
 
-\item{sep}{Separador del CSV (default ",").}
+\item{sep}{CSV field separator (default ",").}
 
-\item{col_especies}{Columna de especies: índice entero o nombre (default 1).}
+\item{species_col}{Species column: integer index or column name (default 1).}
 
-\item{normalizar_espacios}{Si TRUE convierte espacios a "\emph{" en nombres de
-especies (útil cuando árbol usa "}" y CSV usa " ").}
+\item{normalize_spaces}{If TRUE converts spaces to "\emph{" in species names
+(useful when the tree uses "}" and the CSV uses " ").}
 
-\item{formato_arbol}{"auto" (default), "newick" o "nexus".}
+\item{tree_format}{"auto" (default), "newick" or "nexus".}
 
-\item{estricto}{Si TRUE, error ante discrepancias árbol/CSV (default FALSE).}
+\item{strict}{If TRUE, raises an error on tree/CSV discrepancies
+(default FALSE).}
 }
 \value{
-Lista con:
-\item{arbol}{Objeto phylo listo para ape / MultiMapR.}
-\item{caracteres}{Data.frame con columna "Species" y columnas de caracteres.}
+List with:
+\item{tree}{phylo object ready for ape / MultiMapR.}
+\item{characters}{Data.frame with a "Species" column and character columns.}
 }
 \description{
-Detecta automáticamente:
+Automatically detects:
 \itemize{
-\item Formato del árbol (Newick / NEXUS) por extensión.
-\item Presencia o ausencia de encabezado en el CSV.
-\item BOM UTF-8 en el CSV (archivos exportados desde Excel).
-\item Tipos de caracteres (numéricos o strings): se preservan como texto.
+\item Tree format (Newick / NEXUS) by extension.
+\item Presence or absence of a header in the CSV.
+\item UTF-8 BOM in the CSV (files exported from Excel).
+\item Character types (numeric or strings): preserved as text.
 }
 }
 \examples{
 \dontrun{
-  # CSV sin encabezado (caracteres numéricos)
+  # CSV without header (numeric characters)
   d1 <- load_data("tree2_jadc.tre", "Matriz_JAIR.csv")
-  execute_phylogeny(d1$arbol, d1$caracteres)
+  execute_phylogeny(d1$tree, d1$characters)
 
-  # CSV con BOM y nombres de especie con espacios
+  # CSV with BOM and species names with spaces
   d2 <- load_data("bats_tre.tre", "bats_matrix.csv",
-                  normalizar_espacios = TRUE)
-  execute_phylogeny(d2$arbol, d2$caracteres)
+                  normalize_spaces = TRUE)
+  execute_phylogeny(d2$tree, d2$characters)
 
-  # Separador punto y coma, columna de especies por nombre
-  d3 <- load_data("arbol.nex", "datos.csv",
-                  sep = ";", col_especies = "Taxon")
-  execute_phylogeny(d3$arbol, d3$caracteres)
+  # Semicolon separator, species column by name
+  d3 <- load_data("tree.nex", "data.csv",
+                  sep = ";", species_col = "Taxon")
+  execute_phylogeny(d3$tree, d3$characters)
 
-  # Uso polimórfico: pasar rutas directamente al orquestador
-  execute_phylogeny("mi_arbol.tre", "mis_caracteres.csv")
+  # Polymorphic use: pass paths directly to the orchestrator
+  execute_phylogeny("my_tree.tre", "my_characters.csv")
 }
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/export_multimapr_tree.R
 \name{plot_multimapr_screen}
 \alias{plot_multimapr_screen}
-\title{Renderiza el árbol multi-historia directamente en la ventana interactiva de R}
+\title{Renders the multi-history tree directly in R's interactive window}
 \usage{
 plot_multimapr_screen(
   tree,
@@ -10,51 +10,53 @@ plot_multimapr_screen(
   type = "phylogram",
   lwd = 3,
   label_offset = 0.3,
-  rango_desfase = 0.1,
+  offset_range = 0.1,
   legend_by_char = NULL,
   legend_labels = NULL,
   legend_colors = NULL,
   legend_corner = "bottomleft",
-  legend_title = NULL
+  legend_title = NULL,
+  overlay_fn = NULL,
+  hide_fan_labels = FALSE
 )
 }
 \arguments{
-\item{tree}{Objeto \code{\link[ape]{read.tree}} de clase \code{phylo}.}
+\item{tree}{\code{\link[ape]{read.tree}} object of class \code{phylo}.}
 
-\item{color_list}{Lista de N vectores de caracteres (colores R/CSS válidos).
-Cada vector debe tener exactamente \code{nrow(tree$edge)}
-elementos (uno por arista).}
+\item{color_list}{List of N character vectors (valid R/CSS colors).
+Each vector must have exactly \code{nrow(tree$edge)}
+elements (one per edge).}
 
-\item{type}{Topología del árbol: \code{"phylogram"} (default),
-\code{"cladogram"} o \code{"fan"}.}
+\item{type}{Tree topology: \code{"phylogram"} (default),
+\code{"cladogram"} or \code{"fan"}.}
 
-\item{lwd}{Grosor de las ramas (default: \code{3}).}
+\item{lwd}{Branch width (default: \code{3}).}
 
-\item{label_offset}{Distancia entre el extremo de los terminales y sus
-etiquetas (default: \code{0.3}).}
+\item{label_offset}{Distance between tip endpoints and their
+labels (default: \code{0.3}).}
 
-\item{rango_desfase}{Amplitud total del rango de desfase en Y (default: \code{0.1}).}
+\item{offset_range}{Total amplitude of the Y offset range (default: \code{0.1}).}
 
-\item{legend_by_char}{Lista nombrada carácter → list(labels, colors) para
-leyenda agrupada. Si no es NULL tiene precedencia sobre
+\item{legend_by_char}{Named list character → list(labels, colors) for
+grouped legend. If not NULL takes precedence over
 \code{legend_labels} / \code{legend_colors}.}
 
-\item{legend_labels}{Vector plano de etiquetas (modo legacy).}
+\item{legend_labels}{Flat label vector (legacy mode).}
 
-\item{legend_colors}{Vector plano de colores (modo legacy).}
+\item{legend_colors}{Flat color vector (legacy mode).}
 
-\item{legend_corner}{Esquina de la leyenda: \code{"topleft"}, \code{"topright"},
-\code{"bottomleft"} (default) o \code{"bottomright"}.}
+\item{legend_corner}{Legend corner: \code{"topleft"}, \code{"topright"},
+\code{"bottomleft"} (default) or \code{"bottomright"}.}
 
-\item{legend_title}{Título del bloque único de leyenda (modo legacy).}
+\item{legend_title}{Single legend block title (legacy mode).}
 }
 \value{
-Invisible NULL. Dibuja en el dispositivo gráfico activo.
+Invisible NULL. Draws on the active graphics device.
 }
 \description{
-Ejecuta exactamente la misma lógica del Canvas en Blanco que usa
-\code{export_multimapr_tree}, pero opera sobre la ventana gráfica activa
-de R en lugar de abrir celdas de almacenamiento en disco.
-Soporta las tres topologías: \code{"phylogram"}, \code{"cladogram"} y
+Runs exactly the same Blank Canvas logic used by
+\code{export_multimapr_tree}, but operates on the active R graphics window
+instead of opening storage devices on disk.
+Supports all three topologies: \code{"phylogram"}, \code{"cladogram"} and
 \code{"fan"}.
 }

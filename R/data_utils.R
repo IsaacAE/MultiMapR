@@ -1,28 +1,28 @@
 ################################################################################
 # data_utils.R
 #
-# Utilidades puras de datos para MultiMapR.
-# Contiene funciones sin efectos secundarios para validación de colores,
-# ordenación de estados, alineación de datos filogenéticos, ajuste de
-# tamaño de fuente y construcción de estructuras de leyenda.
+# Pure data utilities for MultiMapR.
+# Contains side-effect-free functions for color validation,
+# state sorting, phylogenetic data alignment, font size adjustment,
+# and legend structure construction.
 #
-# Sin dependencias de otros módulos MultiMapR.
-# Requiere: ape (para Ntip en adjust_cex).
+# No dependencies on other MultiMapR modules.
+# Requires: ape (for Ntip in adjust_cex).
 #
-# Autor: MultiMapR — módulo de utilidades de datos
+# Author: MultiMapR — data utilities module
 ################################################################################
 
 
 # ==============================================================================
-# SECCIÓN 1 — OPERADOR UTILITARIO
+# SECTION 1 — UTILITY OPERATOR
 # ==============================================================================
 
-#' Operador null-coalescing: devuelve x si no es NULL, y en caso contrario
+#' Null-coalescing operator: returns x if not NULL, otherwise y
 `%||%` <- function(x, y) if (!is.null(x)) x else y
 
 
 # ==============================================================================
-# SECCIÓN 2 — VALIDACIÓN Y TRANSFORMACIÓN
+# SECTION 2 — VALIDATION AND TRANSFORMATION
 # ==============================================================================
 
 #' Validates whether a string is a color recognised by R
@@ -36,7 +36,7 @@ is_valid_color <- function(color) {
   color %in% colors() || grepl("^#(?:[0-9a-fA-F]{3}){1,2}$", color, perl = TRUE)
 }
 
-#' Sorts the unique states of a character (letters → numbers → other)
+#' Sorts the unique states of a character (letters -> numbers -> other)
 #'
 #' Partitions \code{states} into three buckets — pure-letter tokens, pure-digit
 #' tokens, and everything else — sorts each bucket independently, and
@@ -74,7 +74,7 @@ align_tree_data <- function(phylogeny, char_data) {
 
 
 # ==============================================================================
-# SECCIÓN 3 — AJUSTE DE TAMAÑO DE FUENTE
+# SECTION 3 — FONT SIZE ADJUSTMENT
 # ==============================================================================
 
 #' Adjusts font size (cex) based on the number of tips of the phylogeny
@@ -94,13 +94,13 @@ align_tree_data <- function(phylogeny, char_data) {
 adjust_cex <- function(phylogeny, min_cex = 0.2, config = NULL) {
   n_tips <- Ntip(phylogeny)
   cex    <- max(1 / (1 + n_tips / 50), min_cex)
-  
+
   # ── Scale by custom canvas height ──────────────────────────────────────────
   # If the user set a canvas height different from the automatic default, text
   # must grow proportionally so it is not tiny in the exported file.
   if (!is.null(config) && !is.null(config$height)) {
     height_default <- n_tips * 0.25 + 2
-    
+
     if (!is.null(config$tipo_arbol) && config$tipo_arbol == "fan") {
       width_default  <- 12
       height_default <- max(height_default, width_default)
@@ -108,42 +108,42 @@ adjust_cex <- function(phylogeny, min_cex = 0.2, config = NULL) {
     scale_h <- config$height / height_default
     cex     <- cex * scale_h
   }
-  
+
   return(cex)
 }
 
 
 # ==============================================================================
-# SECCIÓN 4 — CONSTRUCCIÓN DE DATOS DE LEYENDA
+# SECTION 4 — LEGEND DATA CONSTRUCTION
 # ==============================================================================
 
 #' Builds structured legend data grouped by character for export
 #'
 #' Returns two parallel representations of the same colour mapping:
 #' \describe{
-#'   \item{\code{by_char}}{Named list \emph{character} → \code{list(labels, colors)},
+#'   \item{\code{by_char}}{Named list \emph{character} -> \code{list(labels, colors)},
 #'     consumed by \code{export_multimapr_tree(legend_by_char = ...)} to draw
 #'     one labelled block per character.}
 #'   \item{\code{labels} / \code{colors}}{Flat parallel vectors for legacy
 #'     \code{legend()} calls.}
 #' }
 #'
-#' @param colores_por_car Named list \emph{character} → named vector
-#'   \emph{state → color}.
-#' @param caracteres Character vector of character names to include.
+#' @param colors_by_char Named list \emph{character} -> named vector
+#'   \emph{state -> color}.
+#' @param characters Character vector of character names to include.
 #' @return List with elements \code{by_char}, \code{labels}, and \code{colors}.
-.build_legend_data <- function(colores_por_car, caracteres) {
+.build_legend_data <- function(colors_by_char, characters) {
   by_char    <- list()
   all_labels <- character(0)
   all_colors <- character(0)
-  
-  for (car in caracteres) {
-    col_e   <- colores_por_car[[car]]
-    estados <- names(col_e)
-    by_char[[car]] <- list(labels = estados, colors = unname(col_e))
-    all_labels <- c(all_labels, estados)
+
+  for (char in characters) {
+    col_e  <- colors_by_char[[char]]
+    states <- names(col_e)
+    by_char[[char]] <- list(labels = states, colors = unname(col_e))
+    all_labels <- c(all_labels, states)
     all_colors <- c(all_colors, unname(col_e))
   }
-  
+
   list(by_char = by_char, labels = all_labels, colors = all_colors)
 }

@@ -1,66 +1,66 @@
 ################################################################################
-# algoritmo_default.R
+# default_alg.R
 #
-# Algoritmo de reconstrucción ancestral por defecto para MultiMapR.
-# Asigna colores a ramas internas por mayoría ponderada por profundidad.
+# Default ancestral reconstruction algorithm for MultiMapR.
+# Assigns colors to internal branches by depth-weighted majority vote.
 #
-# Función exportada:
-#   algoritmo_default(tree, tip_colors, edge_colors) → edge_colors actualizado
+# Exported function:
+#   default_algorithm(tree, tip_colors, edge_colors) -> updated edge_colors
 #
-# Se carga automáticamente desde main_MultiMapR.R cuando el usuario
-# selecciona el algoritmo 1 (por defecto).
+# Loaded automatically from main_MultiMapR.R when the user
+# selects algorithm 1 (default).
 ################################################################################
 
 
-#' Obtiene todos los descendientes de un nodo (iterativo)
+#' Gets all descendants of a node (iterative)
 #'
-#' Versión iterativa de getDescendants() que evita problemas de recursión
-#' en árboles grandes y no usa <<-.
+#' Iterative version of getDescendants() that avoids recursion problems
+#' in large trees and does not use <<-.
 #'
-#' @param tree  Objeto phylo.
-#' @param node  Número del nodo de partida.
-#' @return Vector de índices de nodos descendientes.
+#' @param tree  phylo object.
+#' @param node  Index of the starting node.
+#' @return Integer vector of descendant node indices.
 .get_descendants <- function(tree, node) {
-  edges       <- tree$edge
-  pendientes  <- node
-  result      <- integer(0)
+  edges   <- tree$edge
+  pending <- node
+  result  <- integer(0)
 
-  while (length(pendientes) > 0) {
-    nd         <- pendientes[1]
-    pendientes <- pendientes[-1]
-    hijos      <- edges[edges[, 1] == nd, 2]
-    result     <- c(result, hijos)
-    pendientes <- c(pendientes, hijos)
+  while (length(pending) > 0) {
+    nd      <- pending[1]
+    pending <- pending[-1]
+    children <- edges[edges[, 1] == nd, 2]
+    result  <- c(result, children)
+    pending <- c(pending, children)
   }
   result
 }
 
 
-#' Algoritmo por defecto: colorea ramas por mayoría ponderada por profundidad
+#' Default algorithm: colors branches by depth-weighted majority vote
 #'
-#' Pasos:
-#'   1. Colorea las ramas que llegan a cada tip con el color del tip.
-#'   2. Recorre los nodos internos en postorder (hojas primero).
-#'   3. Para cada nodo interno, determina el color predominante entre
-#'      sus descendientes directos ponderado por profundidad; ese color
-#'      se asigna a la arista que ENTRA al nodo.
-#'   4. Tras asignar todos los nodos, propaga el color de cada nodo interno
-#'      a las aristas verticales que lo conectan con su padre, evitando
-#'      que queden segmentos en gris cuando el padre aún no tenía color.
+#' Steps:
+#'   1. Colors the edges leading to each tip with that tip's color.
+#'   2. Traverses internal nodes in postorder (deepest first).
+#'   3. For each internal node, determines the predominant color among
+#'      its descendants weighted by depth; that color is assigned to
+#'      the edge ENTERING the node.
+#'   4. After assigning all nodes, propagates each internal node's color
+#'      to the vertical edges connecting it to its parent, preventing
+#'      segments from remaining gray when the parent had no color yet.
 #'
-#' @param tree        Objeto phylo.
-#' @param tip_colors  Named character vector: `tip_colors[i]` = color del tip i.
-#' @param edge_colors Named character vector inicializado con gris
-#'                    (nombres: "padre-hijo").
-#' @return Named character vector de longitud nrow(tree$edge) con colores
-#'         actualizados para cada arista.
-algoritmo_default <- function(tree, tip_colors, edge_colors) {
-  n_tips   <- Ntip(tree)
-  n_nodes  <- Nnode(tree)
-  edges    <- tree$edge
+#' @param tree        phylo object.
+#' @param tip_colors  Named character vector: tip_colors[i] = color of tip i.
+#' @param edge_colors Named character vector initialised with gray
+#'                    (names: "parent-child").
+#' @return Named character vector of length nrow(tree$edge) with updated
+#'         colors for each edge.
+default_algorithm <- function(tree, tip_colors, edge_colors) {
+  n_tips  <- Ntip(tree)
+  n_nodes <- Nnode(tree)
+  edges   <- tree$edge
 
   # ------------------------------------------------------------------
-  # Paso 1: ramas que llegan a tips
+  # Step 1: edges leading to tips
   # ------------------------------------------------------------------
   for (i in seq_len(n_tips)) {
     idx              <- which(edges[, 2] == i)
@@ -68,13 +68,13 @@ algoritmo_default <- function(tree, tip_colors, edge_colors) {
   }
 
   # ------------------------------------------------------------------
-  # Paso 2: postorder de nodos internos (más profundos primero)
+  # Step 2: postorder traversal of internal nodes (deepest first)
   # ------------------------------------------------------------------
   all_nodes    <- (n_tips + 1):(n_tips + n_nodes)
   node_depths  <- node.depth.edgelength(tree)
   sorted_nodes <- all_nodes[order(node_depths[all_nodes], decreasing = TRUE)]
 
-  # Guardamos el color asignado a cada nodo para usarlo en el paso 4
+  # Store the color assigned to each node for use in step 4
   node_color <- character(n_tips + n_nodes)
   node_color[seq_len(n_tips)] <- tip_colors
 
@@ -82,8 +82,8 @@ algoritmo_default <- function(tree, tip_colors, edge_colors) {
     desc <- .get_descendants(tree, nd)
     if (length(desc) == 0) next
 
-    desc_colors    <- character(0)
-    internal_nodes <- integer(0)
+    desc_colors     <- character(0)
+    internal_nodes  <- integer(0)
 
     for (d in desc) {
       if (d <= n_tips) {
@@ -95,12 +95,12 @@ algoritmo_default <- function(tree, tip_colors, edge_colors) {
       }
     }
 
-    # Color prioritario: el del nodo interno descendiente con menos
-    # descendientes propios (el más cercano en la jerarquía)
+    # Priority color: the one from the descendant internal node with the
+    # fewest descendants of its own (i.e. the closest in the hierarchy)
     if (length(internal_nodes) > 0) {
-      n_div      <- sapply(internal_nodes,
+      n_desc     <- sapply(internal_nodes,
                            function(x) length(.get_descendants(tree, x)))
-      prio_node  <- internal_nodes[which.min(n_div)]
+      prio_node  <- internal_nodes[which.min(n_desc)]
       prio_idx   <- which(edges[, 2] == prio_node)
       prio_color <- edge_colors[prio_idx]
     } else {
@@ -119,52 +119,52 @@ algoritmo_default <- function(tree, tip_colors, edge_colors) {
   }
 
   # ------------------------------------------------------------------
-  # Paso 3: propagar colores a aristas entre nodos internos que hayan
-  # quedado en gris.
+  # Step 3: propagate colors to edges between internal nodes that
+  # remained gray.
   #
-  # Problema: en un phylogram, la arista padre→hijo tiene un segmento
-  # vertical (el "codo") que ape dibuja con el color de esa arista.
-  # Si la arista quedó en gris porque el nodo hijo aún era gris cuando
-  # se procesó el padre, la vertical queda sin color.
+  # Problem: in a phylogram, the parent->child edge has a vertical
+  # segment (the "elbow") that ape draws with that edge's color.
+  # If the edge remained gray because the child node was still gray
+  # when the parent was processed, the vertical stays uncolored.
   #
-  # Solución: para cada arista padre→hijo donde AMBOS son nodos internos,
-  # si el color es gris pero el nodo hijo tiene un color asignado,
-  # usar el color del hijo (que refleja lo que predomina en su subárbol).
+  # Solution: for each parent->child edge where BOTH are internal nodes,
+  # if the color is gray but the child node has an assigned color,
+  # use the child's color (which reflects what predominates in its subtree).
   # ------------------------------------------------------------------
   for (i in seq_len(nrow(edges))) {
-    padre <- edges[i, 1]
-    hijo  <- edges[i, 2]
+    parent <- edges[i, 1]
+    child  <- edges[i, 2]
 
-    # Solo aplica a aristas entre nodos internos
-    if (hijo <= n_tips) next
+    # Only applies to edges between internal nodes
+    if (child <= n_tips) next
 
-    # Si ya tiene un color real, no tocar
+    # If it already has a real color, leave it
     if (edge_colors[i] != "gray70") next
 
-    # Usar el color del nodo hijo si está disponible
-    color_hijo <- node_color[hijo]
-    if (nchar(color_hijo) > 0 && color_hijo != "gray70") {
-      edge_colors[i] <- color_hijo
+    # Use the child node's color if available
+    child_color <- node_color[child]
+    if (nchar(child_color) > 0 && child_color != "gray70") {
+      edge_colors[i] <- child_color
     }
   }
 
   # ------------------------------------------------------------------
-  # Paso 4: colorear las aristas que salen del nodo raíz.
+  # Step 4: color the edges leaving the root node.
   #
-  # La raíz no tiene arista entrante, por lo que node_color[raiz]
-  # queda vacío y ape dibuja el segmento vertical inicial en gris.
-  # Asignamos a cada arista raíz→hijo que siga en gris el color
-  # del nodo hijo correspondiente (ya calculado en pasos anteriores).
+  # The root has no incoming edge, so node_color[root] stays empty
+  # and ape draws the initial vertical segment in gray.
+  # We assign to each root->child edge that is still gray the color
+  # of the corresponding child node (already computed in previous steps).
   # ------------------------------------------------------------------
-  raiz <- n_tips + 1L
-  hijos_raiz <- edges[edges[, 1] == raiz, 2]
+  root       <- n_tips + 1L
+  root_children <- edges[edges[, 1] == root, 2]
 
-  for (hijo in hijos_raiz) {
-    idx_arista <- which(edges[, 1] == raiz & edges[, 2] == hijo)
-    if (edge_colors[idx_arista] == "gray70") {
-      color_hijo <- node_color[hijo]
-      if (nchar(color_hijo) > 0 && color_hijo != "gray70")
-        edge_colors[idx_arista] <- color_hijo
+  for (child in root_children) {
+    edge_idx <- which(edges[, 1] == root & edges[, 2] == child)
+    if (edge_colors[edge_idx] == "gray70") {
+      child_color <- node_color[child]
+      if (nchar(child_color) > 0 && child_color != "gray70")
+        edge_colors[edge_idx] <- child_color
     }
   }
 

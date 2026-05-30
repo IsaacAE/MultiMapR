@@ -5,24 +5,24 @@
 \title{Reads a character CSV file and prepares it for MultiMapR}
 \usage{
 read_csv_characters(
-  ruta_csv,
+  csv_path,
   sep = ",",
-  col_especies = 1,
-  normalizar_espacios = FALSE
+  species_col = 1,
+  normalize_spaces = FALSE
 )
 }
 \arguments{
-\item{ruta_csv}{Ruta al archivo CSV.}
+\item{csv_path}{Path to the CSV file.}
 
-\item{sep}{Separador de campos (default ",").}
+\item{sep}{Field separator (default ",").}
 
-\item{col_especies}{Índice o nombre de la columna de especies (default 1).}
+\item{species_col}{Index or name of the species column (default 1).}
 
-\item{normalizar_espacios}{Si TRUE, reemplaza espacios por "_" en los nombres
-de especies (default FALSE).}
+\item{normalize_spaces}{If TRUE, replaces spaces with "_" in species names
+(default FALSE).}
 }
 \value{
-Data.frame con columna "Species" y columnas "charN" o nombres propios.
+Data.frame with a "Species" column and "charN" or custom-named columns.
 }
 \description{
 Reads a character CSV file and prepares it for MultiMapR

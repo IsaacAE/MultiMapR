@@ -4,13 +4,13 @@
 \alias{.build_legend_data}
 \title{Builds structured legend data grouped by character for export}
 \usage{
-.build_legend_data(colores_por_car, caracteres)
+.build_legend_data(colors_by_char, characters)
 }
 \arguments{
-\item{colores_por_car}{Named list \emph{character} → named vector
-\emph{state → color}.}
+\item{colors_by_char}{Named list \emph{character} -> named vector
+\emph{state -> color}.}
 
-\item{caracteres}{Character vector of character names to include.}
+\item{characters}{Character vector of character names to include.}
 }
 \value{
 List with elements \code{by_char}, \code{labels}, and \code{colors}.
@@ -18,7 +18,7 @@ List with elements \code{by_char}, \code{labels}, and \code{colors}.
 \description{
 Returns two parallel representations of the same colour mapping:
 \describe{
-\item{\code{by_char}}{Named list \emph{character} → \code{list(labels, colors)},
+\item{\code{by_char}}{Named list \emph{character} -> \code{list(labels, colors)},
 consumed by \code{export_multimapr_tree(legend_by_char = ...)} to draw
 one labelled block per character.}
 \item{\code{labels} / \code{colors}}{Flat parallel vectors for legacy

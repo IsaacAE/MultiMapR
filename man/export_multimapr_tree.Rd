@@ -2,7 +2,7 @@
 % Please edit documentation in R/export_multimapr_tree.R
 \name{export_multimapr_tree}
 \alias{export_multimapr_tree}
-\title{Exporta un árbol filogenético multi-historia evolutiva}
+\title{Exports a multi-history evolutionary phylogenetic tree}
 \usage{
 export_multimapr_tree(
   tree,
@@ -12,7 +12,7 @@ export_multimapr_tree(
   format = "png",
   lwd = 3,
   label_offset = 0.3,
-  rango_desfase = 0.1,
+  offset_range = 0.1,
   mar = c(1, 1, 1, 4),
   width = NULL,
   height = NULL,
@@ -20,59 +20,61 @@ export_multimapr_tree(
   legend_labels = NULL,
   legend_colors = NULL,
   legend_corner = "bottomleft",
-  legend_title = NULL
+  legend_title = NULL,
+  overlay_fn = NULL,
+  hide_fan_labels = FALSE
 )
 }
 \arguments{
-\item{tree}{Objeto \code{\link[ape]{read.tree}} de clase \code{phylo}.}
+\item{tree}{\code{\link[ape]{read.tree}} object of class \code{phylo}.}
 
-\item{color_list}{Lista de N vectores de caracteres (colores R/CSS válidos).
-Cada vector debe tener exactamente \code{nrow(tree$edge)}
-elementos (uno por arista).}
+\item{color_list}{List of N character vectors (valid R/CSS colors).
+Each vector must have exactly \code{nrow(tree$edge)}
+elements (one per edge).}
 
-\item{filename}{Nombre del archivo de salida \strong{sin extensión}.
-La extensión correcta se añade automáticamente.}
+\item{filename}{Output filename \strong{without extension}.
+The correct extension is added automatically.}
 
-\item{type}{Topología del árbol: \code{"phylogram"} (default),
-\code{"cladogram"} o \code{"fan"}.}
+\item{type}{Tree topology: \code{"phylogram"} (default),
+\code{"cladogram"} or \code{"fan"}.}
 
-\item{format}{Formato de salida: \code{"png"} (default) o \code{"pdf"}.}
+\item{format}{Output format: \code{"png"} (default) or \code{"pdf"}.}
 
-\item{lwd}{Grosor de las ramas (default: \code{3}).}
+\item{lwd}{Branch width (default: \code{3}).}
 
-\item{label_offset}{Distancia entre el extremo de los terminales y sus
-etiquetas, en unidades de coordenadas de datos
+\item{label_offset}{Distance between the tip endpoints and their
+labels, in data coordinate units
 (default: \code{0.3}).}
 
-\item{rango_desfase}{Amplitud total del rango de desfase en Y.  El vector
-\code{desfases_y} se construye como
-\code{seq(-rango, rango, length.out = N)}.
-Con \code{N = 1} el desfase es siempre cero (default: \code{0.1}).}
+\item{offset_range}{Total amplitude of the Y offset range. The vector
+\code{offsets_y} is built as
+\code{seq(-range, range, length.out = N)}.
+With \code{N = 1} the offset is always zero (default: \code{0.1}).}
 
-\item{mar}{Márgenes del gráfico como vector \code{c(b, l, t, r)}
-en líneas (default: \code{c(1, 1, 1, 4)}).}
+\item{mar}{Plot margins as vector \code{c(b, l, t, r)}
+in lines (default: \code{c(1, 1, 1, 4)}).}
 }
 \value{
-Invisible: ruta completa del archivo generado (string).
+Invisible: full path of the generated file (string).
 }
 \description{
-Superpone N historias evolutivas (vectores de colores de ramas) sobre una
-filogenia soportando tres tipos de topología y dos formatos de salida.
-Aplica la estrategia de "Canvas en Blanco" con desfase diagonal isótropo
-calculado al vuelo a partir de los parámetros físicos reales del dispositivo.
+Overlays N evolutionary histories (branch color vectors) onto a
+phylogeny, supporting three topology types and two output formats.
+Applies the "Blank Canvas" strategy with isotropic diagonal offset
+calculated on the fly from the actual physical parameters of the device.
 }
-\section{Flujo interno}{
+\section{Internal workflow}{
 
 \enumerate{
-\item Validación exhaustiva de argumentos.
-\item Cálculo dinámico de dimensiones (alto ∝ Ntip; fan = cuadrado).
-\item Apertura del dispositivo gráfico (PNG @ 300 dpi, o PDF).
-\item Canvas en Blanco: \code{plot(tree, edge.color="transparent")}
-puebla \code{.PlotPhyloEnv} sin renderizar aristas.
-\item Extracción de coordenadas nodales y parámetros físicos del lienzo.
-\item Cálculo al vuelo de desfases isótropos (escala_x/escala_y).
-\item Renderizado por topología (phylogram / cladogram / fan).
-\item Cierre garantizado del dispositivo vía \code{finally}.
+\item Exhaustive argument validation.
+\item Dynamic dimension calculation (height ∝ Ntip; fan = square).
+\item Graphics device opening (PNG @ 300 dpi, or PDF).
+\item Blank Canvas: \code{plot(tree, edge.color="transparent")}
+populates \code{.PlotPhyloEnv} without rendering edges.
+\item Extraction of nodal coordinates and physical canvas parameters.
+\item On-the-fly calculation of isotropic offsets (scale_x/scale_y).
+\item Topology-based rendering (phylogram / cladogram / fan).
+\item Guaranteed device closure via \code{finally}.
 }
 }
 
@@ -89,15 +91,15 @@ ec3 <- sample(c("mediumpurple","gold3",         "gray70"), n_e, replace = TRUE)
 
 # Phylogram PNG
 export_multimapr_tree(tree, list(ec1, ec2, ec3),
-                      "mi_arbol_phylogram", type = "phylogram", format = "png")
+                      "my_tree_phylogram", type = "phylogram", format = "png")
 
 # Cladogram PDF
 export_multimapr_tree(tree, list(ec1, ec2),
-                      "mi_arbol_cladogram", type = "cladogram", format = "pdf")
+                      "my_tree_cladogram", type = "cladogram", format = "pdf")
 
 # Fan PNG
 export_multimapr_tree(tree, list(ec1, ec2, ec3),
-                      "mi_arbol_fan",       type = "fan",       format = "png")
+                      "my_tree_fan",       type = "fan",       format = "png")
 }
 
 }

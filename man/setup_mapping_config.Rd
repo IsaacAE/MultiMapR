@@ -2,24 +2,24 @@
 % Please edit documentation in R/cli_menu.R
 \name{setup_mapping_config}
 \alias{setup_mapping_config}
-\title{Orquesta todos los menús interactivos y devuelve la lista de configuración}
+\title{Orchestrates all interactive menus and returns the configuration list}
 \usage{
-setup_mapping_config(filogenia, datos_caracteres)
+setup_mapping_config(phylogeny, character_data)
 }
 \arguments{
-\item{filogenia}{Objeto \code{phylo} (ape).}
+\item{phylogeny}{\code{phylo} object (ape).}
 
-\item{datos_caracteres}{Data.frame con columna \code{"Species"} y caracteres.}
+\item{character_data}{Data.frame with a \code{"Species"} column and characters.}
 }
 \value{
-Lista de configuración, o invisible(NULL) si el usuario cancela.
+Configuration list, or invisible(NULL) if the user cancels.
 }
 \description{
-Recorre los menús de tipo de mapeo, caracteres, colores, algoritmo, grosor,
-topología, longitudes de rama y opciones de exportación, y empaqueta todas
-las decisiones del usuario en una lista \code{config} homogénea que consumen
-las funciones de renderizado de \code{main_MultiMapR.R}.
+Walks through menus for mapping type, characters, colors, algorithm,
+line width, tree topology, branch lengths, and export options, then
+packages all user decisions into a homogeneous \code{config} list consumed
+by the rendering functions in \code{main_MultiMapR.R}.
 }
 \seealso{
-\code{\link{ejecutar_filogenia}}
+\code{\link{run_phylogeny}}
 }

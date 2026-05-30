@@ -1,380 +1,381 @@
 ################################################################################
 # load_data.R
 #
-# Utilidades para cargar y preparar datos filogenéticos en MultiMapR.
+# Utilities to load and prepare phylogenetic data in MultiMapR.
 #
-# FUNCIÓN PRINCIPAL:
-#   load_data(ruta_arbol, ruta_csv, ...)  →  list(arbol, caracteres)
+# MAIN FUNCTION:
+#   load_data(tree_path, csv_path, ...)  →  list(tree, characters)
 #
-# FORMATOS DE ÁRBOL SOPORTADOS:
+# SUPPORTED TREE FORMATS:
 #   .tre / .tree / .nwk  →  read.tree()   (Newick)
 #   .nex / .nexus        →  read.nexus()  (NEXUS)
-#   (detección automática por extensión; se puede forzar con formato_arbol=)
+#   (automatic detection by extension; can be forced with tree_format=)
 #
-# FORMATOS DE CSV SOPORTADOS:
-#   - Con o sin encabezado en los caracteres (detección automática)
-#   - Primera columna: nombres de especies (cualquier nombre de columna)
-#   - Caracteres numéricos y de texto (strings)
-#   - Inaplicables "-" y desconocidos "?" se preservan tal cual
-#   - Nombres de especies con espacios → se normalizan a "_" opcionalmente
-#   - BOM UTF-8 (archivos exportados desde Excel) eliminado automáticamente
+# SUPPORTED CSV FORMATS:
+#   - With or without a header for characters (automatic detection)
+#   - First column: species names (any column name)
+#   - Numeric and text (string) characters
+#   - Inapplicable "-" and unknown "?" are preserved as-is
+#   - Species names with spaces → optionally normalized to "_"
+#   - UTF-8 BOM (files exported from Excel) removed automatically
 #
-# NOTA: Este archivo forma parte del paquete MultiMapR. Las dependencias
-# (ape, tools) se declaran en DESCRIPTION; no se usa library() aquí.
+# NOTE: This file is part of the MultiMapR package. Dependencies
+# (ape, tools) are declared in DESCRIPTION; library() is not used here.
 ################################################################################
 
 
 # ============================================================================ #
-# MANEJO DE BOM
+# BOM HANDLING
 # ============================================================================ #
 
-#' Elimina el BOM UTF-8 (EF BB BF) si existe y devuelve la ruta a usar
+#' Removes the UTF-8 BOM (EF BB BF) if present and returns the path to use
 #'
-#' Si el archivo tiene BOM, copia el contenido sin los 3 bytes iniciales a un
-#' archivo temporal y devuelve su ruta. Si no tiene BOM devuelve la ruta original.
-#' El archivo temporal se elimina automáticamente al terminar la sesión de R.
+#' If the file has a BOM, copies the content without the first 3 bytes to a
+#' temporary file and returns its path. If there is no BOM, returns the original path.
+#' The temporary file is automatically deleted when the R session ends.
 #'
-#' @param ruta_csv Ruta al archivo original.
-#' @return Ruta al archivo limpio (temporal o la original).
-.quitar_bom <- function(ruta_csv) {
-  con <- file(ruta_csv, open = "rb")
+#' @param csv_path Path to the original file.
+#' @return Path to the clean file (temporary or original).
+.remove_bom <- function(csv_path) {
+  con <- file(csv_path, open = "rb")
   bom <- readBin(con, raw(), n = 3)
-  tiene_bom <- (length(bom) == 3 &&
-                  bom[1] == as.raw(0xEF) &&
-                  bom[2] == as.raw(0xBB) &&
-                  bom[3] == as.raw(0xBF))
+  has_bom <- (length(bom) == 3 &&
+                bom[1] == as.raw(0xEF) &&
+                bom[2] == as.raw(0xBB) &&
+                bom[3] == as.raw(0xBF))
 
-  if (!tiene_bom) {
+  if (!has_bom) {
     close(con)
-    return(ruta_csv)
+    return(csv_path)
   }
 
-  # Los 3 bytes del BOM ya fueron consumidos; leer el resto
-  contenido <- readBin(con, raw(), n = file.info(ruta_csv)$size)
+  # The 3 BOM bytes have already been consumed; read the rest
+  content <- readBin(con, raw(), n = file.info(csv_path)$size)
   close(con)
 
   tmp <- tempfile(fileext = ".csv")
   con_out <- file(tmp, open = "wb")
-  writeBin(contenido, con_out)
+  writeBin(content, con_out)
   close(con_out)
 
-  message("BOM UTF-8 detectado y eliminado para la lectura.")
+  message("UTF-8 BOM detected and removed for reading.")
   tmp
 }
 
 
 # ============================================================================ #
-# DETECCIÓN AUTOMÁTICA DE ENCABEZADO
+# AUTOMATIC HEADER DETECTION
 # ============================================================================ #
 
-#' Decide si un CSV tiene encabezado en las columnas de caracteres
+#' Decides whether a CSV has a header row for the character columns
 #'
-#' Heurística basada en la columna de especies (columna 1):
-#' los nombres de taxones siempre contienen espacio o guion bajo
-#' ("Homo_sapiens", "Homo sapiens"). Si la primera celda no tiene
-#' ninguno de los dos se trata como etiqueta de columna -> hay encabezado.
+#' Heuristic based on the species column (column 1):
+#' taxon names always contain a space or underscore
+#' ("Homo_sapiens", "Homo sapiens"). If the first cell has
+#' neither, it is treated as a column label -> there is a header.
 #'
-#'   "Species"               -> header = TRUE   (sin espacio ni "_")
+#'   "Species"               -> header = TRUE   (no space or "_")
 #'   "Taxon"                 -> header = TRUE
-#'   "Saccopteryx bilineata" -> header = FALSE  (tiene espacio)
-#'   "Passer_domesticus"     -> header = FALSE  (tiene "_")
+#'   "Saccopteryx bilineata" -> header = FALSE  (has space)
+#'   "Passer_domesticus"     -> header = FALSE  (has "_")
 #'
-#' @param ruta_csv  Ruta al archivo CSV (ya sin BOM).
-#' @param sep       Separador de campos (default ",").
-#' @return TRUE si se detecta encabezado, FALSE si no.
-.detectar_header <- function(ruta_csv, sep = ",") {
-  primera <- read.csv(ruta_csv, header = FALSE, sep = sep,
-                      stringsAsFactors = FALSE, nrows = 1,
-                      colClasses = "character")
+#' @param csv_path  Path to the CSV file (already BOM-free).
+#' @param sep       Field separator (default ",").
+#' @return TRUE if a header is detected, FALSE otherwise.
+.detect_header <- function(csv_path, sep = ",") {
+  first_row <- read.csv(csv_path, header = FALSE, sep = sep,
+                        stringsAsFactors = FALSE, nrows = 1,
+                        colClasses = "character")
 
-  if (nrow(primera) < 1 || ncol(primera) < 1) return(FALSE)
+  if (nrow(first_row) < 1 || ncol(first_row) < 1) return(FALSE)
 
-  celda_sp <- trimws(as.character(primera[1, 1]))
+  species_cell <- trimws(as.character(first_row[1, 1]))
 
-  # Un nombre de taxon tiene espacio o guion bajo ("Homo_sapiens",
-  # "Homo sapiens"). Una etiqueta de columna ("Species", "Taxon") no.
-  parece_taxon <- grepl("[ _]", celda_sp)
-  !parece_taxon
+  # A taxon name has a space or underscore ("Homo_sapiens",
+  # "Homo sapiens"). A column label ("Species", "Taxon") does not.
+  looks_like_taxon <- grepl("[ _]", species_cell)
+  !looks_like_taxon
 }
 
 
 # ============================================================================ #
-# NORMALIZACIÓN DE NOMBRES DE COLUMNAS
+# COLUMN NAME NORMALIZATION
 # ============================================================================ #
 
-#' Genera nombres de caracteres seguros para R
+#' Generates R-safe character names
 #'
-#' Si el CSV tiene encabezado usa esos nombres (sanitizados).
-#' Si no tiene encabezado genera "char1", "char2", …
+#' If the CSV has a header, those names are used (sanitized).
+#' If there is no header, generates "char1", "char2", ...
 #'
-#' @param nombres_raw  Vector con los nombres crudos de las columnas de caracteres.
-#'                     NULL o vacío → se generan nombres automáticos.
-#' @param n            Número de columnas de caracteres.
-#' @return Character vector de longitud n.
-.normalizar_nombres_char <- function(nombres_raw, n) {
-  if (is.null(nombres_raw) || length(nombres_raw) == 0) {
+#' @param raw_names  Vector with the raw names of the character columns.
+#'                   NULL or empty → automatic names are generated.
+#' @param n          Number of character columns.
+#' @return Character vector of length n.
+.normalize_char_names <- function(raw_names, n) {
+  if (is.null(raw_names) || length(raw_names) == 0) {
     return(paste0("char", seq_len(n)))
   }
-  nombres <- make.names(trimws(nombres_raw), unique = TRUE)
-  vacios  <- nchar(nombres) == 0 | grepl("^V[0-9]+$", nombres)
-  nombres[vacios] <- paste0("char", which(vacios))
-  nombres
+  names   <- make.names(trimws(raw_names), unique = TRUE)
+  empty   <- nchar(names) == 0 | grepl("^V[0-9]+$", names)
+  names[empty] <- paste0("char", which(empty))
+  names
 }
 
 
 # ============================================================================ #
-# LECTURA DEL ÁRBOL
+# TREE READING
 # ============================================================================ #
 
-#' Sanitiza un archivo de árbol para compatibilidad con ape
+#' Sanitizes a tree file for compatibility with ape
 #'
-#' Elimina problemas comunes producidos por distintos programas filogenéticos:
-#'   - Saltos de línea Windows (\r\n → \n)
-#'   - Comentarios numerados en TRANSLATE de Mesquite (`[0]`, `[1]`, ...)
-#'     que ape no puede parsear
+#' Removes common problems produced by different phylogenetic programs:
+#'   - Windows line endings (\r\n → \n)
+#'   - Numbered comments in Mesquite TRANSLATE blocks (`[0]`, `[1]`, ...)
+#'     that ape cannot parse
 #'
-#' @param ruta_arbol Ruta al archivo original.
-#' @return Ruta al archivo limpio (temporal si hubo cambios, original si no).
-.sanitizar_arbol <- function(ruta_arbol) {
-  lineas <- readLines(ruta_arbol, warn = FALSE)
+#' @param tree_path Path to the original file.
+#' @return Path to the clean file (temporary if changes were made, original otherwise).
+.sanitize_tree <- function(tree_path) {
+  lines <- readLines(tree_path, warn = FALSE)
 
-  # 1) readLines ya maneja \r\n en la mayoría de plataformas,
-  #    pero forzamos limpieza explícita por si acaso
-  lineas <- gsub("\r", "", lineas)
+  # 1) readLines already handles \r\n on most platforms,
+  #    but we force explicit cleanup just in case
+  lines <- gsub("\r", "", lines)
 
-  # 2) Eliminar comentarios numéricos al inicio de línea: "[0]", "[12]", etc.
-  #    Patrón: línea que empieza con espacios/tabs opcionales seguidos de [N]
-  lineas <- gsub("^(\\s*)\\[[0-9]+\\]\\s*", "\\1", lineas, perl = TRUE)
+  # 2) Remove numeric comments at the start of lines: "[0]", "[12]", etc.
+  #    Pattern: line starting with optional spaces/tabs followed by [N]
+  lines <- gsub("^(\\s*)\\[[0-9]+\\]\\s*", "\\1", lines, perl = TRUE)
 
-  tmp <- tempfile(fileext = tools::file_ext(ruta_arbol))
-  writeLines(lineas, tmp)
+  tmp <- tempfile(fileext = tools::file_ext(tree_path))
+  writeLines(lines, tmp)
   tmp
 }
 
 
 #' Reads a phylogenetic tree file (Newick or NEXUS)
 #'
-#' Compatible con archivos de Mesquite, TNT, WinClada y otros programas
-#' que producen variantes no estándar del formato NEXUS/Newick.
+#' Compatible with files from Mesquite, TNT, WinClada and other programs
+#' that produce non-standard variants of the NEXUS/Newick format.
 #'
-#' @param ruta_arbol    Ruta al archivo de árbol.
-#' @param formato_arbol "auto" (default), "newick" o "nexus".
-#' @return Objeto phylo.
-read_tree <- function(ruta_arbol, formato_arbol = "auto") {
-  if (!file.exists(ruta_arbol))
-    stop(paste0("No se encontró el archivo de árbol: '", ruta_arbol, "'"))
+#' @param tree_path    Path to the tree file.
+#' @param tree_format  "auto" (default), "newick" or "nexus".
+#' @return phylo object.
+read_tree <- function(tree_path, tree_format = "auto") {
+  if (!file.exists(tree_path))
+    stop(paste0("Tree file not found: '", tree_path, "'"))
 
-  fmt <- tolower(trimws(formato_arbol))
+  fmt <- tolower(trimws(tree_format))
 
   if (fmt == "auto") {
-    ext <- tolower(tools::file_ext(ruta_arbol))
+    ext <- tolower(tools::file_ext(tree_path))
     fmt <- if (ext %in% c("nex", "nexus")) "nexus" else "newick"
   }
 
-  # Limpiar el archivo antes de parsear
-  ruta_limpia <- .sanitizar_arbol(ruta_arbol)
+  # Sanitize the file before parsing
+  clean_path <- .sanitize_tree(tree_path)
 
-  arbol <- tryCatch({
-    if (fmt == "nexus") read.nexus(ruta_limpia) else read.tree(ruta_limpia)
+  tree <- tryCatch({
+    if (fmt == "nexus") read.nexus(clean_path) else read.tree(clean_path)
   }, error = function(e) {
-    # Si falla con el formato detectado, intentar el otro
-    fmt_alt <- if (fmt == "nexus") "newick" else "nexus"
+    # If the detected format fails, try the other one
+    alt_fmt <- if (fmt == "nexus") "newick" else "nexus"
     message(sprintf(
-      "Formato '%s' falló (%s). Intentando '%s'...", fmt, e$message, fmt_alt
+      "Format '%s' failed (%s). Trying '%s'...", fmt, e$message, alt_fmt
     ))
     tryCatch(
-      if (fmt_alt == "nexus") read.nexus(ruta_limpia) else read.tree(ruta_limpia),
+      if (alt_fmt == "nexus") read.nexus(clean_path) else read.tree(clean_path),
       error = function(e2) stop(paste0(
-        "No se pudo leer el árbol '", ruta_arbol, "'.\n",
-        "  Como ", fmt,     ": ", e$message, "\n",
-        "  Como ", fmt_alt, ": ", e2$message
+        "Could not read tree '", tree_path, "'.\n",
+        "  As ", fmt,     ": ", e$message, "\n",
+        "  As ", alt_fmt, ": ", e2$message
       ))
     )
   })
 
-  if (is.null(arbol))
-    stop(paste0("No se pudo leer el árbol desde '", ruta_arbol, "'."))
+  if (is.null(tree))
+    stop(paste0("Could not read tree from '", tree_path, "'."))
 
-  arbol
+  tree
 }
 
 
 # ============================================================================ #
-# LECTURA DEL CSV
+# CSV READING
 # ============================================================================ #
 
 #' Reads a character CSV file and prepares it for MultiMapR
 #'
-#' @param ruta_csv            Ruta al archivo CSV.
-#' @param sep                 Separador de campos (default ",").
-#' @param col_especies        Índice o nombre de la columna de especies (default 1).
-#' @param normalizar_espacios Si TRUE, reemplaza espacios por "_" en los nombres
-#'                            de especies (default FALSE).
-#' @return Data.frame con columna "Species" y columnas "charN" o nombres propios.
-read_csv_characters <- function(ruta_csv,
-                                sep                  = ",",
-                                col_especies         = 1,
-                                normalizar_espacios  = FALSE) {
+#' @param csv_path           Path to the CSV file.
+#' @param sep                Field separator (default ",").
+#' @param species_col        Index or name of the species column (default 1).
+#' @param normalize_spaces   If TRUE, replaces spaces with "_" in species names
+#'                           (default FALSE).
+#' @return Data.frame with a "Species" column and "charN" or custom-named columns.
+read_csv_characters <- function(csv_path,
+                                sep               = ",",
+                                species_col       = 1,
+                                normalize_spaces  = FALSE) {
 
-  if (!file.exists(ruta_csv))
-    stop(paste0("No se encontró el archivo CSV: '", ruta_csv, "'"))
+  if (!file.exists(csv_path))
+    stop(paste0("CSV file not found: '", csv_path, "'"))
 
-  # Eliminar BOM si existe (Excel UTF-8 lo agrega); trabajar sobre archivo limpio
-  ruta_limpia  <- .quitar_bom(ruta_csv)
-  tiene_header <- .detectar_header(ruta_limpia, sep = sep)
+  # Remove BOM if present (Excel UTF-8 adds it); work on clean file
+  clean_path  <- .remove_bom(csv_path)
+  has_header  <- .detect_header(clean_path, sep = sep)
 
-  datos_raw <- read.csv(ruta_limpia,
-                        header           = tiene_header,
-                        sep              = sep,
-                        stringsAsFactors = FALSE,
-                        colClasses       = "character",
-                        check.names      = FALSE)
+  raw_data <- read.csv(clean_path,
+                       header           = has_header,
+                       sep              = sep,
+                       stringsAsFactors = FALSE,
+                       colClasses       = "character",
+                       check.names      = FALSE)
 
-  if (ncol(datos_raw) < 2)
-    stop("El CSV debe tener al menos dos columnas: especies + un carácter.")
+  if (ncol(raw_data) < 2)
+    stop("The CSV must have at least two columns: species + one character.")
 
-  # --- Extraer columna de especies ---
-  if (is.character(col_especies)) {
-    if (!col_especies %in% colnames(datos_raw))
-      stop(paste0("No se encontró la columna de especies '", col_especies, "'."))
-    idx_sp <- which(colnames(datos_raw) == col_especies)
+  # --- Extract species column ---
+  if (is.character(species_col)) {
+    if (!species_col %in% colnames(raw_data))
+      stop(paste0("Species column '", species_col, "' not found."))
+    sp_idx <- which(colnames(raw_data) == species_col)
   } else {
-    idx_sp <- as.integer(col_especies)
-    if (idx_sp < 1 || idx_sp > ncol(datos_raw))
-      stop(paste0("Índice de columna de especies fuera de rango: ", idx_sp))
+    sp_idx <- as.integer(species_col)
+    if (sp_idx < 1 || sp_idx > ncol(raw_data))
+      stop(paste0("Species column index out of range: ", sp_idx))
   }
 
-  especies <- trimws(datos_raw[[idx_sp]])
-  if (normalizar_espacios)
-    especies <- gsub(" ", "_", especies)
+  species <- trimws(raw_data[[sp_idx]])
+  if (normalize_spaces)
+    species <- gsub(" ", "_", species)
 
-  # --- Columnas de caracteres (todo excepto la columna de especies) ---
-  idx_char   <- setdiff(seq_len(ncol(datos_raw)), idx_sp)
-  datos_char <- datos_raw[, idx_char, drop = FALSE]
+  # --- Character columns (everything except the species column) ---
+  char_idx   <- setdiff(seq_len(ncol(raw_data)), sp_idx)
+  char_data  <- raw_data[, char_idx, drop = FALSE]
 
-  # Determinar nombres de columnas de caracteres
-  nombres_char <- if (tiene_header) colnames(datos_raw)[idx_char] else NULL
-  nombres_char <- .normalizar_nombres_char(nombres_char, ncol(datos_char))
+  # Determine character column names
+  char_names <- if (has_header) colnames(raw_data)[char_idx] else NULL
+  char_names <- .normalize_char_names(char_names, ncol(char_data))
 
-  # Construir data.frame final
-  resultado           <- as.data.frame(datos_char, stringsAsFactors = FALSE)
-  colnames(resultado) <- nombres_char
-  resultado           <- data.frame(Species = especies, resultado,
-                                    stringsAsFactors = FALSE,
-                                    check.names      = FALSE)
-  rownames(resultado) <- NULL
+  # Build final data.frame
+  result           <- as.data.frame(char_data, stringsAsFactors = FALSE)
+  colnames(result) <- char_names
+  result           <- data.frame(Species = species, result,
+                                 stringsAsFactors = FALSE,
+                                 check.names      = FALSE)
+  rownames(result) <- NULL
 
   message(sprintf(
-    "CSV cargado: %d especies, %d carácter(es). Encabezado %s.",
-    nrow(resultado),
-    length(nombres_char),
-    if (tiene_header) "detectado (nombres propios)" else "no detectado (nombres automáticos)"
+    "CSV loaded: %d species, %d character(s). Header %s.",
+    nrow(result),
+    length(char_names),
+    if (has_header) "detected (custom names)" else "not detected (automatic names)"
   ))
 
-  resultado
+  result
 }
 
 
 # ============================================================================ #
-# VALIDACIÓN DE COMPATIBILIDAD ÁRBOL ↔ CSV
+# TREE ↔ CSV COMPATIBILITY VALIDATION
 # ============================================================================ #
 
-#' Verifica que los nombres del CSV coincidan con los tip.labels del árbol
+#' Checks that the CSV names match the tree tip.labels
 #'
-#' @param arbol    Objeto phylo.
-#' @param datos    Data.frame con columna "Species".
-#' @param estricto Si TRUE lanza error ante cualquier discrepancia;
-#'                 si FALSE (default) solo advierte y devuelve los no emparejados.
-#' @return Invisible: vector de nombres del CSV que no están en el árbol.
-validar_compatibilidad <- function(arbol, datos, estricto = FALSE) {
-  tips          <- arbol$tip.label
-  sp            <- datos$Species
-  sin_par_csv   <- setdiff(sp,   tips)
-  sin_par_arbol <- setdiff(tips, sp)
-  ok            <- length(sin_par_csv) == 0 && length(sin_par_arbol) == 0
+#' @param tree     phylo object.
+#' @param data     Data.frame with a "Species" column.
+#' @param strict   If TRUE raises an error on any discrepancy;
+#'                 if FALSE (default) only warns and returns unmatched names.
+#' @return Invisible: vector of CSV names not found in the tree.
+validate_compatibility <- function(tree, data, strict = FALSE) {
+  tips            <- tree$tip.label
+  sp              <- data$Species
+  unmatched_csv   <- setdiff(sp,   tips)
+  unmatched_tree  <- setdiff(tips, sp)
+  ok              <- length(unmatched_csv) == 0 && length(unmatched_tree) == 0
 
   if (!ok) {
-    msg_partes <- character(0)
-    if (length(sin_par_csv) > 0)
-      msg_partes <- c(msg_partes,
-                      paste0("En CSV pero NO en árbol (", length(sin_par_csv), "): ",
-                             paste(head(sin_par_csv, 10), collapse = ", "),
-                             if (length(sin_par_csv) > 10) " ..." else ""))
-    if (length(sin_par_arbol) > 0)
-      msg_partes <- c(msg_partes,
-                      paste0("En árbol pero NO en CSV (", length(sin_par_arbol), "): ",
-                             paste(head(sin_par_arbol, 10), collapse = ", "),
-                             if (length(sin_par_arbol) > 10) " ..." else ""))
+    msg_parts <- character(0)
+    if (length(unmatched_csv) > 0)
+      msg_parts <- c(msg_parts,
+                     paste0("In CSV but NOT in tree (", length(unmatched_csv), "): ",
+                            paste(head(unmatched_csv, 10), collapse = ", "),
+                            if (length(unmatched_csv) > 10) " ..." else ""))
+    if (length(unmatched_tree) > 0)
+      msg_parts <- c(msg_parts,
+                     paste0("In tree but NOT in CSV (", length(unmatched_tree), "): ",
+                            paste(head(unmatched_tree, 10), collapse = ", "),
+                            if (length(unmatched_tree) > 10) " ..." else ""))
 
-    msg <- paste(c("Discrepancias entre árbol y CSV:", msg_partes), collapse = "\n  ")
-    if (estricto) stop(msg) else warning(msg)
+    msg <- paste(c("Discrepancies between tree and CSV:", msg_parts), collapse = "\n  ")
+    if (strict) stop(msg) else warning(msg)
   } else {
-    message("Validación OK: los ", length(tips), " tips coinciden con el CSV.")
+    message("Validation OK: all ", length(tips), " tips match the CSV.")
   }
 
-  invisible(sin_par_csv)
+  invisible(unmatched_csv)
 }
 
 
 # ============================================================================ #
-# FUNCIÓN PRINCIPAL
+# MAIN FUNCTION
 # ============================================================================ #
 
 #' Loads a tree and a character CSV ready to use with MultiMapR
 #'
-#' Detecta automáticamente:
-#'   - Formato del árbol (Newick / NEXUS) por extensión.
-#'   - Presencia o ausencia de encabezado en el CSV.
-#'   - BOM UTF-8 en el CSV (archivos exportados desde Excel).
-#'   - Tipos de caracteres (numéricos o strings): se preservan como texto.
+#' Automatically detects:
+#'   - Tree format (Newick / NEXUS) by extension.
+#'   - Presence or absence of a header in the CSV.
+#'   - UTF-8 BOM in the CSV (files exported from Excel).
+#'   - Character types (numeric or strings): preserved as text.
 #'
-#' @param ruta_arbol          Ruta al archivo de árbol (.tre, .nwk, .nex, .nexus, …).
-#' @param ruta_csv            Ruta al archivo CSV de caracteres.
-#' @param sep                 Separador del CSV (default ",").
-#' @param col_especies        Columna de especies: índice entero o nombre (default 1).
-#' @param normalizar_espacios Si TRUE convierte espacios a "_" en nombres de
-#'                            especies (útil cuando árbol usa "_" y CSV usa " ").
-#' @param formato_arbol       "auto" (default), "newick" o "nexus".
-#' @param estricto            Si TRUE, error ante discrepancias árbol/CSV (default FALSE).
+#' @param tree_path          Path to the tree file (.tre, .nwk, .nex, .nexus, ...).
+#' @param csv_path           Path to the character CSV file.
+#' @param sep                CSV field separator (default ",").
+#' @param species_col        Species column: integer index or column name (default 1).
+#' @param normalize_spaces   If TRUE converts spaces to "_" in species names
+#'                           (useful when the tree uses "_" and the CSV uses " ").
+#' @param tree_format        "auto" (default), "newick" or "nexus".
+#' @param strict             If TRUE, raises an error on tree/CSV discrepancies
+#'                           (default FALSE).
 #'
-#' @return Lista con:
-#'   \item{arbol}{Objeto phylo listo para ape / MultiMapR.}
-#'   \item{caracteres}{Data.frame con columna "Species" y columnas de caracteres.}
+#' @return List with:
+#'   \item{tree}{phylo object ready for ape / MultiMapR.}
+#'   \item{characters}{Data.frame with a "Species" column and character columns.}
 #'
 #' @examples
 #' \dontrun{
-#'   # CSV sin encabezado (caracteres numéricos)
+#'   # CSV without header (numeric characters)
 #'   d1 <- load_data("tree2_jadc.tre", "Matriz_JAIR.csv")
-#'   execute_phylogeny(d1$arbol, d1$caracteres)
+#'   execute_phylogeny(d1$tree, d1$characters)
 #'
-#'   # CSV con BOM y nombres de especie con espacios
+#'   # CSV with BOM and species names with spaces
 #'   d2 <- load_data("bats_tre.tre", "bats_matrix.csv",
-#'                   normalizar_espacios = TRUE)
-#'   execute_phylogeny(d2$arbol, d2$caracteres)
+#'                   normalize_spaces = TRUE)
+#'   execute_phylogeny(d2$tree, d2$characters)
 #'
-#'   # Separador punto y coma, columna de especies por nombre
-#'   d3 <- load_data("arbol.nex", "datos.csv",
-#'                   sep = ";", col_especies = "Taxon")
-#'   execute_phylogeny(d3$arbol, d3$caracteres)
+#'   # Semicolon separator, species column by name
+#'   d3 <- load_data("tree.nex", "data.csv",
+#'                   sep = ";", species_col = "Taxon")
+#'   execute_phylogeny(d3$tree, d3$characters)
 #'
-#'   # Uso polimórfico: pasar rutas directamente al orquestador
-#'   execute_phylogeny("mi_arbol.tre", "mis_caracteres.csv")
+#'   # Polymorphic use: pass paths directly to the orchestrator
+#'   execute_phylogeny("my_tree.tre", "my_characters.csv")
 #' }
-load_data <- function(ruta_arbol,
-                      ruta_csv,
-                      sep                  = ",",
-                      col_especies         = 1,
-                      normalizar_espacios  = FALSE,
-                      formato_arbol        = "auto",
-                      estricto             = FALSE) {
+load_data <- function(tree_path,
+                      csv_path,
+                      sep               = ",",
+                      species_col       = 1,
+                      normalize_spaces  = FALSE,
+                      tree_format       = "auto",
+                      strict            = FALSE) {
 
-  arbol      <- read_tree(ruta_arbol, formato_arbol = formato_arbol)
-  caracteres <- read_csv_characters(ruta_csv,
-                                    sep                 = sep,
-                                    col_especies        = col_especies,
-                                    normalizar_espacios = normalizar_espacios)
+  tree       <- read_tree(tree_path, tree_format = tree_format)
+  characters <- read_csv_characters(csv_path,
+                                    sep              = sep,
+                                    species_col      = species_col,
+                                    normalize_spaces = normalize_spaces)
 
-  validar_compatibilidad(arbol, caracteres, estricto = estricto)
+  validate_compatibility(tree, characters, strict = strict)
 
-  list(arbol = arbol, caracteres = caracteres)
+  list(tree = tree, characters = characters)
 }

@@ -2,16 +2,16 @@
 % Please edit documentation in R/cli_menu.R
 \name{check_exit}
 \alias{check_exit}
-\title{Verifica si el usuario quiere salir}
+\title{Checks whether the user wants to exit}
 \usage{
 check_exit(input)
 }
 \arguments{
-\item{input}{String ingresado por el usuario.}
+\item{input}{String entered by the user.}
 }
 \value{
-TRUE si el usuario escribió 'exit', FALSE en caso contrario.
+TRUE if the user typed 'exit', FALSE otherwise.
 }
 \description{
-Verifica si el usuario quiere salir
+Checks whether the user wants to exit
 }
