@@ -638,6 +638,18 @@
 #'                      \code{offsets_y} is built as
 #'                      \code{seq(-range, range, length.out = N)}.
 #'                      With \code{N = 1} the offset is always zero (default: \code{0.1}).
+#' @param use_edge_length Logical. When \code{TRUE} (default) the tree is plotted
+#'                      with its original branch lengths (if present). When
+#'                      \code{FALSE} all edges are drawn with uniform length
+#'                      regardless of \code{tree$edge.length}.
+#' @param ladderize     Controls tip ordering before rendering. \code{FALSE}
+#'                      (default) preserves the original order. \code{TRUE}
+#'                      calls \code{ape::ladderize(right = FALSE)} (larger
+#'                      subclade at bottom). \code{"right"} calls
+#'                      \code{ape::ladderize(right = TRUE)} (larger subclade
+#'                      at top). Must match the value used in
+#'                      \code{execute_phylogeny()} to ensure export and screen
+#'                      render are identical.
 #' @param mar            Plot margins as vector \code{c(b, l, t, r)}
 #'                       in lines (default: \code{c(1, 1, 1, 4)}).
 #' @param width          Device width in inches. \code{NULL} = automatic (proportional to tip count).
@@ -691,6 +703,8 @@ export_multimapr_tree <- function(tree,
                                   lwd           = 3,
                                   label_offset  = 0.3,
                                   offset_range  = 0.1,
+                                  use_edge_length = TRUE,
+                                  ladderize       = FALSE,
                                   mar           = c(1, 1, 1, 4),
                                   # -- CUSTOM DIMENSION PARAMETERS -----------------------
                                   # NULL -> automatic dimensions are used, calculated
@@ -730,6 +744,18 @@ export_multimapr_tree <- function(tree,
   .emtree_validate_color_list(color_list, nrow(tree$edge))
   .emtree_validate_filename(filename)
   .emtree_validate_type_format(type, format)
+
+  # -- 0b. Apply ladderize / edge length BEFORE any rendering ----------------
+  # These transform the tree object used for ALL subsequent render steps so
+  # that the exported file matches what execute_phylogeny() drew on screen.
+  if (identical(ladderize, TRUE)) {
+    tree <- ladderize(tree, right = FALSE)
+  } else if (identical(ladderize, "right")) {
+    tree <- ladderize(tree, right = TRUE)
+  }
+  if (!isTRUE(use_edge_length)) {
+    tree$edge.length <- NULL
+  }
 
   if (!is.numeric(lwd)          || length(lwd) != 1L || lwd <= 0)
     stop("`lwd` must be a positive number.")
@@ -1107,6 +1133,13 @@ if (FALSE) {
 #' @param label_offset  Distance between tip endpoints and their
 #'                      labels (default: \code{0.3}).
 #' @param offset_range  Total amplitude of the Y offset range (default: \code{0.1}).
+#' @param use_edge_length Logical. When \code{TRUE} (default) branch lengths are
+#'                      used if present. When \code{FALSE} all branches are drawn
+#'                      with uniform length.
+#' @param ladderize     Controls tip ordering. \code{FALSE} (default) preserves
+#'                      original order. \code{TRUE} calls
+#'                      \code{ape::ladderize(right = FALSE)}. \code{"right"}
+#'                      calls \code{ape::ladderize(right = TRUE)}.
 #' @param legend_by_char Named list character -> list(labels, colors) for
 #'                       grouped legend. If not NULL takes precedence over
 #'                       \code{legend_labels} / \code{legend_colors}.
@@ -1126,6 +1159,8 @@ plot_multimapr_screen <- function(tree,
                                   lwd           = 3,
                                   label_offset  = 0.3,
                                   offset_range  = 0.1,
+                                  use_edge_length = TRUE,
+                                  ladderize       = FALSE,
                                   legend_by_char = NULL,
                                   legend_labels  = NULL,
                                   legend_colors  = NULL,
@@ -1144,6 +1179,16 @@ plot_multimapr_screen <- function(tree,
 
   .emtree_validate_tree(tree)
   .emtree_validate_color_list(color_list, nrow(tree$edge))
+
+  # Apply ladderize / edge length before rendering (mirrors export behavior)
+  if (identical(ladderize, TRUE)) {
+    tree <- ladderize(tree, right = FALSE)
+  } else if (identical(ladderize, "right")) {
+    tree <- ladderize(tree, right = TRUE)
+  }
+  if (!isTRUE(use_edge_length)) {
+    tree$edge.length <- NULL
+  }
 
   n_tips <- Ntip(tree)
   N      <- length(color_list)

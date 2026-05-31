@@ -326,18 +326,6 @@ setup_mapping_config <- function(phylogeny, character_data) {
     }
   }
 
-  # --- Branch width ------------------------------------------------------------
-  cat("\nBranch width (positive number; Enter = 2):\n")
-  cat("  Reference: thin \u2248 1, normal \u2248 2, thick \u2248 4, very thick \u2248 8\n")
-  width_str <- readline(prompt = "Width: ")
-  if (check_exit(width_str)) return(invisible(NULL))
-  width_val <- suppressWarnings(as.numeric(trimws(width_str)))
-  if (is.na(width_val) || width_val <= 0) {
-    cat("Invalid value, using 2.\n")
-    width_val <- 2
-  }
-  config$grosor <- width_val
-
   # --- Tree type ---------------------------------------------------------------
   valid_types <- c("phylogram", "cladogram", "fan")
   cat("\nTree type: phylogram / cladogram / fan\n")
@@ -351,13 +339,16 @@ setup_mapping_config <- function(phylogeny, character_data) {
   config$tipo_arbol <- tree_type
 
   # --- Dynamic offset range based on branch width ------------------------------
+  # branch_width is supplied as a parameter to execute_phylogeny() and
+  # recalculated there once config$grosor is known.  Here we set a placeholder
+  # using the default width (2) so config is always complete before rendering.
   # The offset between branches must grow proportionally to the width so
   # branches never overlap. The conversion factor varies by tree type because
   # data coordinates differ in scale:
-  #   · phylogram / cladogram: Y axis is linear (1 unit ≈ 1 tip),
+  #   . phylogram / cladogram: Y axis is linear (1 unit ~= 1 tip),
   #     empirical width->offset relation is ~0.012 units/pt.
-  #   · fan: coordinates are polar; spread is a percentage of the radius,
-  #     so a larger factor is needed (~0.0025 × R_max per pt).
+  #   . fan: coordinates are polar; spread is a percentage of the radius,
+  #     so a larger factor is needed (~0.0025 x R_max per pt).
   #     Since R_max is unknown here, a relative scale factor is used,
   #     adjusted automatically in .emtree_render_fan().
   offset_factor <- switch(tree_type,
@@ -366,7 +357,8 @@ setup_mapping_config <- function(phylogeny, character_data) {
                           "fan"        = 0.003,
                           0.012
   )
-  config$rango_desfase <- max(0.05, width_val * offset_factor)
+  config$grosor        <- 2          # default; overridden by execute_phylogeny()
+  config$rango_desfase <- max(0.05, config$grosor * offset_factor)
 
   # --- Branch lengths ----------------------------------------------------------
   if (!is.null(phylogeny$edge.length) && tree_type %in% c("phylogram", "fan")) {

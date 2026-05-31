@@ -1110,27 +1110,31 @@ plot_superimposed_characters <- function(filogenia, config,
   if (exportar) {
     cat("    \u2192 Exporting to:", paste0(fn_export, ".", config$export_format %||% "png"), "\n")
     export_multimapr_tree(
-      tree           = filogenia,
-      color_list     = lista_ec,
-      filename       = fn_export,
-      type           = tipo_arbol,
-      format         = config$export_format %||% "png",
-      lwd            = grosor1,
-      offset_range   = config$rango_desfase %||% 0.1,
-      legend_by_char = ley_data$by_char,
-      legend_corner  = config$legend_corner %||% "bottomleft"
+      tree            = filogenia,
+      color_list      = lista_ec,
+      filename        = fn_export,
+      type            = tipo_arbol,
+      format          = config$export_format %||% "png",
+      lwd             = grosor1,
+      offset_range    = config$rango_desfase %||% 0.1,
+      use_edge_length = isTRUE(config$use_edge_length),
+      ladderize       = config$ladderize %||% FALSE,
+      legend_by_char  = ley_data$by_char,
+      legend_corner   = config$legend_corner %||% "bottomleft"
     )
   }
 
   # SCREEN RENDER — integrated advanced visual engine
   plot_multimapr_screen(
-    tree           = filogenia,
-    color_list     = lista_ec,
-    type           = tipo_arbol,
-    lwd            = grosor1,
-    offset_range   = config$rango_desfase %||% 0.1,
-    legend_by_char = ley_data$by_char,
-    legend_corner  = config$legend_corner %||% "bottomleft"
+    tree            = filogenia,
+    color_list      = lista_ec,
+    type            = tipo_arbol,
+    lwd             = grosor1,
+    offset_range    = config$rango_desfase %||% 0.1,
+    use_edge_length = isTRUE(config$use_edge_length),
+    ladderize       = config$ladderize %||% FALSE,
+    legend_by_char  = ley_data$by_char,
+    legend_corner   = config$legend_corner %||% "bottomleft"
   )
 
   invisible(NULL)

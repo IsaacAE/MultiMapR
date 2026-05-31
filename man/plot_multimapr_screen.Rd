@@ -11,6 +11,8 @@ plot_multimapr_screen(
   lwd = 3,
   label_offset = 0.3,
   offset_range = 0.1,
+  use_edge_length = TRUE,
+  ladderize = FALSE,
   legend_by_char = NULL,
   legend_labels = NULL,
   legend_colors = NULL,
@@ -36,6 +38,15 @@ elements (one per edge).}
 labels (default: \code{0.3}).}
 
 \item{offset_range}{Total amplitude of the Y offset range (default: \code{0.1}).}
+
+\item{use_edge_length}{Logical. When \code{TRUE} (default) branch lengths are
+used if present. When \code{FALSE} all branches are drawn
+with uniform length.}
+
+\item{ladderize}{Controls tip ordering. \code{FALSE} (default) preserves
+original order. \code{TRUE} calls
+\code{ape::ladderize(right = FALSE)}. \code{"right"}
+calls \code{ape::ladderize(right = TRUE)}.}
 
 \item{legend_by_char}{Named list character -> list(labels, colors) for
 grouped legend. If not NULL takes precedence over

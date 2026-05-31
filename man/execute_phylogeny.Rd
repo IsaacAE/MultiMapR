@@ -7,7 +7,9 @@
 execute_phylogeny(
   phylogeny,
   character_data,
-  branch_width = NULL,
+  branch_width = 2,
+  use_edge_length = NULL,
+  ladderize = TRUE,
   label_offset = 0.3,
   sep = ",",
   species_col = 1,
@@ -22,8 +24,28 @@ execute_phylogeny(
 \item{character_data}{Data.frame with a "Species" column -- OR -- string path
 to the character CSV file.}
 
-\item{branch_width}{Branch width (default NULL = chosen by the user in
-the menu). A positive number overrides the menu.}
+\item{branch_width}{Branch width in points (default \code{2}).
+Reference values: thin \eqn{\approx} 1, normal = 2,
+thick \eqn{\approx} 4, very thick \eqn{\approx} 8.
+Previously requested interactively in the menu; now a
+direct parameter.}
+
+\item{use_edge_length}{Logical. When \code{TRUE} (default) and the tree
+carries branch lengths, they are used for proportional
+rendering (phylogram / fan). When \code{FALSE} all
+branches are drawn with uniform length (cladogram
+style), regardless of whether \code{edge.length} is
+present. When \code{NULL} (previous interactive
+behavior) the menu asks the user only if the tree has
+branch lengths and the topology supports them.}
+
+\item{ladderize}{Controls whether the tree is ladderized before
+plotting. \code{TRUE} (default) sorts clades so the
+larger subclade is always at the bottom
+(\code{ape::ladderize(tree, right = FALSE)}).
+\code{FALSE} leaves the tree in the original tip
+order. \code{"right"} ladderizes in the opposite
+direction (larger subclade at the top).}
 
 \item{label_offset}{Distance between tips and labels (default 0.3).}
 

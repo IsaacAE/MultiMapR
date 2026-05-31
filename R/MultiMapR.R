@@ -76,8 +76,26 @@
 #' @param phylogeny          phylo object -- OR -- string path to the tree file.
 #' @param character_data     Data.frame with a "Species" column -- OR -- string path
 #'                           to the character CSV file.
-#' @param branch_width       Branch width (default NULL = chosen by the user in
-#'                           the menu). A positive number overrides the menu.
+#' @param branch_width       Branch width in points (default \code{2}).
+#'                           Reference values: thin \eqn{\approx} 1, normal = 2,
+#'                           thick \eqn{\approx} 4, very thick \eqn{\approx} 8.
+#'                           Previously requested interactively in the menu; now a
+#'                           direct parameter.
+#' @param use_edge_length    Logical. When \code{TRUE} (default) and the tree
+#'                           carries branch lengths, they are used for proportional
+#'                           rendering (phylogram / fan). When \code{FALSE} all
+#'                           branches are drawn with uniform length (cladogram
+#'                           style), regardless of whether \code{edge.length} is
+#'                           present. When \code{NULL} (previous interactive
+#'                           behavior) the menu asks the user only if the tree has
+#'                           branch lengths and the topology supports them.
+#' @param ladderize          Controls whether the tree is ladderized before
+#'                           plotting. \code{TRUE} (default) sorts clades so the
+#'                           larger subclade is always at the bottom
+#'                           (\code{ape::ladderize(tree, right = FALSE)}).
+#'                           \code{FALSE} leaves the tree in the original tip
+#'                           order. \code{"right"} ladderizes in the opposite
+#'                           direction (larger subclade at the top).
 #' @param label_offset       Distance between tips and labels (default 0.3).
 #' @param sep                CSV field separator (default ",").
 #'                           Only used when file paths are passed.
@@ -96,7 +114,9 @@
 #' @return Invisible NULL.
 #' @export
 execute_phylogeny <- function(phylogeny, character_data,
-                              branch_width         = NULL,
+                              branch_width         = 2,
+                              use_edge_length      = NULL,
+                              ladderize            = TRUE,
                               label_offset         = 0.3,
                               sep                  = ",",
                               species_col          = 1,
@@ -123,18 +143,35 @@ execute_phylogeny <- function(phylogeny, character_data,
     config <- setup_mapping_config(phylogeny, character_data)
     if (is.null(config)) return(invisible(NULL))
 
-    # Force uniform branches if the user requested it in the menu
+    # -- Branch width (parameter overrides menu default of 2) ------------------
+    if (!is.numeric(branch_width) || length(branch_width) != 1L || branch_width <= 0)
+      stop("`branch_width` must be a positive number.")
+    config$grosor <- branch_width
+    offset_factor <- switch(config$tipo_arbol %||% "phylogram",
+                            "phylogram" = 0.012, "cladogram" = 0.012, "fan" = 0.003, 0.012)
+    config$rango_desfase <- max(0.05, branch_width * offset_factor)
+
+    # -- Branch lengths --------------------------------------------------------
+    # use_edge_length = NULL  -> respect menu choice stored in config
+    # use_edge_length = TRUE  -> always use lengths if present
+    # use_edge_length = FALSE -> always strip lengths (uniform branches)
+    if (!is.null(use_edge_length)) {
+      config$use_edge_length <- isTRUE(use_edge_length)
+    }
     if (isFALSE(config$use_edge_length)) {
       phylogeny$edge.length <- NULL
     }
 
-    # External branch width configuration if passed as argument
-    if (!is.null(branch_width) && is.numeric(branch_width) && branch_width > 0) {
-      config$grosor <- branch_width
-      offset_factor <- switch(config$tipo_arbol %||% "phylogram",
-                              "phylogram" = 0.012, "cladogram" = 0.012, "fan" = 0.003, 0.012)
-      config$rango_desfase <- max(0.05, branch_width * offset_factor)
+    # -- Ladderize -------------------------------------------------------------
+    # ladderize = TRUE    -> ape::ladderize(right = FALSE) [larger clade bottom]
+    # ladderize = "right" -> ape::ladderize(right = TRUE)  [larger clade top]
+    # ladderize = FALSE   -> no reordering
+    if (identical(ladderize, TRUE)) {
+      phylogeny <- ladderize(phylogeny, right = FALSE)
+    } else if (identical(ladderize, "right")) {
+      phylogeny <- ladderize(phylogeny, right = TRUE)
     }
+    config$ladderize <- ladderize   # propagate to renderers for export consistency
 
     # Calculate tree geometric depth to assign a proportional 2.5% offset
     phy_tmp <- phylogeny

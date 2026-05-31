@@ -13,6 +13,8 @@ export_multimapr_tree(
   lwd = 3,
   label_offset = 0.3,
   offset_range = 0.1,
+  use_edge_length = TRUE,
+  ladderize = FALSE,
   mar = c(1, 1, 1, 4),
   width = NULL,
   height = NULL,
@@ -50,6 +52,20 @@ labels, in data coordinate units
 \code{offsets_y} is built as
 \code{seq(-range, range, length.out = N)}.
 With \code{N = 1} the offset is always zero (default: \code{0.1}).}
+
+\item{use_edge_length}{Logical. When \code{TRUE} (default) the tree is plotted
+with its original branch lengths (if present). When
+\code{FALSE} all edges are drawn with uniform length
+regardless of \code{tree$edge.length}.}
+
+\item{ladderize}{Controls tip ordering before rendering. \code{FALSE}
+(default) preserves the original order. \code{TRUE}
+calls \code{ape::ladderize(right = FALSE)} (larger
+subclade at bottom). \code{"right"} calls
+\code{ape::ladderize(right = TRUE)} (larger subclade
+at top). Must match the value used in
+\code{execute_phylogeny()} to ensure export and screen
+render are identical.}
 
 \item{mar}{Plot margins as vector \code{c(b, l, t, r)}
 in lines (default: \code{c(1, 1, 1, 4)}).}
