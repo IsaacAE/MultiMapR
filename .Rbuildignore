@@ -1,3 +1,5 @@
 ^MultiMapR\.Rproj$
 ^\.Rproj\.user$
 ^README\.Rmd$
+^Exports$
+^README\.html$

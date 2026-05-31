@@ -15,7 +15,7 @@ Path to the clean file (temporary if changes were made, original otherwise).
 \description{
 Removes common problems produced by different phylogenetic programs:
 \itemize{
-\item Windows line endings (\r\n → \n)
+\item Windows line endings (CR+LF converted to LF)
 \item Numbered comments in Mesquite TRANSLATE blocks (\verb{[0]}, \verb{[1]}, ...)
 that ape cannot parse
 }

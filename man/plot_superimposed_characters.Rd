@@ -20,9 +20,29 @@ plot_superimposed_characters(
 )
 }
 \arguments{
-\item{filogenia}{phylo object.}
+\item{filogenia}{\code{phylo} object.}
 
-\item{config}{Configuration list from setup_mapping_config().}
+\item{config}{Configuration list from \code{setup_mapping_config()}.}
+
+\item{alpha1}{Alpha transparency for the first character layer (default \code{1}).}
+
+\item{alpha2}{Alpha transparency for additional character layers (default \code{1}).}
+
+\item{offset_h_map}{Horizontal offset between layers in data units (default \code{0.02}).}
+
+\item{offset_v_map}{Vertical offset between layers in data units (default \code{0.02}).}
+
+\item{extra_offset_map}{Extra separation added to fan layers (default \code{0.07}).}
+
+\item{escala_fan}{Scale factor for fan topology layers (default \code{0.75}).}
+
+\item{rotacion_fan}{Rotation in radians between fan layers (default \code{2}).}
+
+\item{base_escala}{Base scale factor applied before \code{escala_fan} (default \code{1}).}
+
+\item{legend_spacing}{Vertical spacing between legend blocks in data units (default \code{0.06}).}
+
+\item{x_limit}{Optional numeric; overrides the x-axis upper limit. \code{NULL} = automatic.}
 }
 \value{
 Invisible NULL. Draws on the active graphics device.

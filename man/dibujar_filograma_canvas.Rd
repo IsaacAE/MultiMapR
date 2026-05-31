@@ -35,8 +35,8 @@ Invisible NULL. Draws on the active graphics device.
 }
 \description{
 Accepts a list of color vectors (one per evolutionary history).
-If the list has 1 element → simple mapping (no offset).
-If it has N > 1 → multi-mapping with zero-centered offset:
+If the list has 1 element -> simple mapping (no offset).
+If it has N > 1 -> multi-mapping with zero-centered offset:
 · The user only provides \code{desfases_y} (vertical lanes).
 · \code{desfases_x} is calculated automatically just after
 \code{plot(..., type = "n")}, when the graphics engine already knows

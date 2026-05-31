@@ -6,6 +6,12 @@
 \usage{
 .emtree_validate_color_list(color_list, n_edges)
 }
+\arguments{
+\item{color_list}{List of character vectors (one per history).}
+
+\item{n_edges}{Expected length of each color vector (\code{nrow(tree$edge)}).}
+}
 \description{
 Checks that \code{color_list} is consistent with the number of tree edges
 }
+\keyword{internal}

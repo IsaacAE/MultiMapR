@@ -17,9 +17,9 @@ execute_phylogeny(
 )
 }
 \arguments{
-\item{phylogeny}{phylo object — OR — string path to the tree file.}
+\item{phylogeny}{phylo object -- OR -- string path to the tree file.}
 
-\item{character_data}{Data.frame with a "Species" column — OR — string path
+\item{character_data}{Data.frame with a "Species" column -- OR -- string path
 to the character CSV file.}
 
 \item{branch_width}{Branch width (default NULL = chosen by the user in

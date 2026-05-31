@@ -21,7 +21,7 @@ plot_ancestral_branches(
 
 \item{titulo_leyenda}{String for the legend title.}
 
-\item{colores_estado}{Named vector state → color for the legend.}
+\item{colores_estado}{Named vector state -> color for the legend.}
 }
 \value{
 Invisible NULL. Draws on the active graphics device.

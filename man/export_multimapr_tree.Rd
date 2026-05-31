@@ -53,6 +53,30 @@ With \code{N = 1} the offset is always zero (default: \code{0.1}).}
 
 \item{mar}{Plot margins as vector \code{c(b, l, t, r)}
 in lines (default: \code{c(1, 1, 1, 4)}).}
+
+\item{width}{Device width in inches. \code{NULL} = automatic (proportional to tip count).}
+
+\item{height}{Device height in inches. \code{NULL} = automatic.}
+
+\item{legend_by_char}{Named list \code{character -> list(labels, colors)} for grouped legend.
+When not \code{NULL}, takes precedence over \code{legend_labels} /
+\code{legend_colors} / \code{legend_title}.}
+
+\item{legend_labels}{Flat character vector of legend labels (legacy mode).}
+
+\item{legend_colors}{Flat character vector of legend colors (legacy mode).}
+
+\item{legend_corner}{Corner for the legend: \code{"topleft"}, \code{"topright"},
+\code{"bottomleft"} (default), or \code{"bottomright"}.}
+
+\item{legend_title}{Single legend block title string (legacy mode). \code{NULL} = no title.}
+
+\item{overlay_fn}{Optional function called after the legend, inside the open device,
+with \code{par("usr")} already set. Receives \code{pp}, \code{cex_aj},
+\code{label_offset_aj}, \code{R_tips}, and \code{gap_u}.}
+
+\item{hide_fan_labels}{When \code{TRUE}, omits radial tip labels in fan topology,
+delegating their drawing to \code{overlay_fn}.}
 }
 \value{
 Invisible: full path of the generated file (string).
@@ -67,7 +91,7 @@ calculated on the fly from the actual physical parameters of the device.
 
 \enumerate{
 \item Exhaustive argument validation.
-\item Dynamic dimension calculation (height ∝ Ntip; fan = square).
+\item Dynamic dimension calculation (height proportional to Ntip; fan = square).
 \item Graphics device opening (PNG @ 300 dpi, or PDF).
 \item Blank Canvas: \code{plot(tree, edge.color="transparent")}
 populates \code{.PlotPhyloEnv} without rendering edges.

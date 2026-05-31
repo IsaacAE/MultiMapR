@@ -7,10 +7,10 @@
 #   - Blank Canvas (edge.color = "transparent") to populate .PlotPhyloEnv
 #     without rendering anything, then manually draw the histories with
 #     segments() / lines() + offsets calculated on the fly.
-#   - Fan uses true polar geometry: radius + angle → radial segments and arcs.
+#   - Fan uses true polar geometry: radius + angle -> radial segments and arcs.
 #
-# Dependencies: ape (>= 5.0) — declared in DESCRIPTION, do not use library() here
-# Author:       MultiMapR — universal export module
+# Dependencies: ape (>= 5.0) -- declared in DESCRIPTION, do not use library() here
+# Author:       MultiMapR -- universal export module
 ################################################################################
 
 # ==============================================================================
@@ -18,6 +18,9 @@
 # ==============================================================================
 
 #' Checks that `tree` is a valid phylo object with edges and tip.labels
+#'
+#' @param tree  Object to validate; must be of class \code{phylo}.
+#' @keywords internal
 .emtree_validate_tree <- function(tree) {
   if (!inherits(tree, "phylo"))
     stop("`tree` must be an object of class 'phylo'.")
@@ -28,6 +31,10 @@
 }
 
 #' Checks that `color_list` is consistent with the number of tree edges
+#'
+#' @param color_list  List of character vectors (one per history).
+#' @param n_edges     Expected length of each color vector (\code{nrow(tree$edge)}).
+#' @keywords internal
 .emtree_validate_color_list <- function(color_list, n_edges) {
   if (!is.list(color_list) || length(color_list) == 0L)
     stop("`color_list` must be a non-empty list of color vectors.")
@@ -44,6 +51,10 @@
 }
 
 #' Checks scalar type and format arguments
+#'
+#' @param type    Tree topology string: \code{"phylogram"}, \code{"cladogram"}, or \code{"fan"}.
+#' @param format  Output format: \code{"png"} or \code{"pdf"}.
+#' @keywords internal
 .emtree_validate_type_format <- function(type, format) {
   valid_types   <- c("phylogram", "cladogram", "fan")
   valid_formats <- c("png", "pdf")
@@ -54,6 +65,9 @@
 }
 
 #' Checks that `filename` is a non-empty string (no extension required)
+#'
+#' @param filename  Output filename without extension; must be a non-empty string.
+#' @keywords internal
 .emtree_validate_filename <- function(filename) {
   if (!is.character(filename) || length(filename) != 1L || !nzchar(trimws(filename)))
     stop("`filename` must be a non-empty string (without extension).")
@@ -70,7 +84,13 @@
 }
 
 #' Opens the appropriate graphics device according to `format`
+#'
+#' @param filename   Output path without extension.
+#' @param format     Device format: \code{"png"} or \code{"pdf"}.
+#' @param width_in   Device width in inches.
+#' @param height_in  Device height in inches.
 #' @return Invisible NULL. The device remains open after the call.
+#' @keywords internal
 .emtree_open_device <- function(filename, format, width_in, height_in) {
 
   path <- paste0(filename, ".", format)
@@ -102,17 +122,17 @@
   # Fixed step = offset_range between consecutive layers, set centered at 0.
   # This ensures that for any N the visual separation between branches
   # is always the same (offset_range), without gaps or asymmetries:
-  #   N=2 → c(-range/2, +range/2)  separation = range ✓
-  #   N=3 → c(-range,   0, +range) separation = range ✓  (same as seq() gave)
-  #   N=4 → c(-3r/2, -r/2, +r/2, +3r/2) separation = range ✓
+  #   N=2 -> c(-range/2, +range/2)  separation = range [ok]
+  #   N=3 -> c(-range,   0, +range) separation = range [ok]  (same as seq() gave)
+  #   N=4 -> c(-3r/2, -r/2, +r/2, +3r/2) separation = range [ok]
   #
-  # Original bug: seq(-r, r, N=2) → c(-r, +r), separation = 2*range and
+  # Original bug: seq(-r, r, N=2) -> c(-r, +r), separation = 2*range and
   # no value at 0, leaving a gap twice the step size of N=3.
-  indices    <- seq_len(N) - (N + 1L) / 2   # e.g. N=2→c(-0.5,0.5); N=3→c(-1,0,1)
+  indices    <- seq_len(N) - (N + 1L) / 2   # e.g. N=2->c(-0.5,0.5); N=3->c(-1,0,1)
   offsets_y  <- indices * offset_range
 
-  usr <- par("usr")   # c(x1, x2, y1, y2) — coordinate system limits
-  pin <- par("pin")   # c(width_in, height_in) — physical plot area dimensions
+  usr <- par("usr")   # c(x1, x2, y1, y2) -- coordinate system limits
+  pin <- par("pin")   # c(width_in, height_in) -- physical plot area dimensions
 
   scale_x <- (usr[2L] - usr[1L]) / pin[1L]   # data_units / inch (X)
   scale_y <- (usr[4L] - usr[3L]) / pin[2L]   # data_units / inch (Y)
@@ -124,7 +144,7 @@
 
 
 # ==============================================================================
-# LEGEND HELPER — EXCLUSIVE SPACE
+# LEGEND HELPER -- EXCLUSIVE SPACE
 # ==============================================================================
 
 #' Converts the user-chosen corner into margins and legend position
@@ -171,7 +191,7 @@
 #' (up or down) so the legend does not overlap the plot.
 #'
 #' @param corner         Corner string.
-#' @param legend_by_char Grouped list character → list(labels, colors), or NULL.
+#' @param legend_by_char Grouped list character -> list(labels, colors), or NULL.
 #' @param legend_labels  Flat label vector (legacy mode).
 #' @param legend_title   Block title (legacy mode).
 #' @param cex_ley        Legend font size.
@@ -187,7 +207,7 @@
   on_right   <- grepl("right", corner)
   usr        <- par("usr")   # c(x1, x2, y1, y2) in data coordinates
 
-  # ── Internal function: measures a legend block with plot=FALSE ─────────────
+  # -- Internal function: measures a legend block with plot=FALSE -------------
   measure_block <- function(labels, title_txt, x_ref, y_ref) {
     lg <- legend(x      = x_ref,
                  y      = y_ref,
@@ -242,7 +262,7 @@
 #'
 #' Supports two modes:
 #'   - **Grouped** (`legend_by_char` not NULL): receives a named list
-#'     character → list(labels, colors) and draws each character as an
+#'     character -> list(labels, colors) and draws each character as an
 #'     independent block with its header in bold, without mixing states.
 #'   - **Flat** (legacy): uses `legend_labels` + `legend_colors` + `legend_title`
 #'     as before, to maintain compatibility with older calls.
@@ -251,7 +271,7 @@
 #' paint outside the plot area but within the device.
 #'
 #' @param corner         Corner string ("topleft", etc.)
-#' @param legend_by_char Named list character → list(labels, colors). If not
+#' @param legend_by_char Named list character -> list(labels, colors). If not
 #'                       NULL takes precedence over `legend_labels`.
 #' @param legend_labels  Flat label vector (legacy mode).
 #' @param legend_colors  Flat color vector (legacy mode).
@@ -270,7 +290,7 @@
   par(xpd = NA)
   on.exit(par(xpd = old_xpd))
 
-  # ── Grouped mode: one block per character with header ─────────────────────
+  # -- Grouped mode: one block per character with header ---------------------
   if (!is.null(legend_by_char) && length(legend_by_char) > 0L) {
 
     # Determine starting position based on the chosen corner.
@@ -323,7 +343,7 @@
     return(invisible(NULL))
   }
 
-  # ── Legacy (flat) mode: a single block ────────────────────────────────────
+  # -- Legacy (flat) mode: a single block ------------------------------------
   if (is.null(legend_labels) || length(legend_labels) == 0L)
     return(invisible(NULL))
 
@@ -374,7 +394,7 @@
     dy    <- offsets$dy[min(i, length(offsets$dy))]
     dx    <- offsets$dx[min(i, length(offsets$dx))]
 
-    # ── Horizontals (vectorized, no loop) ────────────────────────────────────
+    # -- Horizontals (vectorized, no loop) ------------------------------------
     # Each edge goes from x_parent to x_child, at the height y_child (ape convention).
     segments(x0   = xx[parent_idx] + dx,
              y0   = yy[child_idx]  + dy,
@@ -384,7 +404,7 @@
              lwd  = lwd_i,
              lend = 1L)
 
-    # ── Verticals (loop over internal nodes) ─────────────────────────────────
+    # -- Verticals (loop over internal nodes) ---------------------------------
     # Connects children of a node at the node's X coordinate.
     for (m in seq_along(internal_nodes)) {
       ie         <- entry_idx[m]
@@ -415,7 +435,7 @@
 
 # ------------------------------------------------------------------------------
 # CLADOGRAM
-# Direct geometry: diagonals parent → child. Offset at both endpoints.
+# Direct geometry: diagonals parent -> child. Offset at both endpoints.
 # ------------------------------------------------------------------------------
 
 .emtree_render_cladogram <- function(pp, tree, color_list, lwd, offsets) {
@@ -434,7 +454,7 @@
     dy    <- offsets$dy[min(i, length(offsets$dy))]
     dx    <- offsets$dx[min(i, length(offsets$dx))]
 
-    # Diagonal segments parent→child (fully vectorized).
+    # Diagonal segments parent->child (fully vectorized).
     # dx / dy is added to BOTH endpoints to shift the entire segment.
     segments(x0   = xx[parent_idx] + dx,
              y0   = yy[parent_idx] + dy,
@@ -456,18 +476,18 @@
 #   multimapping, not as separate rings. To achieve this, the total spread
 #   is expressed as a small percentage of R_max (tree maximum radius):
 #
-#     spread  = R_max * 0.03   → 3% of total radius, distributed among N layers
+#     spread  = R_max * 0.03   -> 3% of total radius, distributed among N layers
 #     vect_D  = seq(-spread/2, spread/2, length.out = N)
 #
 #   For each history i:
 #     dr       = vect_D[i]            radial displacement
 #     dtheta_n = dtheta_node[n] * dr/R_max  angular rotation per node, so
 #                                     that each trace endpoint uses its own
-#                                     angle → traces parallel to the original
+#                                     angle -> traces parallel to the original
 #
-# East axis crossing correction (0° / 360°):
-#   Normalization to [0, 2π) with ifelse(); if ang_max − ang_min > π the clade
-#   crosses 0° and angles < π are raised to the extended range [2π, 4π).
+# East axis crossing correction (0 deg / 360 deg):
+#   Normalization to [0, 2pi) with ifelse(); if ang_max - ang_min > pi the clade
+#   crosses 0 deg and angles < pi are raised to the extended range [2pi, 4pi).
 # ------------------------------------------------------------------------------
 
 .emtree_render_fan <- function(pp, tree, color_list, lwd, offsets) {
@@ -480,12 +500,12 @@
   # Extract original angles for all nodes
   node_angles <- atan2(yy, xx)
 
-  # ── Internal node metadata ────────────────────────────────────────────────
+  # -- Internal node metadata ------------------------------------------------
   internal_nodes <- unique(edges[edges[, 1L] > n_tips, 1L])
   entry_idx      <- match(internal_nodes, edges[, 2L])
   children_of    <- lapply(internal_nodes, function(nd) edges[edges[, 1L] == nd, 2L])
 
-  # ── Spread ────────────────────────────────────────────────────────────────
+  # -- Spread ----------------------------------------------------------------
   R_max  <- max(sqrt(xx^2 + yy^2))
   # The spread between layers in fan mode scales with branch width (lwd)
   # so that wider layers do not overlap. Empirical factor: 0.0025 * lwd,
@@ -500,7 +520,7 @@
   }
 
   # Auxiliary function: exact angular compensation for parallelism
-  # Δθ = asin(D / (R + D))  — clamp avoids NaN when R+D ≈ 0
+  # Deltatheta = asin(D / (R + D))  -- clamp avoids NaN when R+D ~ 0
   calc_dtheta <- function(R, D) {
     R_new <- R + D
     if (abs(R_new) < 1e-8) return(pi / 2)
@@ -508,7 +528,7 @@
     asin(ratio)
   }
 
-  # ── History loop ──────────────────────────────────────────────────────────
+  # -- History loop ----------------------------------------------------------
   for (i in seq_len(N)) {
     ec    <- color_list[[i]]
     lwd_i <- lwd[min(i, length(lwd))]
@@ -591,7 +611,7 @@
 #' @section Internal workflow:
 #' \enumerate{
 #'   \item Exhaustive argument validation.
-#'   \item Dynamic dimension calculation (height ∝ Ntip; fan = square).
+#'   \item Dynamic dimension calculation (height proportional to Ntip; fan = square).
 #'   \item Graphics device opening (PNG @ 300 dpi, or PDF).
 #'   \item Blank Canvas: \code{plot(tree, edge.color="transparent")}
 #'         populates \code{.PlotPhyloEnv} without rendering edges.
@@ -618,8 +638,23 @@
 #'                      \code{offsets_y} is built as
 #'                      \code{seq(-range, range, length.out = N)}.
 #'                      With \code{N = 1} the offset is always zero (default: \code{0.1}).
-#' @param mar           Plot margins as vector \code{c(b, l, t, r)}
-#'                      in lines (default: \code{c(1, 1, 1, 4)}).
+#' @param mar            Plot margins as vector \code{c(b, l, t, r)}
+#'                       in lines (default: \code{c(1, 1, 1, 4)}).
+#' @param width          Device width in inches. \code{NULL} = automatic (proportional to tip count).
+#' @param height         Device height in inches. \code{NULL} = automatic.
+#' @param legend_by_char Named list \code{character -> list(labels, colors)} for grouped legend.
+#'                       When not \code{NULL}, takes precedence over \code{legend_labels} /
+#'                       \code{legend_colors} / \code{legend_title}.
+#' @param legend_labels  Flat character vector of legend labels (legacy mode).
+#' @param legend_colors  Flat character vector of legend colors (legacy mode).
+#' @param legend_corner  Corner for the legend: \code{"topleft"}, \code{"topright"},
+#'                       \code{"bottomleft"} (default), or \code{"bottomright"}.
+#' @param legend_title   Single legend block title string (legacy mode). \code{NULL} = no title.
+#' @param overlay_fn     Optional function called after the legend, inside the open device,
+#'                       with \code{par("usr")} already set. Receives \code{pp}, \code{cex_aj},
+#'                       \code{label_offset_aj}, \code{R_tips}, and \code{gap_u}.
+#' @param hide_fan_labels When \code{TRUE}, omits radial tip labels in fan topology,
+#'                        delegating their drawing to \code{overlay_fn}.
 #'
 #' @return Invisible: full path of the generated file (string).
 #'
@@ -657,14 +692,14 @@ export_multimapr_tree <- function(tree,
                                   label_offset  = 0.3,
                                   offset_range  = 0.1,
                                   mar           = c(1, 1, 1, 4),
-                                  # ── CUSTOM DIMENSION PARAMETERS ───────────────────────
-                                  # NULL → automatic dimensions are used, calculated
+                                  # -- CUSTOM DIMENSION PARAMETERS -----------------------
+                                  # NULL -> automatic dimensions are used, calculated
                                   # from the number of tips (original behavior).
                                   # A numeric value in inches activates dynamic scaling.
                                   width         = NULL,
                                   height        = NULL,
-                                  # ── LEGEND PARAMETERS ─────────────────────────────────
-                                  # legend_by_char: named list character → list(labels, colors).
+                                  # -- LEGEND PARAMETERS ---------------------------------
+                                  # legend_by_char: named list character -> list(labels, colors).
                                   #   When provided, each character is drawn as an independent
                                   #   block with its name as a header. Takes precedence over
                                   #   legend_labels / legend_colors / legend_title.
@@ -678,7 +713,7 @@ export_multimapr_tree <- function(tree,
                                   legend_colors  = NULL,
                                   legend_corner  = "bottomleft",
                                   legend_title   = NULL,
-                                  # ── OVERLAY CALLBACK ──────────────────────────────────
+                                  # -- OVERLAY CALLBACK ----------------------------------
                                   # Optional function executed AFTER the legend,
                                   # inside the same open device and with par("usr")
                                   # already established. Receives pp, cex_aj, label_offset_aj,
@@ -690,7 +725,7 @@ export_multimapr_tree <- function(tree,
                                   # to overlay_fn which repositions them further out.
                                   hide_fan_labels = FALSE) {
 
-  # ── 0. Argument validation ────────────────────────────────────────────────
+  # -- 0. Argument validation ------------------------------------------------
   .emtree_validate_tree(tree)
   .emtree_validate_color_list(color_list, nrow(tree$edge))
   .emtree_validate_filename(filename)
@@ -718,7 +753,7 @@ export_multimapr_tree <- function(tree,
 
   if (has_grouped_legend) {
     # Only validate structure; space is reserved with expanded xlim/ylim
-    # after measuring the legend with .emtree_measure_legend() (Phase 1 → Phase 2).
+    # after measuring the legend with .emtree_measure_legend() (Phase 1 -> Phase 2).
     for (nm in names(legend_by_char)) {
       blk <- legend_by_char[[nm]]
       if (!is.list(blk) || is.null(blk$labels) || is.null(blk$colors))
@@ -734,7 +769,7 @@ export_multimapr_tree <- function(tree,
       stop("`legend_colors` must have the same length as `legend_labels`.")
   }
 
-  # ── 1. Dimension calculation and device opening ───────────────────────────
+  # -- 1. Dimension calculation and device opening ---------------------------
   n_tips <- Ntip(tree)
   N      <- length(color_list)
 
@@ -746,7 +781,7 @@ export_multimapr_tree <- function(tree,
   height_default <- n_tips * 0.25 + 2   # 0.25 inches per tip + base margin
   width_default  <- 12
 
-  # Fan → square canvas to avoid polar distortions + 1.5 in extra
+  # Fan -> square canvas to avoid polar distortions + 1.5 in extra
   # for more breathing room for labels and legend in radial mode.
   if (type == "fan") {
     height_default <- max(height_default, width_default)
@@ -757,15 +792,15 @@ export_multimapr_tree <- function(tree,
   height_in <- if (!is.null(height)) height else height_default
   width_in  <- if (!is.null(width))  width  else width_default
 
-  # ── SCALE FACTORS ─────────────────────────────────────────────────────────
+  # -- SCALE FACTORS ---------------------------------------------------------
   # Measure how much each axis grows (or shrinks) relative to the reference size.
-  # scale_h > 1 → taller canvas than default; scale_h < 1 → more compact.
+  # scale_h > 1 -> taller canvas than default; scale_h < 1 -> more compact.
   # Used to: (a) adjust cex and label_offset proportionally,
   #          (b) compensate Y offset dilation (inverse scale).
   scale_h <- height_in / height_default
   scale_w <- width_in  / width_default
 
-  # ── 2. Render parameters (cex, offsets, displacement) ─────────────────────
+  # -- 2. Render parameters (cex, offsets, displacement) ---------------------
   # Calculated BEFORE opening the final device so they can also be used
   # in the off-screen probing device (Phase 1).
   cex_base <- max(1 / (1 + n_tips / 50), 0.2)
@@ -789,7 +824,7 @@ export_multimapr_tree <- function(tree,
 
   mar_base <- c(1, 1, 1, 4)
 
-  # ── Internal canvas render function ──────────────────────────────────────
+  # -- Internal canvas render function --------------------------------------
   # Draws the "invisible" tree (edge.color = "transparent") to populate
   # .PlotPhyloEnv and establish par("usr"). Reused in the off-screen probe
   # and in the definitive render inside the final device.
@@ -811,7 +846,7 @@ export_multimapr_tree <- function(tree,
     get("last_plot.phylo", envir = .PlotPhyloEnv)
   }
 
-  # ── 3. PHASE 1 — off-screen probing device ────────────────────────────────
+  # -- 3. PHASE 1 -- off-screen probing device --------------------------------
   # A temporary pdf(NULL) is opened (no file on disk) to:
   #   a) establish par("usr") with the same dimensions as the final device
   #   b) measure the legend with legend(..., plot = FALSE) in data coordinates
@@ -884,7 +919,7 @@ export_multimapr_tree <- function(tree,
     }, finally = dev.off())   # always close; leaves no file on disk
   }
 
-  # ── 4. Open final device and render ──────────────────────────────────────
+  # -- 4. Open final device and render --------------------------------------
   .emtree_open_device(filename, format, width_in, height_in)
   output_path <- paste0(filename, ".", format)
 
@@ -894,7 +929,7 @@ export_multimapr_tree <- function(tree,
     pp      <- .render_canvas(xlim_extra = xlim_final, ylim_extra = ylim_final)
     offsets <- .emtree_calc_offsets(N, adjusted_offset_range)
 
-    # ── 5. Branch rendering by topology ──────────────────────────────────────
+    # -- 5. Branch rendering by topology --------------------------------------
     if (type == "phylogram") {
       .emtree_render_phylogram(pp, tree, color_list, lwd_vec, offsets)
 
@@ -904,7 +939,7 @@ export_multimapr_tree <- function(tree,
     } else {
       .emtree_render_fan(pp, tree, color_list, lwd_vec, offsets)
 
-      # ── 5b. Fan tip labels — exact radius ────────────────────────────────
+      # -- 5b. Fan tip labels -- exact radius --------------------------------
       xx_tips <- pp$xx[seq_len(n_tips)]
       yy_tips <- pp$yy[seq_len(n_tips)]
       angles  <- atan2(yy_tips, xx_tips)
@@ -932,7 +967,7 @@ export_multimapr_tree <- function(tree,
       }
     }
 
-    # ── 6. Legend — drawn inside the expanded viewport ────────────────────
+    # -- 6. Legend -- drawn inside the expanded viewport --------------------
     if (has_legend) {
       .emtree_draw_legend(
         corner         = legend_corner,
@@ -944,7 +979,7 @@ export_multimapr_tree <- function(tree,
       )
     }
 
-    # ── 7. Optional overlay — additional figures on top of the render ─────
+    # -- 7. Optional overlay -- additional figures on top of the render -----
     if (!is.null(overlay_fn)) {
       # Calculate R_tips and gap_u for fan (NULL for other topologies)
       if (type == "fan") {
@@ -966,7 +1001,7 @@ export_multimapr_tree <- function(tree,
     # Indicate whether dimensions are automatic or user-defined
     dims_origin <- if (!is.null(width) || !is.null(height)) " [custom]" else " [auto]"
     message(sprintf(
-      "[export_multimapr_tree] File generated: %s  (%d tips, %d histories, %.1f × %.1f in%s%s)",
+      "[export_multimapr_tree] File generated: %s  (%d tips, %d histories, %.1f \u00d7 %.1f in%s%s)",
       output_path, n_tips, N, width_in, height_in,
       if (format == "png") " @ 300 dpi" else "",
       dims_origin))
@@ -983,7 +1018,7 @@ export_multimapr_tree <- function(tree,
 
 
 # ==============================================================================
-# USAGE EXAMPLES  (change FALSE → TRUE to run)
+# USAGE EXAMPLES  (change FALSE -> TRUE to run)
 # ==============================================================================
 if (FALSE) {
 
@@ -1001,7 +1036,7 @@ if (FALSE) {
   ec2 <- sample(palette2, n_e, replace = TRUE)
   ec3 <- sample(palette3, n_e, replace = TRUE)
 
-  # ── Phylogram with legend in bottom-left corner ────────────────────────────
+  # -- Phylogram with legend in bottom-left corner ----------------------------
   export_multimapr_tree(
     tree          = tree,
     color_list    = list(ec1, ec2, ec3),
@@ -1014,7 +1049,7 @@ if (FALSE) {
     legend_title  = "Character 1"
   )
 
-  # ── Cladogram with legend in top-right corner ──────────────────────────────
+  # -- Cladogram with legend in top-right corner ------------------------------
   export_multimapr_tree(
     tree          = tree,
     color_list    = list(ec1, ec2),
@@ -1027,7 +1062,7 @@ if (FALSE) {
     legend_title  = "Character 1"
   )
 
-  # ── Fan with legend in top-left corner ────────────────────────────────────
+  # -- Fan with legend in top-left corner ------------------------------------
   export_multimapr_tree(
     tree          = tree,
     color_list    = list(ec1, ec2, ec3),
@@ -1040,7 +1075,7 @@ if (FALSE) {
     legend_title  = "Character 1"
   )
 
-  # ── Single history without legend (original behavior) ─────────────────────
+  # -- Single history without legend (original behavior) ---------------------
   export_multimapr_tree(
     tree       = tree,
     color_list = list(ec1),
@@ -1051,7 +1086,7 @@ if (FALSE) {
 }
 
 # ==============================================================================
-# SCREEN RENDERING — ADVANCED ENGINE
+# SCREEN RENDERING -- ADVANCED ENGINE
 # ==============================================================================
 
 #' Renders the multi-history tree directly in R's interactive window
@@ -1072,14 +1107,18 @@ if (FALSE) {
 #' @param label_offset  Distance between tip endpoints and their
 #'                      labels (default: \code{0.3}).
 #' @param offset_range  Total amplitude of the Y offset range (default: \code{0.1}).
-#' @param legend_by_char Named list character → list(labels, colors) for
+#' @param legend_by_char Named list character -> list(labels, colors) for
 #'                       grouped legend. If not NULL takes precedence over
 #'                       \code{legend_labels} / \code{legend_colors}.
 #' @param legend_labels  Flat label vector (legacy mode).
 #' @param legend_colors  Flat color vector (legacy mode).
 #' @param legend_corner  Legend corner: \code{"topleft"}, \code{"topright"},
 #'                       \code{"bottomleft"} (default) or \code{"bottomright"}.
-#' @param legend_title   Single legend block title (legacy mode).
+#' @param legend_title    Single legend block title (legacy mode).
+#' @param overlay_fn      Optional function called after the legend, inside the
+#'                        active device with \code{par("usr")} already set.
+#' @param hide_fan_labels When \code{TRUE}, omits radial tip labels in fan topology,
+#'                        delegating their drawing to \code{overlay_fn}.
 #' @return Invisible NULL. Draws on the active graphics device.
 plot_multimapr_screen <- function(tree,
                                   color_list,
@@ -1092,7 +1131,7 @@ plot_multimapr_screen <- function(tree,
                                   legend_colors  = NULL,
                                   legend_corner  = "bottomleft",
                                   legend_title   = NULL,
-                                  # ── OVERLAY CALLBACK ──────────────────────────────────
+                                  # -- OVERLAY CALLBACK ----------------------------------
                                   # Optional function executed AFTER the legend,
                                   # inside the same open device and with par("usr")
                                   # already established. Receives pp, cex_aj, label_offset_aj,
@@ -1200,7 +1239,7 @@ plot_multimapr_screen <- function(tree,
     )
   }
 
-  # ── Optional overlay — additional figures over the screen render ────────
+  # -- Optional overlay -- additional figures over the screen render --------
   if (!is.null(overlay_fn)) {
     if (type == "fan") {
       .ov_xx    <- pp$xx[seq_len(n_tips)]

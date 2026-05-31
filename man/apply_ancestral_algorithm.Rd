@@ -9,7 +9,7 @@ apply_ancestral_algorithm(tree, tip_colors, edge_colors, config)
 \arguments{
 \item{tree}{phylo object.}
 
-\item{tip_colors}{Named character vector: tip label → color.}
+\item{tip_colors}{Named character vector: tip label -> color.}
 
 \item{edge_colors}{Named character vector from init_edge_colors().}
 

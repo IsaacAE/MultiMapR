@@ -169,7 +169,7 @@ prompt_states_and_colors <- function(aligned_data, character) {
 #' @param phylogeny        \code{phylo} object (ape).
 #' @param character_data   Data.frame with a \code{"Species"} column and characters.
 #' @return Configuration list, or invisible(NULL) if the user cancels.
-#' @seealso \code{\link{run_phylogeny}}
+#' @seealso \code{\link{execute_phylogeny}}
 setup_mapping_config <- function(phylogeny, character_data) {
 
   if (!inherits(phylogeny, "phylo"))

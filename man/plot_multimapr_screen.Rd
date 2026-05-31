@@ -37,7 +37,7 @@ labels (default: \code{0.3}).}
 
 \item{offset_range}{Total amplitude of the Y offset range (default: \code{0.1}).}
 
-\item{legend_by_char}{Named list character → list(labels, colors) for
+\item{legend_by_char}{Named list character -> list(labels, colors) for
 grouped legend. If not NULL takes precedence over
 \code{legend_labels} / \code{legend_colors}.}
 
@@ -49,6 +49,12 @@ grouped legend. If not NULL takes precedence over
 \code{"bottomleft"} (default) or \code{"bottomright"}.}
 
 \item{legend_title}{Single legend block title (legacy mode).}
+
+\item{overlay_fn}{Optional function called after the legend, inside the
+active device with \code{par("usr")} already set.}
+
+\item{hide_fan_labels}{When \code{TRUE}, omits radial tip labels in fan topology,
+delegating their drawing to \code{overlay_fn}.}
 }
 \value{
 Invisible NULL. Draws on the active graphics device.

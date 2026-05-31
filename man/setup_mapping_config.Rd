@@ -21,5 +21,5 @@ packages all user decisions into a homogeneous \code{config} list consumed
 by the rendering functions in \code{main_MultiMapR.R}.
 }
 \seealso{
-\code{\link{run_phylogeny}}
+\code{\link{execute_phylogeny}}
 }

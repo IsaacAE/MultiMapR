@@ -16,7 +16,7 @@
 \arguments{
 \item{corner}{Corner string.}
 
-\item{legend_by_char}{Grouped list character → list(labels, colors), or NULL.}
+\item{legend_by_char}{Grouped list character -> list(labels, colors), or NULL.}
 
 \item{legend_labels}{Flat label vector (legacy mode).}
 

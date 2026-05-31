@@ -6,6 +6,10 @@
 \usage{
 .emtree_validate_filename(filename)
 }
+\arguments{
+\item{filename}{Output filename without extension; must be a non-empty string.}
+}
 \description{
 Checks that \code{filename} is a non-empty string (no extension required)
 }
+\keyword{internal}

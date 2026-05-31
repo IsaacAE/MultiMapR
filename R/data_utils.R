@@ -18,6 +18,12 @@
 # ==============================================================================
 
 #' Null-coalescing operator: returns x if not NULL, otherwise y
+#'
+#' @name op-null-default
+#' @param x Value to test; returned as-is if not \code{NULL}.
+#' @param y Fallback value returned when \code{x} is \code{NULL}.
+#' @return \code{x} if \code{!is.null(x)}, otherwise \code{y}.
+#' @keywords internal
 `%||%` <- function(x, y) if (!is.null(x)) x else y
 
 

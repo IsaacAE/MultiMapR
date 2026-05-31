@@ -6,9 +6,19 @@
 \usage{
 .emtree_open_device(filename, format, width_in, height_in)
 }
+\arguments{
+\item{filename}{Output path without extension.}
+
+\item{format}{Device format: \code{"png"} or \code{"pdf"}.}
+
+\item{width_in}{Device width in inches.}
+
+\item{height_in}{Device height in inches.}
+}
 \value{
 Invisible NULL. The device remains open after the call.
 }
 \description{
 Opens the appropriate graphics device according to \code{format}
 }
+\keyword{internal}

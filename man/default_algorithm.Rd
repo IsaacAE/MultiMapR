@@ -9,7 +9,7 @@ default_algorithm(tree, tip_colors, edge_colors)
 \arguments{
 \item{tree}{phylo object.}
 
-\item{tip_colors}{Named character vector: tip_colors\link{i} = color of tip i.}
+\item{tip_colors}{Named character vector: \code{tip_colors[[i]]} is the color of tip \code{i}.}
 
 \item{edge_colors}{Named character vector initialised with gray
 (names: "parent-child").}

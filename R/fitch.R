@@ -6,12 +6,12 @@
 #
 # When MultiMapR asks for the algorithm, select option 2 (Fitch).
 # The optimization mode is chosen interactively from the terminal:
-#   1 = ACCTRAN     (accelerated transformations — toward the tips)
-#   2 = DELTRAN     (delayed transformations — toward the root)
+#   1 = ACCTRAN     (accelerated transformations -- toward the tips)
+#   2 = DELTRAN     (delayed transformations -- toward the root)
 #   3 = Unambiguous (only nodes with a unique state after both Fitch passes)
 #
 # SIGNATURE expected by MultiMapR:
-#   external_algorithm(tree, tip_colors, edge_colors, config) → edge_colors
+#   external_algorithm(tree, tip_colors, edge_colors, config) -> edge_colors
 #
 #   - tree        : phylo object
 #   - tip_colors  : named vector (color per tip, in tip.label order)
@@ -21,12 +21,12 @@
 #                   determine the optimization method. Default: "deltran".
 #
 # NOTE: tip_colors already contains the color assigned by the user to each state;
-#       this function inverts that color→state mapping to run Fitch and then
+#       this function inverts that color->state mapping to run Fitch and then
 #       returns the resulting branch colors in the same format.
 ################################################################################
 
 # ============================================================================ #
-# DOWNPASS (tips → root)
+# DOWNPASS (tips -> root)
 # ============================================================================ #
 .fitch_downpass <- function(phylo, tip_states) {
   n_tips      <- Ntip(phylo)
@@ -91,7 +91,7 @@
 
 
 # ============================================================================ #
-# UPPASS (root → tips)
+# UPPASS (root -> tips)
 #
 # Implements the Swofford & Maddison (1987) rule to compute the MPR sets
 # for each node:
@@ -139,16 +139,16 @@
 
 
 # ============================================================================ #
-# OPTIMIZATION (ACCTRAN / DELTRAN / Unambiguous) → one unique state per node
+# OPTIMIZATION (ACCTRAN / DELTRAN / Unambiguous) -> one unique state per node
 #
 # current_mode (derived from config$fitch_mode inside the function):
-#   "acctran"     — on ambiguities, uses DOWNPASS sets;
+#   "acctran"     -- on ambiguities, uses DOWNPASS sets;
 #                   if the parent state is in the child's set,
 #                   it is inherited (accelerates changes toward the tips).
-#   "deltran"     — on ambiguities, uses MPR UPPASS sets;
+#   "deltran"     -- on ambiguities, uses MPR UPPASS sets;
 #                   if the parent state is in the child's set,
 #                   it is inherited (delays changes toward the root).
-#   "unambiguous" — a node is unambiguous EXCLUSIVELY when ACCTRAN and
+#   "unambiguous" -- a node is unambiguous EXCLUSIVELY when ACCTRAN and
 #                   DELTRAN assign exactly the same state; the rest
 #                   remain as NA. The root is unambiguous only if its MPR
 #                   set has exactly one element.
@@ -156,7 +156,7 @@
 # STRICT BUSINESS RULE (unambiguous):
 #   A node is unambiguous if and only if acc[nd] == del[nd] (same string, no NA).
 #   This condition is not relaxed: if they share a state it is unambiguous; if
-#   they differ — even if both are valid — the node remains NA.
+#   they differ -- even if both are valid -- the node remains NA.
 #
 # Terminals are always untouched: copied directly from tip_states,
 # and the pre-order traversal operates only on internal nodes.
@@ -252,13 +252,13 @@
 
 
 # ============================================================================ #
-# PUBLIC FUNCTION — signature compatible with MultiMapR
+# PUBLIC FUNCTION -- signature compatible with MultiMapR
 #
-#   external_algorithm(tree, tip_colors, edge_colors, config) → edge_colors
+#   external_algorithm(tree, tip_colors, edge_colors, config) -> edge_colors
 #
 # tip_colors : named vector (name = tip state, value = color).
 #              If names(tip_colors) is available, it is used directly as the
-#              state→color palette, including the color assigned to "?" or "-".
+#              state->color palette, including the color assigned to "?" or "-".
 # edge_colors: initialized color vector (completely overwritten).
 # ============================================================================ #
 external_algorithm <- function(tree, tip_colors, edge_colors, config = NULL) {

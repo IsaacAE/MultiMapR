@@ -4,11 +4,11 @@
 # Utilities to load and prepare phylogenetic data in MultiMapR.
 #
 # MAIN FUNCTION:
-#   load_data(tree_path, csv_path, ...)  →  list(tree, characters)
+#   load_data(tree_path, csv_path, ...)  ->  list(tree, characters)
 #
 # SUPPORTED TREE FORMATS:
-#   .tre / .tree / .nwk  →  read.tree()   (Newick)
-#   .nex / .nexus        →  read.nexus()  (NEXUS)
+#   .tre / .tree / .nwk  ->  read.tree()   (Newick)
+#   .nex / .nexus        ->  read.nexus()  (NEXUS)
 #   (automatic detection by extension; can be forced with tree_format=)
 #
 # SUPPORTED CSV FORMATS:
@@ -16,7 +16,7 @@
 #   - First column: species names (any column name)
 #   - Numeric and text (string) characters
 #   - Inapplicable "-" and unknown "?" are preserved as-is
-#   - Species names with spaces → optionally normalized to "_"
+#   - Species names with spaces -> optionally normalized to "_"
 #   - UTF-8 BOM (files exported from Excel) removed automatically
 #
 # NOTE: This file is part of the MultiMapR package. Dependencies
@@ -108,7 +108,7 @@
 #' If there is no header, generates "char1", "char2", ...
 #'
 #' @param raw_names  Vector with the raw names of the character columns.
-#'                   NULL or empty → automatic names are generated.
+#'                   NULL or empty -> automatic names are generated.
 #' @param n          Number of character columns.
 #' @return Character vector of length n.
 .normalize_char_names <- function(raw_names, n) {
@@ -129,7 +129,7 @@
 #' Sanitizes a tree file for compatibility with ape
 #'
 #' Removes common problems produced by different phylogenetic programs:
-#'   - Windows line endings (\r\n → \n)
+#'   - Windows line endings (CR+LF converted to LF)
 #'   - Numbered comments in Mesquite TRANSLATE blocks (`[0]`, `[1]`, ...)
 #'     that ape cannot parse
 #'
@@ -276,7 +276,7 @@ read_csv_characters <- function(csv_path,
 
 
 # ============================================================================ #
-# TREE ↔ CSV COMPATIBILITY VALIDATION
+# TREE <-> CSV COMPATIBILITY VALIDATION
 # ============================================================================ #
 
 #' Checks that the CSV names match the tree tip.labels

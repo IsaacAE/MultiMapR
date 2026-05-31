@@ -7,11 +7,11 @@
 resolve_tip_color(value, color_map, color_na = "gray70")
 }
 \arguments{
+\item{value}{Character state value.}
+
+\item{color_map}{Named vector: state -> color.}
+
 \item{color_na}{Fallback color for NA or unrecognized states.}
-
-\item{valor}{Character state value.}
-
-\item{colores_sel}{Named vector: state → color.}
 }
 \value{
 A single color string.

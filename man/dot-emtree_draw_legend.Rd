@@ -17,7 +17,7 @@
 \arguments{
 \item{corner}{Corner string ("topleft", etc.)}
 
-\item{legend_by_char}{Named list character → list(labels, colors). If not
+\item{legend_by_char}{Named list character -> list(labels, colors). If not
 NULL takes precedence over \code{legend_labels}.}
 
 \item{legend_labels}{Flat label vector (legacy mode).}
@@ -34,7 +34,7 @@ NULL takes precedence over \code{legend_labels}.}
 Supports two modes:
 \itemize{
 \item \strong{Grouped} (\code{legend_by_char} not NULL): receives a named list
-character → list(labels, colors) and draws each character as an
+character -> list(labels, colors) and draws each character as an
 independent block with its header in bold, without mixing states.
 \item \strong{Flat} (legacy): uses \code{legend_labels} + \code{legend_colors} + \code{legend_title}
 as before, to maintain compatibility with older calls.

@@ -17,6 +17,31 @@ plot_fan_capa(
   escala_relativa = 1
 )
 }
+\arguments{
+\item{filogenia}{\code{phylo} object.}
+
+\item{edge_colors}{Character vector of colors, one per edge.}
+
+\item{grosor}{Branch width (line width).}
+
+\item{alpha}{Alpha transparency applied to all edge colors (0-1).}
+
+\item{escala}{Global scale factor for the fan radius.}
+
+\item{rotacion}{Rotation offset in radians applied to the whole fan.}
+
+\item{offset_x}{Horizontal displacement in data units (default \code{0}).}
+
+\item{offset_y}{Vertical displacement in data units (default \code{0}).}
+
+\item{cex_aj}{Font size for tip labels (default \code{0.5}).}
+
+\item{escala_relativa}{Additional scale factor multiplied with \code{escala} (default \code{1}).}
+}
+\value{
+Invisible NULL. Draws on the active graphics device.
+}
 \description{
 Replots the fan tree with slight rotation and displacement for additional layers
 }
+\keyword{internal}

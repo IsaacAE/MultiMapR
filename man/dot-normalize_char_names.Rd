@@ -8,7 +8,7 @@
 }
 \arguments{
 \item{raw_names}{Vector with the raw names of the character columns.
-NULL or empty → automatic names are generated.}
+NULL or empty -> automatic names are generated.}
 
 \item{n}{Number of character columns.}
 }

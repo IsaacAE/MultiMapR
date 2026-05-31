@@ -1,11 +1,29 @@
-#' Main orchestrator of MultiMapR
-#'
-#' @param phylogeny         Path to the tree file or a phylo object.
-#' @param character_data    Path to the CSV file or a data.frame.
-#' @param branch_width      Optional branch width.
-#' @param label_offset      Dynamic label offset.
+# ==============================================================================
+# PACKAGE-LEVEL IMPORTS
+# Centralises all base-R importFrom declarations so devtools::document()
+# writes them to NAMESPACE automatically. Nothing else in the package needs
+# to repeat these.
+# ==============================================================================
+
+#' @importFrom grDevices adjustcolor colors dev.list dev.new dev.off pdf png
+#' @importFrom graphics  legend lines par plot.new points segments strheight strwidth text
+#' @importFrom stats     setNames
+#' @importFrom utils     head read.csv
 #' @import ape
-#' @export
+"_PACKAGE"
+
+#' Opens a graphics device, evaluates an expression, and closes the device
+#'
+#' @param filename   Output filename without extension.
+#' @param format     Output format: \code{"png"} or \code{"pdf"}.
+#' @param phylogeny  \code{phylo} object; used only to calculate default dimensions.
+#' @param tree_type  Tree topology string (\code{"phylogram"}, \code{"cladogram"}, or \code{"fan"}).
+#'                   Fan trees use square dimensions.
+#' @param expr       Expression to evaluate inside the open device (the drawing code).
+#' @param width      Device width in inches. \code{NULL} = automatic.
+#' @param height     Device height in inches. \code{NULL} = automatic.
+#' @import ape
+#' @keywords internal
 .export_device <- function(filename, format, phylogeny, tree_type, expr,
                            width = NULL, height = NULL) {
   n_tips         <- Ntip(phylogeny)
@@ -46,7 +64,7 @@
 
 
 # ==============================================================================
-# MAIN FUNCTION — ORCHESTRATOR
+# MAIN FUNCTION -- ORCHESTRATOR
 # ==============================================================================
 
 #' Main orchestrator of MultiMapR
@@ -55,8 +73,8 @@
 #' are strings (file paths on disk), the data are loaded automatically
 #' through `load_data()` before configuring the mapping.
 #'
-#' @param phylogeny          phylo object — OR — string path to the tree file.
-#' @param character_data     Data.frame with a "Species" column — OR — string path
+#' @param phylogeny          phylo object -- OR -- string path to the tree file.
+#' @param character_data     Data.frame with a "Species" column -- OR -- string path
 #'                           to the character CSV file.
 #' @param branch_width       Branch width (default NULL = chosen by the user in
 #'                           the menu). A positive number overrides the menu.
@@ -128,8 +146,8 @@ execute_phylogeny <- function(phylogeny, character_data,
 
     # Dispatch to the corresponding graphics controller (core_render.R)
     # plot_ancestral_reconstruction() internally handles multi_function:
-    #   multi_function == 1 → branch overlay
-    #   multi_function == 2 → ancestral reconstruction + tip figures
+    #   multi_function == 1 -> branch overlay
+    #   multi_function == 2 -> ancestral reconstruction + tip figures
     if (config$mapping_type == 1) {
       plot_simple_mapping(phylogeny, config)
     } else {

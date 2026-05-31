@@ -6,6 +6,10 @@
 \usage{
 .emtree_validate_tree(tree)
 }
+\arguments{
+\item{tree}{Object to validate; must be of class \code{phylo}.}
+}
 \description{
 Checks that \code{tree} is a valid phylo object with edges and tip.labels
 }
+\keyword{internal}

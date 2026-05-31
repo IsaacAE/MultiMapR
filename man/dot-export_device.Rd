@@ -2,7 +2,7 @@
 % Please edit documentation in R/MultiMapR.R
 \name{.export_device}
 \alias{.export_device}
-\title{Main orchestrator of MultiMapR}
+\title{Opens a graphics device, evaluates an expression, and closes the device}
 \usage{
 .export_device(
   filename,
@@ -15,14 +15,22 @@
 )
 }
 \arguments{
-\item{phylogeny}{Path to the tree file or a phylo object.}
+\item{filename}{Output filename without extension.}
 
-\item{character_data}{Path to the CSV file or a data.frame.}
+\item{format}{Output format: \code{"png"} or \code{"pdf"}.}
 
-\item{branch_width}{Optional branch width.}
+\item{phylogeny}{\code{phylo} object; used only to calculate default dimensions.}
 
-\item{label_offset}{Dynamic label offset.}
+\item{tree_type}{Tree topology string (\code{"phylogram"}, \code{"cladogram"}, or \code{"fan"}).
+Fan trees use square dimensions.}
+
+\item{expr}{Expression to evaluate inside the open device (the drawing code).}
+
+\item{width}{Device width in inches. \code{NULL} = automatic.}
+
+\item{height}{Device height in inches. \code{NULL} = automatic.}
 }
 \description{
-Main orchestrator of MultiMapR
+Opens a graphics device, evaluates an expression, and closes the device
 }
+\keyword{internal}

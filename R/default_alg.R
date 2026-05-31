@@ -49,7 +49,7 @@
 #'      segments from remaining gray when the parent had no color yet.
 #'
 #' @param tree        phylo object.
-#' @param tip_colors  Named character vector: tip_colors[i] = color of tip i.
+#' @param tip_colors  Named character vector: \code{tip_colors[[i]]} is the color of tip \code{i}.
 #' @param edge_colors Named character vector initialised with gray
 #'                    (names: "parent-child").
 #' @return Named character vector of length nrow(tree$edge) with updated

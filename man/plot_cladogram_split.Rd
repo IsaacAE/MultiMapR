@@ -13,6 +13,25 @@ plot_cladogram_split(
   offset_clado
 )
 }
+\arguments{
+\item{tree}{\code{phylo} object.}
+
+\item{base_coords}{List with \code{xx} and \code{yy} nodal coordinate vectors
+from \code{ape::plotPhyloCoor()} or equivalent.}
+
+\item{edge_colors}{Character vector of colors, one per edge.}
+
+\item{grosor2}{Branch width (line width) for the offset layer.}
+
+\item{alpha2}{Alpha transparency applied to all edge colors (0-1).}
+
+\item{offset_clado}{Displacement in data units applied to each segment endpoint
+to separate the cladogram layer from the base layer.}
+}
+\value{
+Invisible NULL. Draws on the active graphics device.
+}
 \description{
 Draws an offset cladogram for the second character onward
 }
+\keyword{internal}

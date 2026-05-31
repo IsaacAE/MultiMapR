@@ -10,8 +10,8 @@
 
 #' Resolves the tip figure color given its state value
 #'
-#' @param valor          Character state value.
-#' @param colores_sel    Named vector: state → color.
+#' @param value          Character state value.
+#' @param color_map      Named vector: state -> color.
 #' @param color_na       Fallback color for NA or unrecognized states.
 #' @return A single color string.
 resolve_tip_color <- function(value, color_map, color_na = "gray70") {
@@ -437,7 +437,7 @@ init_edge_colors <- function(filogenia) {
 #' Dispatches to the ancestral reconstruction algorithm selected in config
 #'
 #' @param tree         phylo object.
-#' @param tip_colors   Named character vector: tip label → color.
+#' @param tip_colors   Named character vector: tip label -> color.
 #' @param edge_colors  Named character vector from init_edge_colors().
 #' @param config       Configuration list.
 #' @return Updated edge_colors vector.
@@ -471,8 +471,8 @@ apply_ancestral_algorithm <- function(tree, tip_colors, edge_colors, config) {
 #' multi-mappings.
 #'
 #' Accepts a list of color vectors (one per evolutionary history).
-#' If the list has 1 element → simple mapping (no offset).
-#' If it has N > 1 → multi-mapping with zero-centered offset:
+#' If the list has 1 element -> simple mapping (no offset).
+#' If it has N > 1 -> multi-mapping with zero-centered offset:
 #'   · The user only provides `desfases_y` (vertical lanes).
 #'   · `desfases_x` is calculated automatically just after
 #'     `plot(..., type = "n")`, when the graphics engine already knows
@@ -615,7 +615,7 @@ dibujar_filograma_canvas <- function(filogenia, lista_ec,
 #' @param edge_colors    Color vector for each branch.
 #' @param config         Configuration list.
 #' @param titulo_leyenda String for the legend title.
-#' @param colores_estado Named vector state → color for the legend.
+#' @param colores_estado Named vector state -> color for the legend.
 #' @return Invisible NULL. Draws on the active graphics device.
 plot_ancestral_branches <- function(filogenia, edge_colors, config,
                                     titulo_leyenda = "", colores_estado = NULL) {
@@ -666,9 +666,9 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
 #' FULL ANCESTRAL RECONSTRUCTION — orchestrates 3.1 and 3.3
 #'
 #' Dispatches to the appropriate render function based on config$funcion_multi:
-#'   1 → branch superimposition only (plot_superimposed_characters /
+#'   1 -> branch superimposition only (plot_superimposed_characters /
 #'         plot_ancestral_branches for single character)
-#'   2 → ancestral reconstruction on branches PLUS simple terminal figures
+#'   2 -> ancestral reconstruction on branches PLUS simple terminal figures
 #'         (plot_ancestral_with_terminals)
 #'
 #' @param filogenia  phylo object.
@@ -968,6 +968,17 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
 # ==============================================================================
 
 #' Draws an offset cladogram for the second character onward
+#'
+#' @param tree          \code{phylo} object.
+#' @param base_coords   List with \code{xx} and \code{yy} nodal coordinate vectors
+#'                      from \code{ape::plotPhyloCoor()} or equivalent.
+#' @param edge_colors   Character vector of colors, one per edge.
+#' @param grosor2       Branch width (line width) for the offset layer.
+#' @param alpha2        Alpha transparency applied to all edge colors (0-1).
+#' @param offset_clado  Displacement in data units applied to each segment endpoint
+#'                      to separate the cladogram layer from the base layer.
+#' @return Invisible NULL. Draws on the active graphics device.
+#' @keywords internal
 plot_cladogram_split <- function(tree, base_coords, edge_colors,
                                  grosor2, alpha2, offset_clado) {
   temp_tree <- tree
@@ -1006,6 +1017,19 @@ plot_cladogram_split <- function(tree, base_coords, edge_colors,
 
 
 #' Replots the fan tree with slight rotation and displacement for additional layers
+#'
+#' @param filogenia       \code{phylo} object.
+#' @param edge_colors     Character vector of colors, one per edge.
+#' @param grosor          Branch width (line width).
+#' @param alpha           Alpha transparency applied to all edge colors (0-1).
+#' @param escala          Global scale factor for the fan radius.
+#' @param rotacion        Rotation offset in radians applied to the whole fan.
+#' @param offset_x        Horizontal displacement in data units (default \code{0}).
+#' @param offset_y        Vertical displacement in data units (default \code{0}).
+#' @param cex_aj          Font size for tip labels (default \code{0.5}).
+#' @param escala_relativa Additional scale factor multiplied with \code{escala} (default \code{1}).
+#' @return Invisible NULL. Draws on the active graphics device.
+#' @keywords internal
 plot_fan_capa <- function(filogenia, edge_colors, grosor, alpha,
                           escala, rotacion, offset_x = 0, offset_y = 0,
                           cex_aj = 0.5, escala_relativa = 1.0) {
@@ -1033,8 +1057,18 @@ plot_fan_capa <- function(filogenia, edge_colors, grosor, alpha,
 #' Isotropic offsets and the character-grouped legend are calculated and
 #' drawn identically to export_multimapr_tree.
 #'
-#' @param filogenia  phylo object.
-#' @param config     Configuration list from setup_mapping_config().
+#' @param filogenia        \code{phylo} object.
+#' @param config           Configuration list from \code{setup_mapping_config()}.
+#' @param alpha1           Alpha transparency for the first character layer (default \code{1}).
+#' @param alpha2           Alpha transparency for additional character layers (default \code{1}).
+#' @param offset_h_map     Horizontal offset between layers in data units (default \code{0.02}).
+#' @param offset_v_map     Vertical offset between layers in data units (default \code{0.02}).
+#' @param extra_offset_map Extra separation added to fan layers (default \code{0.07}).
+#' @param escala_fan       Scale factor for fan topology layers (default \code{0.75}).
+#' @param rotacion_fan     Rotation in radians between fan layers (default \code{2}).
+#' @param base_escala      Base scale factor applied before \code{escala_fan} (default \code{1}).
+#' @param legend_spacing   Vertical spacing between legend blocks in data units (default \code{0.06}).
+#' @param x_limit          Optional numeric; overrides the x-axis upper limit. \code{NULL} = automatic.
 #' @return Invisible NULL. Draws on the active graphics device.
 plot_superimposed_characters <- function(filogenia, config,
                                          alpha1           = 1,

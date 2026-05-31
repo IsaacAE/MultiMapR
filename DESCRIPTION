@@ -1,13 +1,18 @@
 Package: MultiMapR
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Title: Mapping and Visualization of Discrete Characters on Phylogenies
+Version: 1.0.1.1
+Authors@R: c(
+    person("Kevin Isaac", "Alcántara Estrada", role = c("aut", "cre"),
+           email = "isaac.ae@ciencias.unam.mx"),
+    person("Jatziri", "Linares Rios", role = "aut", email= "jatzirilin@ciencias.unam.mx "))
+Description: Maps and visualizes discrete morphological, ecological, or molecular
+    characters on phylogenetic trees. Supports simple terminal mapping and ancestral
+    state reconstruction (depth-weighted majority and Fitch parsimony with ACCTRAN,
+    DELTRAN, and Unambiguous modes) across phylogram, cladogram, and fan topologies.
+    Exports publication-ready PNG and PDF figures.
+License: GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Imports: 
-    ape
+Imports:
+    ape (>= 5.0)

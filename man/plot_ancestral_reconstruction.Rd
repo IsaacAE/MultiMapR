@@ -16,8 +16,8 @@ Invisible NULL.
 }
 \description{
 Dispatches to the appropriate render function based on config$funcion_multi:
-1 → branch superimposition only (plot_superimposed_characters /
+1 -> branch superimposition only (plot_superimposed_characters /
 plot_ancestral_branches for single character)
-2 → ancestral reconstruction on branches PLUS simple terminal figures
+2 -> ancestral reconstruction on branches PLUS simple terminal figures
 (plot_ancestral_with_terminals)
 }

@@ -6,6 +6,12 @@
 \usage{
 .emtree_validate_type_format(type, format)
 }
+\arguments{
+\item{type}{Tree topology string: \code{"phylogram"}, \code{"cladogram"}, or \code{"fan"}.}
+
+\item{format}{Output format: \code{"png"} or \code{"pdf"}.}
+}
 \description{
 Checks scalar type and format arguments
 }
+\keyword{internal}
