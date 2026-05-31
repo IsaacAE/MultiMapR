@@ -19,8 +19,12 @@ publication-ready PNG and PDF files.
 You can install the development version of MultiMapR from GitHub:
 
 ``` r
+# install.packages("pak")
+pak::pak("IsaacAE/MultiMapR")
+
+# Or with remotes:
 # install.packages("remotes")
-remotes::install_github("your-username/MultiMapR")
+remotes::install_github("IsaacAE/MultiMapR")
 ```
 
 MultiMapR requires the `ape` package (\>= 5.0), which is installed
@@ -31,11 +35,19 @@ automatically as a dependency.
 ``` r
 library(MultiMapR)
 
-# Option A — pass file paths directly (recommended)
-execute_phylogeny("my_tree.tre", "my_characters.csv")
+# Pass file paths directly — the interactive menu opens automatically
+execute_phylogeny(
+  phylogeny      = "arbol_aves.tre",
+  character_data = "matriz_aves.csv"
+)
+```
 
-# Option B — load objects first, then map
-data <- load_data("my_tree.tre", "my_characters.csv")
+Paths can be absolute or relative to your working directory (`getwd()`).
+`execute_phylogeny()` also accepts in-memory objects if you have already
+loaded the data:
+
+``` r
+data <- load_data("arbol_aves.tre", "matriz_aves.csv")
 execute_phylogeny(data$tree, data$characters)
 ```
 

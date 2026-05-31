@@ -616,19 +616,27 @@ with support for three topologies (phylogram, cladogram, fan) and export
 to publication-ready PNG and PDF files.</p>
 <h2 id="installation">Installation</h2>
 <p>You can install the development version of MultiMapR from GitHub:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># install.packages(&quot;remotes&quot;)</span></span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>remotes<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">&quot;your-username/MultiMapR&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># install.packages(&quot;pak&quot;)</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pak</span>(<span class="st">&quot;IsaacAE/MultiMapR&quot;</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co"># Or with remotes:</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co"># install.packages(&quot;remotes&quot;)</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>remotes<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">&quot;IsaacAE/MultiMapR&quot;</span>)</span></code></pre></div>
 <p>MultiMapR requires the <code>ape</code> package (&gt;= 5.0), which is
 installed automatically as a dependency.</p>
 <h2 id="quick-start">Quick start</h2>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(MultiMapR)</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># Option A — pass file paths directly (recommended)</span></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">execute_phylogeny</span>(<span class="st">&quot;my_tree.tre&quot;</span>, <span class="st">&quot;my_characters.csv&quot;</span>)</span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a></span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co"># Option B — load objects first, then map</span></span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;my_tree.tre&quot;</span>, <span class="st">&quot;my_characters.csv&quot;</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">execute_phylogeny</span>(data<span class="sc">$</span>tree, data<span class="sc">$</span>characters)</span></code></pre></div>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># Pass file paths directly — the interactive menu opens automatically</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">execute_phylogeny</span>(</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">phylogeny      =</span> <span class="st">&quot;arbol_aves.tre&quot;</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="at">character_data =</span> <span class="st">&quot;matriz_aves.csv&quot;</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>)</span></code></pre></div>
+<p>Paths can be absolute or relative to your working directory
+(<code>getwd()</code>). <code>execute_phylogeny()</code> also accepts
+in-memory objects if you have already loaded the data:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;arbol_aves.tre&quot;</span>, <span class="st">&quot;matriz_aves.csv&quot;</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">execute_phylogeny</span>(data<span class="sc">$</span>tree, data<span class="sc">$</span>characters)</span></code></pre></div>
 <p>Calling <code>execute_phylogeny()</code> opens an <strong>interactive
 console menu</strong> that guides you through every option: mapping
 type, colours per state, algorithm, tree topology, and export settings.
@@ -636,18 +644,18 @@ Type <code>exit</code> at any prompt to cancel.</p>
 <h2 id="loading-data">Loading data</h2>
 <p><code>load_data()</code> handles tree and character matrix reading in
 a single call:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Basic usage — auto-detects format, header, and BOM</span></span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.tre&quot;</span>, <span class="st">&quot;characters.csv&quot;</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># Semicolon-separated CSV, species column identified by name</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.nex&quot;</span>, <span class="st">&quot;data.csv&quot;</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>               <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>, <span class="at">species_col =</span> <span class="st">&quot;Taxon&quot;</span>)</span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co"># Normalise spaces to underscores when tree uses &quot;_&quot; but CSV uses &quot; &quot;</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.tre&quot;</span>, <span class="st">&quot;data.csv&quot;</span>, <span class="at">normalize_spaces =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co"># Raise an error (instead of a warning) on tree/CSV mismatches</span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.tre&quot;</span>, <span class="st">&quot;data.csv&quot;</span>, <span class="at">strict =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Basic usage — auto-detects format, header, and BOM</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.tre&quot;</span>, <span class="st">&quot;characters.csv&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co"># Semicolon-separated CSV, species column identified by name</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.nex&quot;</span>, <span class="st">&quot;data.csv&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>               <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>, <span class="at">species_col =</span> <span class="st">&quot;Taxon&quot;</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co"># Normalise spaces to underscores when tree uses &quot;_&quot; but CSV uses &quot; &quot;</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.tre&quot;</span>, <span class="st">&quot;data.csv&quot;</span>, <span class="at">normalize_spaces =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co"># Raise an error (instead of a warning) on tree/CSV mismatches</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>d <span class="ot">&lt;-</span> <span class="fu">load_data</span>(<span class="st">&quot;tree.tre&quot;</span>, <span class="st">&quot;data.csv&quot;</span>, <span class="at">strict =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 <p><code>load_data()</code> returns a list with two elements:</p>
 <ul>
 <li><code>$tree</code> — a <code>phylo</code> object ready for ape and
