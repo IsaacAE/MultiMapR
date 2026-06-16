@@ -95,30 +95,41 @@ prompt_characters <- function(available_chars, prompt_n, min_n = 1,
       cat("Only one character available:", available_chars[1], "\n")
       return(available_chars[1])
     }
-    sel <- readline(prompt = prompt_n)
-    if (check_exit(sel)) return(invisible(NULL))
-    sel <- as.integer(sel)
-    if (is.na(sel) || sel < 1 || sel > length(available_chars))
-      stop("Invalid selection.")
+    repeat {
+      sel <- readline(prompt = prompt_n)
+      if (check_exit(sel)) return(invisible(NULL))
+      sel <- suppressWarnings(as.integer(sel))
+      if (!is.na(sel) && sel >= 1 && sel <= length(available_chars)) break
+      cat(sprintf("Invalid selection. Please enter a number between 1 and %d.\n",
+                  length(available_chars)))
+    }
     return(available_chars[sel])
   }
 
   range_txt <- if (min_n == max_n) as.character(min_n)
   else paste0(min_n, "\u2013", max_n)
-  n_str <- readline(prompt = paste0(prompt_n, " (", range_txt, " or 'exit' to quit): "))
-  if (check_exit(n_str)) return(invisible(NULL))
-  n <- as.integer(n_str)
-  if (is.na(n) || n < min_n || n > max_n)
-    stop(paste0("Invalid number. Must be between ", min_n, " and ", max_n, "."))
+  repeat {
+    n_str <- readline(prompt = paste0(prompt_n, " (", range_txt, " or 'exit' to quit): "))
+    if (check_exit(n_str)) return(invisible(NULL))
+    n <- suppressWarnings(as.integer(n_str))
+    if (!is.na(n) && n >= min_n && n <= max_n) break
+    cat(sprintf("Invalid number. Must be between %d and %d.\n", min_n, max_n))
+  }
 
   selected <- character(n)
   for (i in seq_len(n)) {
-    s <- readline(prompt = paste0("  Character ", i, " (number, or 'exit' to quit): "))
-    if (check_exit(s)) return(invisible(NULL))
-    s <- as.integer(s)
-    if (is.na(s) || s < 1 || s > length(available_chars) ||
-        available_chars[s] %in% selected)
-      stop("Invalid selection or repeated character.")
+    repeat {
+      s <- readline(prompt = paste0("  Character ", i, " (number, or 'exit' to quit): "))
+      if (check_exit(s)) return(invisible(NULL))
+      s <- suppressWarnings(as.integer(s))
+      if (!is.na(s) && s >= 1 && s <= length(available_chars) &&
+          !available_chars[s] %in% selected) break
+      if (!is.na(s) && available_chars[s] %in% selected)
+        cat("Character already selected. Please choose a different one.\n")
+      else
+        cat(sprintf("Invalid selection. Please enter a number between 1 and %d.\n",
+                    length(available_chars)))
+    }
     selected[i] <- available_chars[s]
   }
   selected
@@ -139,16 +150,20 @@ prompt_states_and_colors <- function(aligned_data, character) {
   for (i in seq_along(all_states)) cat(sprintf("  %d: %s\n", i, all_states[i]))
 
   cat("  0: All states\n")
-  sel_str <- readline(prompt = "Which states to include? (0 = all, or numbers separated by commas): ")
-  if (check_exit(sel_str)) return(invisible(NULL))
-
-  if (trimws(sel_str) == "0") {
-    selected_states <- all_states
-  } else {
+  repeat {
+    sel_str <- readline(prompt = "Which states to include? (0 = all, or numbers separated by commas): ")
+    if (check_exit(sel_str)) return(invisible(NULL))
+    if (trimws(sel_str) == "0") {
+      selected_states <- all_states
+      break
+    }
     indices <- suppressWarnings(as.integer(unlist(strsplit(sel_str, ","))))
-    if (any(is.na(indices)) || any(indices < 1) || any(indices > length(all_states)))
-      stop("Invalid state selection.")
-    selected_states <- all_states[indices]
+    if (!any(is.na(indices)) && all(indices >= 1) && all(indices <= length(all_states))) {
+      selected_states <- all_states[indices]
+      break
+    }
+    cat(sprintf("Invalid selection. Enter 0 or numbers between 1 and %d separated by commas.\n",
+                length(all_states)))
   }
 
   prompt_character_colors(selected_states, character)
@@ -186,11 +201,13 @@ setup_mapping_config <- function(phylogeny, character_data) {
   cat("\nMapping type:\n")
   cat("  1: Simple mapping \u2014 colored figures at terminals\n")
   cat("  2: Ancestral reconstruction \u2014 branch coloring\n")
-  mapping_type <- readline(prompt = "Select (1/2, or 'exit' to quit): ")
-  if (check_exit(mapping_type)) return(invisible(NULL))
-  mapping_type <- as.integer(mapping_type)
-  if (!mapping_type %in% 1:2) stop("Invalid mapping option.")
-
+  repeat {
+    mapping_type <- readline(prompt = "Select (1/2, or 'exit' to quit): ")
+    if (check_exit(mapping_type)) return(invisible(NULL))
+    mapping_type <- suppressWarnings(as.integer(mapping_type))
+    if (!is.na(mapping_type) && mapping_type %in% 1:2) break
+    cat("Invalid option. Please enter 1 or 2.\n")
+  }
   config <- list(mapping_type = mapping_type, aligned_data = aligned_data)
 
   # Alias kept for backward compatibility with rendering functions
@@ -252,10 +269,13 @@ setup_mapping_config <- function(phylogeny, character_data) {
     cat("\nVisualization mode:\n")
     cat("  1: Branch superimposition (one or several characters)\n")
     cat("  2: Terminal figures + colored tree\n")
-    fun_sel <- readline(prompt = "Select (1/2, or 'exit' to quit): ")
-    if (check_exit(fun_sel)) return(invisible(NULL))
-    fun_sel <- as.integer(fun_sel)
-    if (!fun_sel %in% 1:2) stop("Invalid option.")
+    repeat {
+      fun_sel <- readline(prompt = "Select (1/2, or 'exit' to quit): ")
+      if (check_exit(fun_sel)) return(invisible(NULL))
+      fun_sel <- suppressWarnings(as.integer(fun_sel))
+      if (!is.na(fun_sel) && fun_sel %in% 1:2) break
+      cat("Invalid option. Please enter 1 or 2.\n")
+    }
     config$funcion_multi <- fun_sel
 
     selected_chars <- prompt_characters(
@@ -316,10 +336,13 @@ setup_mapping_config <- function(phylogeny, character_data) {
     cat("\nAncestral reconstruction algorithm:\n")
     cat("  1: Default (depth-weighted majority)\n")
     cat("  2: Fitch (ACCTRAN/DELTRAN/Unambiguous \u2014 loaded automatically from fitch.R)\n")
-    algo_sel <- readline(prompt = "Select (1/2, or 'exit' to quit): ")
-    if (check_exit(algo_sel)) return(invisible(NULL))
-    algo_sel <- as.integer(algo_sel)
-    if (!algo_sel %in% 1:2) stop("Invalid algorithm option.")
+    repeat {
+      algo_sel <- readline(prompt = "Select (1/2, or 'exit' to quit): ")
+      if (check_exit(algo_sel)) return(invisible(NULL))
+      algo_sel <- suppressWarnings(as.integer(algo_sel))
+      if (!is.na(algo_sel) && algo_sel %in% 1:2) break
+      cat("Invalid option. Please enter 1 or 2.\n")
+    }
     config$algoritmo <- algo_sel
 
     if (algo_sel == 2) {
@@ -339,15 +362,19 @@ setup_mapping_config <- function(phylogeny, character_data) {
   }
 
   # --- Tree type ---------------------------------------------------------------
-  valid_types <- c("phylogram", "cladogram", "fan")
-  cat("\nTree type: phylogram / cladogram / fan\n")
-  tree_type <- tolower(trimws(readline(prompt = "Select (or 'exit' to quit): ")))
-  if (check_exit(tree_type)) return(invisible(NULL))
-  while (!tree_type %in% valid_types) {
-    cat("Invalid type.\n")
-    tree_type <- tolower(trimws(readline(prompt = "Select: ")))
-    if (check_exit(tree_type)) return(invisible(NULL))
+  letter_to_type <- c("p" = "phylogram", "c" = "cladogram", "f" = "fan")
+  cat("\nTree type:\n")
+  cat("  p: Phylogram\n")
+  cat("  c: Cladogram\n")
+  cat("  f: Fan\n")
+  repeat {
+    tree_input <- tolower(trimws(readline(prompt = "Select (p/c/f, or 'exit' to quit): ")))
+    if (check_exit(tree_input)) return(invisible(NULL))
+    if (tree_input %in% names(letter_to_type)) break
+    cat("Invalid option. Please enter p, c, or f.\n")
   }
+  tree_type <- letter_to_type[[tree_input]]
+  cat(sprintf("  \u2192 Tree type: %s\n", tree_type))
   config$tipo_arbol <- tree_type
 
   # --- Dynamic offset range based on branch width ------------------------------
