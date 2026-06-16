@@ -216,20 +216,32 @@ setup_mapping_config <- function(phylogeny, character_data) {
     }
     config$colores_por_caracter <- colors_by_char
 
-    cat("\nFigure type at terminals:\n")
-    cat("  1: Circle   (pch = 21)\n")
-    cat("  2: Square   (pch = 22)\n")
-    cat("  3: Triangle (pch = 24)\n")
-    cat("  4: Diamond  (pch = 23)\n")
-    fig_str <- readline(prompt = "Select (1\u20134, Enter = 1): ")
-    pch_map <- c(`1` = 21L, `2` = 22L, `3` = 24L, `4` = 23L)
-    config$pch_figura <- if (nchar(trimws(fig_str)) == 0 || is.na(pch_map[fig_str]))
-      21L else pch_map[fig_str]
+    cat("\nSimple mapping display mode:\n")
+    cat("  1: Colored figures at terminals (circles, squares, etc.)\n")
+    cat("  2: Colored tip labels only (no figures)\n")
+    mode_sm_str <- readline(prompt = "Select (1/2, Enter = 1): ")
+    if (check_exit(mode_sm_str)) return(invisible(NULL))
+    config$simple_mode <- if (trimws(mode_sm_str) == "2") "tip_color" else "figures"
 
-    size_str <- readline(prompt = "Figure size (positive number, Enter = 1): ")
-    config$tam_figura <- if (nchar(trimws(size_str)) == 0) 1 else {
-      t <- suppressWarnings(as.numeric(size_str))
-      if (is.na(t) || t <= 0) { cat("Invalid value, using 1.\n"); 1 } else t
+    if (config$simple_mode == "figures") {
+      cat("\nFigure type at terminals:\n")
+      cat("  1: Circle   (pch = 21)\n")
+      cat("  2: Square   (pch = 22)\n")
+      cat("  3: Triangle (pch = 24)\n")
+      cat("  4: Diamond  (pch = 23)\n")
+      fig_str <- readline(prompt = "Select (1\u20134, Enter = 1): ")
+      pch_map <- c(`1` = 21L, `2` = 22L, `3` = 24L, `4` = 23L)
+      config$pch_figura <- if (nchar(trimws(fig_str)) == 0 || is.na(pch_map[fig_str]))
+        21L else pch_map[fig_str]
+
+      size_str <- readline(prompt = "Figure size (positive number, Enter = 1): ")
+      config$tam_figura <- if (nchar(trimws(size_str)) == 0) 1 else {
+        t <- suppressWarnings(as.numeric(size_str))
+        if (is.na(t) || t <= 0) { cat("Invalid value, using 1.\n"); 1 } else t
+      }
+    } else {
+      config$pch_figura <- 21L   # valor por defecto, no se usará en el render
+      config$tam_figura <- 1
     }
 
     # ==========================================================================

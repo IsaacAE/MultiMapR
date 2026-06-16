@@ -60,6 +60,7 @@ plot_simple_mapping <- function(filogenia, config) {
   tipo_arbol      <- config$tipo_arbol
   pch_fig         <- config$pch_figura
   tam_fig         <- config$tam_figura
+  simple_mode     <- config$simple_mode %||% "figures"   # "figures" | "tip_color"
   cex_aj          <- adjust_cex(filogenia, config = config)
   n_tips          <- Ntip(filogenia)
   n_car           <- length(caracteres)
@@ -175,85 +176,126 @@ plot_simple_mapping <- function(filogenia, config) {
       tip_radius     <- sqrt(xx_tip^2 + yy_tip^2)
       max_tip_radius <- max(tip_radius)
 
-      # ── Step 2: ring geometry ─────────────────────────────────────────────────
-      radio_base       <- max_tip_radius * 1.06
-      incremento_radio <- max_tip_radius * 0.10
-      radio_ultimo     <- radio_base + (n_car - 1L) * incremento_radio
+      if (simple_mode == "tip_color") {
+        # ── MODE tip_color (fan): colored terminal branches, no rings ──────────
+        # Edges whose child is a tip are painted with that tip's state color;
+        # all other edges stay black.
+        char1     <- caracteres[1L]
+        col_tips1 <- sapply(datos_ord[[char1]], asignar_color,
+                            colores_estado = colores_por_car[[char1]])
 
-      # Space between last ring and label
-      gap_etiq         <- incremento_radio * 0.5
-      radio_nombres    <- radio_ultimo + gap_etiq
-
-      # ── Step 3: estimate total radius including tip labels ────────────────────
-      max_nchar_lbl <- max(nchar(filogenia$tip.label))
-      char_w_u      <- max_tip_radius * 0.018 * cex_aj
-      lbl_w_u       <- max_nchar_lbl * char_w_u
-      radio_total   <- radio_nombres + lbl_w_u + max_tip_radius * 0.05
-
-      # ── Step 4: replot with symmetric x.lim that contains everything ─────────
-      xlim_fan <- c(-radio_total, radio_total)
-
-      plot(filogenia,
-           type           = "fan",
-           cex            = cex_aj,
-           label.offset   = config$label_offset,
-           edge.width     = config$grosor,
-           tip.color      = "transparent",
-           show.tip.label = FALSE,
-           no.margin      = TRUE,
-           x.lim          = xlim_fan)
-
-      # Refresh coordinates from the definitive plot
-      obj    <- get("last_plot.phylo", envir = .PlotPhyloEnv)
-      xx_tip <- obj$xx[seq_len(n_tips)]
-      yy_tip <- obj$yy[seq_len(n_tips)]
-      angulos <- atan2(yy_tip, xx_tip)
-
-      # ── Symbol rings ───────────────────────────────────────────────────────────
-      old_xpd <- par("xpd"); par(xpd = TRUE)
-      for (i in seq_len(n_car)) {
-        col_tips     <- sapply(datos_ord[[caracteres[i]]], asignar_color,
-                               colores_estado = colores_por_car[[caracteres[i]]])
-        radio_actual <- radio_base + (i - 1L) * incremento_radio
-
-        points(radio_actual * cos(angulos),
-               radio_actual * sin(angulos),
-               pch = pch_fig, bg = col_tips, col = "black", cex = tam_fig)
-
-        gap_tan <- incremento_radio * 0.55
-        for (j in seq_len(n_tips)) {
-          ang_j   <- angulos[j]
-          deg_j   <- ang_j * 180 / pi
-          lado_d  <- cos(ang_j) >= 0
-          srt_j   <- if (lado_d) deg_j else deg_j + 180
-          tan_x   <- -sin(ang_j)
-          tan_y   <-  cos(ang_j)
-          cx      <- radio_actual * cos(ang_j) + tan_x * gap_tan
-          cy      <- radio_actual * sin(ang_j) + tan_y * gap_tan
-          text(cx, cy,
-               labels = paste0("C", i),
-               adj    = c(0.5, 0.5),
-               cex    = cex_aj * 0.65,
-               font   = 2L,
-               srt    = srt_j)
+        edge_col <- rep("black", nrow(filogenia$edge))
+        for (e in seq_len(nrow(filogenia$edge))) {
+          child <- filogenia$edge[e, 2L]
+          if (child <= n_tips)
+            edge_col[e] <- col_tips1[child]
         }
-      }
-      par(xpd = old_xpd)
 
-      # ── Tip labels — parallel to radius ──────────────────────────────────────
-      old_xpd <- par("xpd"); par(xpd = TRUE)
-      for (j in seq_len(n_tips)) {
-        ang_j  <- angulos[j]; deg_j <- ang_j * 180 / pi
-        lado_d <- cos(ang_j) >= 0
-        srt_j  <- if (lado_d) deg_j else deg_j + 180
-        adj_j  <- if (lado_d) c(0, 0.5) else c(1, 0.5)
-        text(radio_nombres * cos(ang_j), radio_nombres * sin(ang_j),
-             labels = filogenia$tip.label[j], adj = adj_j, cex = cex_aj, srt = srt_j,
-             font   = 3L)
-      }
-      par(xpd = old_xpd)
+        # Estimate label radius (no rings)
+        max_nchar_lbl <- max(nchar(filogenia$tip.label))
+        char_w_u      <- max_tip_radius * 0.018 * cex_aj
+        lbl_w_u       <- max_nchar_lbl * char_w_u
+        radio_total   <- max_tip_radius * 1.06 + lbl_w_u + max_tip_radius * 0.05
+        xlim_fan      <- c(-radio_total, radio_total)
 
-      .draw_simple_legend(pos_leyenda)
+        plot(filogenia,
+             type           = "fan",
+             cex            = cex_aj,
+             label.offset   = config$label_offset,
+             edge.width     = config$grosor,
+             edge.color     = edge_col,
+             tip.color      = "black",
+             show.tip.label = TRUE,
+             no.margin      = TRUE,
+             font           = 3L,
+             x.lim          = xlim_fan)
+
+        .draw_simple_legend(pos_leyenda)
+
+      } else {
+        # ── MODE figures (fan): concentric symbol rings ─────────────────────────
+
+        # ── Step 2: ring geometry ───────────────────────────────────────────────
+        radio_base       <- max_tip_radius * 1.06
+        incremento_radio <- max_tip_radius * 0.10
+        radio_ultimo     <- radio_base + (n_car - 1L) * incremento_radio
+
+        # Space between last ring and label
+        gap_etiq         <- incremento_radio * 0.5
+        radio_nombres    <- radio_ultimo + gap_etiq
+
+        # ── Step 3: estimate total radius including tip labels ──────────────────
+        max_nchar_lbl <- max(nchar(filogenia$tip.label))
+        char_w_u      <- max_tip_radius * 0.018 * cex_aj
+        lbl_w_u       <- max_nchar_lbl * char_w_u
+        radio_total   <- radio_nombres + lbl_w_u + max_tip_radius * 0.05
+
+        # ── Step 4: replot with symmetric x.lim that contains everything ────────
+        xlim_fan <- c(-radio_total, radio_total)
+
+        plot(filogenia,
+             type           = "fan",
+             cex            = cex_aj,
+             label.offset   = config$label_offset,
+             edge.width     = config$grosor,
+             tip.color      = "transparent",
+             show.tip.label = FALSE,
+             no.margin      = TRUE,
+             x.lim          = xlim_fan)
+
+        # Refresh coordinates from the definitive plot
+        obj    <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+        xx_tip <- obj$xx[seq_len(n_tips)]
+        yy_tip <- obj$yy[seq_len(n_tips)]
+        angulos <- atan2(yy_tip, xx_tip)
+
+        # ── Symbol rings ──────────────────────────────────────────────────────────
+        old_xpd <- par("xpd"); par(xpd = TRUE)
+        for (i in seq_len(n_car)) {
+          col_tips     <- sapply(datos_ord[[caracteres[i]]], asignar_color,
+                                 colores_estado = colores_por_car[[caracteres[i]]])
+          radio_actual <- radio_base + (i - 1L) * incremento_radio
+
+          points(radio_actual * cos(angulos),
+                 radio_actual * sin(angulos),
+                 pch = pch_fig, bg = col_tips, col = "black", cex = tam_fig)
+
+          gap_tan <- incremento_radio * 0.55
+          for (j in seq_len(n_tips)) {
+            ang_j   <- angulos[j]
+            deg_j   <- ang_j * 180 / pi
+            lado_d  <- cos(ang_j) >= 0
+            srt_j   <- if (lado_d) deg_j else deg_j + 180
+            tan_x   <- -sin(ang_j)
+            tan_y   <-  cos(ang_j)
+            cx      <- radio_actual * cos(ang_j) + tan_x * gap_tan
+            cy      <- radio_actual * sin(ang_j) + tan_y * gap_tan
+            text(cx, cy,
+                 labels = paste0("C", i),
+                 adj    = c(0.5, 0.5),
+                 cex    = cex_aj * 0.65,
+                 font   = 2L,
+                 srt    = srt_j)
+          }
+        }
+        par(xpd = old_xpd)
+
+        # ── Tip labels — parallel to radius ────────────────────────────────────
+        old_xpd <- par("xpd"); par(xpd = TRUE)
+        for (j in seq_len(n_tips)) {
+          ang_j  <- angulos[j]; deg_j <- ang_j * 180 / pi
+          lado_d <- cos(ang_j) >= 0
+          srt_j  <- if (lado_d) deg_j else deg_j + 180
+          adj_j  <- if (lado_d) c(0, 0.5) else c(1, 0.5)
+          text(radio_nombres * cos(ang_j), radio_nombres * sin(ang_j),
+               labels = filogenia$tip.label[j], adj = adj_j, cex = cex_aj, srt = srt_j,
+               font   = 3L)
+        }
+        par(xpd = old_xpd)
+
+        .draw_simple_legend(pos_leyenda)
+
+      }   # end if simple_mode
 
       # ==========================================================================
       # PHYLOGRAM / CLADOGRAM
@@ -262,50 +304,81 @@ plot_simple_mapping <- function(filogenia, config) {
 
       par(mar = c(1, 1, 2, 1), xpd = TRUE)
 
-      plot(filogenia,
-           type           = tipo_arbol,
-           cex            = cex_aj,
-           label.offset   = config$label_offset,
-           edge.width     = config$grosor,
-           tip.color      = "black",
-           show.tip.label = TRUE,
-           font           = 3L,
-           x.lim          = xlim_extra)   # NULL on screen; expanded on export
+      if (simple_mode == "tip_color") {
+        # ── MODE: colored terminal branches — one character only ───────────────
+        # Edges whose child is a tip are painted with that tip's state color;
+        # all other edges stay black.
+        char1     <- caracteres[1L]
+        col_tips1 <- sapply(datos_ord[[char1]], asignar_color,
+                            colores_estado = colores_por_car[[char1]])
 
-      obj    <- get("last_plot.phylo", envir = .PlotPhyloEnv)
-      xx_tip <- obj$xx[seq_len(n_tips)]
-      yy_tip <- obj$yy[seq_len(n_tips)]
-      usr    <- par("usr")
-      pin    <- par("pin")
+        edge_col <- rep("black", nrow(filogenia$edge))
+        for (e in seq_len(nrow(filogenia$edge))) {
+          child <- filogenia$edge[e, 2L]
+          if (child <= n_tips)
+            edge_col[e] <- col_tips1[child]
+        }
 
-      sep_col    <- strwidth("M", cex = cex_aj) * 2.5
-      max_tip_x  <- max(xx_tip)
-      max_lbl_w  <- max(strwidth(filogenia$tip.label, cex = cex_aj))
-      start_x    <- max_tip_x + config$label_offset + max_lbl_w + max_tip_x * 0.02
-      x_columnas <- start_x + seq(0, n_car - 1L) * sep_col
+        plot(filogenia,
+             type           = tipo_arbol,
+             cex            = cex_aj,
+             label.offset   = config$label_offset,
+             edge.width     = config$grosor,
+             edge.color     = edge_col,
+             tip.color      = "black",
+             show.tip.label = TRUE,
+             font           = 3L,
+             x.lim          = xlim_extra)
 
-      y_range  <- diff(range(yy_tip))
-      y_header <- max(yy_tip) + y_range * 0.04
-      old_xpd <- par("xpd"); par(xpd = NA)
-      text(x_columnas, y_header,
-           labels = caracteres,
-           cex    = cex_aj * 0.9,
-           srt    = 45,
-           adj    = c(0, 0.5),
-           font   = 2L)
-      par(xpd = old_xpd)
+        .draw_simple_legend(pos_leyenda)
 
-      fig_x <- fig_y <- fig_col <- NULL
-      for (i in seq_along(caracteres)) {
-        col_tips <- sapply(datos_ord[[caracteres[i]]], asignar_color,
-                           colores_estado = colores_por_car[[caracteres[i]]])
-        fig_x   <- c(fig_x,   rep(x_columnas[i], n_tips))
-        fig_y   <- c(fig_y,   yy_tip)
-        fig_col <- c(fig_col, col_tips)
+      } else {
+        # ── MODE: figures (default) ────────────────────────────────────────────
+        plot(filogenia,
+             type           = tipo_arbol,
+             cex            = cex_aj,
+             label.offset   = config$label_offset,
+             edge.width     = config$grosor,
+             tip.color      = "black",
+             show.tip.label = TRUE,
+             font           = 3L,
+             x.lim          = xlim_extra)   # NULL on screen; expanded on export
+
+        obj    <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+        xx_tip <- obj$xx[seq_len(n_tips)]
+        yy_tip <- obj$yy[seq_len(n_tips)]
+        usr    <- par("usr")
+        pin    <- par("pin")
+
+        sep_col    <- strwidth("M", cex = cex_aj) * 2.5
+        max_tip_x  <- max(xx_tip)
+        max_lbl_w  <- max(strwidth(filogenia$tip.label, cex = cex_aj))
+        start_x    <- max_tip_x + config$label_offset + max_lbl_w + max_tip_x * 0.02
+        x_columnas <- start_x + seq(0, n_car - 1L) * sep_col
+
+        y_range  <- diff(range(yy_tip))
+        y_header <- max(yy_tip) + y_range * 0.04
+        old_xpd <- par("xpd"); par(xpd = NA)
+        text(x_columnas, y_header,
+             labels = caracteres,
+             cex    = cex_aj * 0.9,
+             srt    = 45,
+             adj    = c(0, 0.5),
+             font   = 2L)
+        par(xpd = old_xpd)
+
+        fig_x <- fig_y <- fig_col <- NULL
+        for (i in seq_along(caracteres)) {
+          col_tips <- sapply(datos_ord[[caracteres[i]]], asignar_color,
+                             colores_estado = colores_por_car[[caracteres[i]]])
+          fig_x   <- c(fig_x,   rep(x_columnas[i], n_tips))
+          fig_y   <- c(fig_y,   yy_tip)
+          fig_col <- c(fig_col, col_tips)
+        }
+        points(fig_x, fig_y, pch = pch_fig, bg = fig_col, col = "black", cex = tam_fig)
+
+        .draw_simple_legend(pos_leyenda)
       }
-      points(fig_x, fig_y, pch = pch_fig, bg = fig_col, col = "black", cex = tam_fig)
-
-      .draw_simple_legend(pos_leyenda)
     }
 
     invisible(NULL)
@@ -332,7 +405,7 @@ plot_simple_mapping <- function(filogenia, config) {
     finally = dev.off())
   }
 
-  if (tipo_arbol != "fan") {
+  if (tipo_arbol != "fan" && simple_mode == "figures") {
     n_tips_tmp    <- n_tips
     default_height  <- n_tips_tmp * 0.25 + 2
     default_width <- 12
@@ -403,12 +476,12 @@ plot_simple_mapping <- function(filogenia, config) {
   # ── PHASE 2: export or draw on screen ───────────────────────────────────────
   if (exportar) {
     .export_device(fn_export, config$export_format %||% "png",
-                          filogenia, tipo_arbol,
-                          {
-                            .render_simple_mapping(xlim_extra = computed_xlim)
-                          },
-                          width  = config$width,
-                          height = config$height)
+                   filogenia, tipo_arbol,
+                   {
+                     .render_simple_mapping(xlim_extra = computed_xlim)
+                   },
+                   width  = config$width,
+                   height = config$height)
   } else {
     .render_simple_mapping()
   }
