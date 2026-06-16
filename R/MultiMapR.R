@@ -122,7 +122,8 @@ execute_phylogeny <- function(phylogeny, character_data,
                               species_col          = 1,
                               normalize_spaces     = FALSE,
                               tree_format          = "auto",
-                              strict               = FALSE) {
+                              strict               = FALSE,
+                              use_palettes = FALSE) {
   tryCatch({
 
     # POLYMORPHISM: If file paths (character) are passed, load data automatically
@@ -140,7 +141,7 @@ execute_phylogeny <- function(phylogeny, character_data,
     }
 
     # Continue with the normal system flow using the modular interface
-    config <- setup_mapping_config(phylogeny, character_data)
+    config <- setup_mapping_config(phylogeny, character_data, use_palettes)
     if (is.null(config)) return(invisible(NULL))
 
     # -- Branch width (parameter overrides menu default of 2) ------------------

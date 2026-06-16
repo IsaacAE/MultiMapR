@@ -16,6 +16,79 @@
 
 
 # ==============================================================================
+# SECTION 0 — ACCESSIBLE COLOR PALETTES
+# ==============================================================================
+
+#' Predefined color-blind-friendly palettes used in automatic color assignment.
+#'
+#' Used for Simple Mapping and single-character Ancestral Reconstruction.
+#' Each palette contains up to 10 colors.
+#'   okabe  — Okabe-Ito (most widely recommended for color-blind accessibility)
+#'   tol    — Paul Tol Muted (high-contrast, print-friendly)
+#'   plasma — Plasma perceptual gradient (viridis family, ordered data)
+PALETAS_ACCESIBLES <- list(
+  okabe  = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#999999", "#44AA99"),
+  tol    = c("#332288", "#88CCEE", "#44AA99", "#117733", "#999933", "#DDCC77", "#CC6677", "#882255", "#AA4499", "#DDDDDD"),
+  plasma = c("#0D0887", "#46039F", "#7201A8", "#9C179E", "#BD3786", "#D8576B", "#ED7953", "#FA9E3B", "#FDC926", "#F0F921")
+)
+
+#' Sequential color-blind-safe gradients for multi-character Ancestral Reconstruction.
+#'
+#' One gradient per character slot (up to 3). Each gradient has 10 steps
+#' sampled from continuous perceptual scales:
+#'   magma  — character 1 (dark purple → cream)
+#'   mako   — character 2 (near-black → pale green)
+#'   plasma — character 3 (dark blue → yellow)
+GAMAS_MULTIMAPEO <- list(
+  # 1. WARM RANGE (Yellows, Oranges, Reds, Pinks)
+  # Ideal for Character 1.
+  # Initial jump: Light Yellow -> Dark Red -> Medium Orange
+  rojos = c(
+    "#FF0000", # 0: Rojo puro brillante
+    "#660000", # 1: Granate muy oscuro
+    "#FF1493", # 2: Rosa neón (DeepPink)
+    "#FF8C00", # 3: Naranja oscuro
+    "#DC143C", # 4: Carmesí
+    "#FFB6C1", # 5: Rosa claro
+    "#8B0000", # 6: Rojo sangre
+    "#C71585", # 7: Violeta medio
+    "#FF4500", # 8: Rojo anaranjado
+    "#330000"  # 9: Rojo casi negro
+  ),
+
+  # 2. GAMA VERDES (Para Carácter 2)
+  # Salto: Verde lima -> Verde noche -> Cian puro
+  verdes = c(
+    "#00FF00", # 0: Verde lima puro
+    "#004000", # 1: Verde bosque muy oscuro
+    "#00FFFF", # 2: Cian puro (contrasta brutal con el lima)
+    "#2E8B57", # 3: Verde mar
+    "#ADFF2F", # 4: Amarillo verdoso
+    "#00FF7F", # 5: Verde primavera
+    "#808000", # 6: Oliva
+    "#228B22", # 7: Verde hoja
+    "#9ACD32", # 8: Verde amarillento
+    "#002000"  # 9: Verde casi negro
+  ),
+
+  # 3. GAMA AZULES / MORADOS (Para Carácter 3)
+  # Salto: Azul puro -> Índigo oscuro -> Azul cielo brillante
+  azules = c(
+    "#0000FF", # 0: Azul puro
+    "#000066", # 1: Azul marino muy oscuro
+    "#00BFFF", # 2: Azul cielo profundo
+    "#8A2BE2", # 3: Violeta azulado brillante
+    "#1E90FF", # 4: Azul Dodger
+    "#4B0082", # 5: Índigo
+    "#87CEFA", # 6: Azul claro
+    "#4169E1", # 7: Azul real
+    "#9370DB", # 8: Morado medio
+    "#000033"  # 9: Azul casi negro
+  )
+)
+
+
+# ==============================================================================
 # SECTION 1 — EXIT UTILITY
 # ==============================================================================
 
@@ -139,12 +212,32 @@ prompt_characters <- function(available_chars, prompt_n, min_n = 1,
 #'
 #' Displays the unique states of the character, allows choosing a subset
 #' (or all with option 0), then requests a color for each one.
+#' If \code{auto_palette} is supplied, all states are mapped automatically
+#' to that palette and no readline() prompts are shown.
 #'
-#' @param aligned_data Data.frame aligned with the phylogeny.
-#' @param character    Name of the character column to configure.
+#' @param aligned_data  Data.frame aligned with the phylogeny.
+#' @param character     Name of the character column to configure.
+#' @param auto_palette  Optional character vector of colors (a palette).
+#'                      When not NULL, skips interactive prompts entirely.
 #' @return Named character vector state -> color, or invisible(NULL) if cancelled.
-prompt_states_and_colors <- function(aligned_data, character) {
+prompt_states_and_colors <- function(aligned_data, character, auto_palette = NULL) {
   all_states <- sort_states(as.character(unique(aligned_data[[character]])))
+
+  # --- Automatic palette assignment (non-interactive) -------------------------
+  if (!is.null(auto_palette)) {
+    if (length(all_states) > length(auto_palette)) {
+      cat(sprintf("  [!] Warning: '%s' has more states than colors in the palette. Colors will be recycled.\n",
+                  character))
+      colores_asignados <- rep(auto_palette, length.out = length(all_states))
+    } else {
+      colores_asignados <- auto_palette[seq_along(all_states)]
+    }
+    names(colores_asignados) <- all_states
+    cat(sprintf("  \u2192 Colors assigned automatically to '%s': %s\n",
+                character, paste(all_states, collapse = ", ")))
+    return(colores_asignados)
+  }
+  # ----------------------------------------------------------------------------
 
   cat("\nAvailable states for '", character, "':\n", sep = "")
   for (i in seq_along(all_states)) cat(sprintf("  %d: %s\n", i, all_states[i]))
@@ -183,9 +276,11 @@ prompt_states_and_colors <- function(aligned_data, character) {
 #'
 #' @param phylogeny        \code{phylo} object (ape).
 #' @param character_data   Data.frame with a \code{"Species"} column and characters.
+#' @param use_palettes     Logical. If \code{TRUE}, colors are assigned automatically
+#'                         from \code{PALETAS_ACCESIBLES} and color prompts are skipped.
 #' @return Configuration list, or invisible(NULL) if the user cancels.
 #' @seealso \code{\link{execute_phylogeny}}
-setup_mapping_config <- function(phylogeny, character_data) {
+setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE) {
 
   if (!inherits(phylogeny, "phylo"))
     stop("'phylogeny' must be a 'phylo' object.")
@@ -226,8 +321,11 @@ setup_mapping_config <- function(phylogeny, character_data) {
     config$caracteres <- selected_chars
 
     colors_by_char <- list()
-    for (char in selected_chars) {
-      cols <- prompt_states_and_colors(aligned_data, char)
+    for (i in seq_along(selected_chars)) {
+      char         <- selected_chars[i]
+      paleta_actual <- if (use_palettes && i <= length(PALETAS_ACCESIBLES))
+        PALETAS_ACCESIBLES[[i]] else NULL
+      cols <- prompt_states_and_colors(aligned_data, char, auto_palette = paleta_actual)
       if (is.null(cols)) return(invisible(NULL))
       colors_by_char[[char]] <- cols
     }
@@ -288,8 +386,10 @@ setup_mapping_config <- function(phylogeny, character_data) {
     colors_by_char <- list()
 
     if (length(selected_chars) == 1) {
-      char <- selected_chars[1]
-      cols <- prompt_states_and_colors(aligned_data, char)
+      # === 1 SOLO CARÁCTER: Usar Paleta Okabe-Ito (PALETAS_ACCESIBLES) ===
+      char          <- selected_chars[1]
+      paleta_actual <- if (use_palettes) PALETAS_ACCESIBLES[[1]] else NULL
+      cols <- prompt_states_and_colors(aligned_data, char, auto_palette = paleta_actual)
       if (is.null(cols)) return(invisible(NULL))
       colors_by_char[[char]] <- cols
 
@@ -297,10 +397,13 @@ setup_mapping_config <- function(phylogeny, character_data) {
       config$mapear_todos <- length(cols) == length(all_states)
 
     } else {
-      for (char in selected_chars) {
-        # States not selected are excluded from the color map and
-        # resolve_color() will paint them gray (gray70) automatically.
-        cols <- prompt_states_and_colors(aligned_data, char)
+      # === MULTIMAPEO (2 o 3 CARACTERES): Usar Gamas Secuenciales (GAMAS_MULTIMAPEO) ===
+      # Carácter 1: Magma, Carácter 2: Mako, Carácter 3: Plasma
+      for (i in seq_along(selected_chars)) {
+        char          <- selected_chars[i]
+        paleta_actual <- if (use_palettes && i <= length(GAMAS_MULTIMAPEO))
+          GAMAS_MULTIMAPEO[[i]] else NULL
+        cols <- prompt_states_and_colors(aligned_data, char, auto_palette = paleta_actual)
         if (is.null(cols)) return(invisible(NULL))
         colors_by_char[[char]] <- cols
       }
