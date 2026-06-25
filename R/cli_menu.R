@@ -211,34 +211,21 @@ prompt_characters <- function(available_chars, prompt_n, min_n = 1,
 #' Prompts the user which states of a character to include and their colors
 #'
 #' Displays the unique states of the character, allows choosing a subset
-#' (or all with option 0), then requests a color for each one.
-#' If \code{auto_palette} is supplied, all states are mapped automatically
-#' to that palette and no readline() prompts are shown.
+#' (or all with option 0), then requests a color for each selected state.
+#' State selection is always interactive. If \code{auto_palette} is supplied,
+#' colors are assigned automatically from that palette (no color prompts);
+#' otherwise the user is asked to type a color for each state.
 #'
 #' @param aligned_data  Data.frame aligned with the phylogeny.
 #' @param character     Name of the character column to configure.
 #' @param auto_palette  Optional character vector of colors (a palette).
-#'                      When not NULL, skips interactive prompts entirely.
+#'                      When not NULL, colors are auto-assigned but state
+#'                      selection is still shown interactively.
 #' @return Named character vector state -> color, or invisible(NULL) if cancelled.
 prompt_states_and_colors <- function(aligned_data, character, auto_palette = NULL) {
   all_states <- sort_states(as.character(unique(aligned_data[[character]])))
 
-  # --- Automatic palette assignment (non-interactive) -------------------------
-  if (!is.null(auto_palette)) {
-    if (length(all_states) > length(auto_palette)) {
-      cat(sprintf("  [!] Warning: '%s' has more states than colors in the palette. Colors will be recycled.\n",
-                  character))
-      colores_asignados <- rep(auto_palette, length.out = length(all_states))
-    } else {
-      colores_asignados <- auto_palette[seq_along(all_states)]
-    }
-    names(colores_asignados) <- all_states
-    cat(sprintf("  \u2192 Colors assigned automatically to '%s': %s\n",
-                character, paste(all_states, collapse = ", ")))
-    return(colores_asignados)
-  }
-  # ----------------------------------------------------------------------------
-
+  # --- State selection (always interactive) -----------------------------------
   cat("\nAvailable states for '", character, "':\n", sep = "")
   for (i in seq_along(all_states)) cat(sprintf("  %d: %s\n", i, all_states[i]))
 
@@ -258,6 +245,23 @@ prompt_states_and_colors <- function(aligned_data, character, auto_palette = NUL
     cat(sprintf("Invalid selection. Enter 0 or numbers between 1 and %d separated by commas.\n",
                 length(all_states)))
   }
+  # ----------------------------------------------------------------------------
+
+  # --- Color assignment: automatic (palette) or manual -----------------------
+  if (!is.null(auto_palette)) {
+    if (length(selected_states) > length(auto_palette)) {
+      cat(sprintf("  [!] Warning: '%s' has more selected states than colors in the palette. Colors will be recycled.\n",
+                  character))
+      colores_asignados <- rep(auto_palette, length.out = length(selected_states))
+    } else {
+      colores_asignados <- auto_palette[seq_along(selected_states)]
+    }
+    names(colores_asignados) <- selected_states
+    cat(sprintf("  \u2192 Colors assigned automatically to '%s': %s\n",
+                character, paste(selected_states, collapse = ", ")))
+    return(colores_asignados)
+  }
+  # ----------------------------------------------------------------------------
 
   prompt_character_colors(selected_states, character)
 }
@@ -277,7 +281,8 @@ prompt_states_and_colors <- function(aligned_data, character, auto_palette = NUL
 #' @param phylogeny        \code{phylo} object (ape).
 #' @param character_data   Data.frame with a \code{"Species"} column and characters.
 #' @param use_palettes     Logical. If \code{TRUE}, colors are assigned automatically
-#'                         from \code{PALETAS_ACCESIBLES} and color prompts are skipped.
+#'                         from \code{PALETAS_ACCESIBLES}; color prompts are skipped but
+#'                         state-selection prompts are still shown interactively.
 #' @return Configuration list, or invisible(NULL) if the user cancels.
 #' @seealso \code{\link{execute_phylogeny}}
 setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE) {

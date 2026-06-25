@@ -179,36 +179,68 @@ plot_simple_mapping <- function(filogenia, config) {
       if (simple_mode == "tip_color") {
         # ── MODE tip_color (fan): colored terminal branches, no rings ──────────
         # Edges whose child is a tip are painted with that tip's state color;
-        # all other edges stay black.
+        # all other edges stay gray.
         char1     <- caracteres[1L]
         col_tips1 <- sapply(datos_ord[[char1]], asignar_color,
                             colores_estado = colores_por_car[[char1]])
 
-        edge_col <- rep("black", nrow(filogenia$edge))
+        edge_col <- rep("gray70", nrow(filogenia$edge))
         for (e in seq_len(nrow(filogenia$edge))) {
           child <- filogenia$edge[e, 2L]
           if (child <= n_tips)
             edge_col[e] <- col_tips1[child]
         }
 
-        # Estimate label radius (no rings)
+        # Label geometry: identical to the multimapping fan (export_multimapr_tree)
+        # so that the gap between tips and species names is consistent.
+        # gap_u = strwidth("m") * 1.5  (evaluated after the plot establishes usr)
+        # radio_nombres = max_tip_radius + gap_u
+        # radio_total   = radio_nombres + estimated label width + small padding
+
+        # First plot with show.tip.label = FALSE to get definitive tip coordinates
+        # and then measure strwidth in the correct coordinate system.
         max_nchar_lbl <- max(nchar(filogenia$tip.label))
-        char_w_u      <- max_tip_radius * 0.018 * cex_aj
-        lbl_w_u       <- max_nchar_lbl * char_w_u
-        radio_total   <- max_tip_radius * 1.06 + lbl_w_u + max_tip_radius * 0.05
-        xlim_fan      <- c(-radio_total, radio_total)
+
+        # Rough xlim to open the canvas (will be tightened after measuring)
+        rough_lbl_w <- max_tip_radius * 0.018 * cex_aj * max_nchar_lbl
+        rough_total <- max_tip_radius * 1.06 + rough_lbl_w + max_tip_radius * 0.05
+        xlim_fan    <- c(-rough_total, rough_total)
 
         plot(filogenia,
              type           = "fan",
              cex            = cex_aj,
-             label.offset   = config$label_offset,
+             label.offset   = 0,           # labels drawn manually below
              edge.width     = config$grosor,
              edge.color     = edge_col,
-             tip.color      = "black",
-             show.tip.label = TRUE,
+             tip.color      = "transparent",
+             show.tip.label = FALSE,
              no.margin      = TRUE,
              font           = 3L,
              x.lim          = xlim_fan)
+
+        # Refresh coordinates after definitive plot
+        obj2       <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+        xx_tip2    <- obj2$xx[seq_len(n_tips)]
+        yy_tip2    <- obj2$yy[seq_len(n_tips)]
+        angulos2   <- atan2(yy_tip2, xx_tip2)
+        tip_radius2 <- sqrt(xx_tip2^2 + yy_tip2^2)
+        R_tips2     <- max(tip_radius2)
+
+        gap_u2        <- strwidth("m", cex = cex_aj) * 1.5
+        radio_nombres2 <- R_tips2 + gap_u2
+
+        # Draw italic tip labels radially
+        old_xpd <- par("xpd"); par(xpd = TRUE)
+        for (j in seq_len(n_tips)) {
+          ang_j  <- angulos2[j]; deg_j <- ang_j * 180 / pi
+          lado_d <- cos(ang_j) >= 0
+          srt_j  <- if (lado_d) deg_j else deg_j + 180
+          adj_j  <- if (lado_d) c(0, 0.5) else c(1, 0.5)
+          text(radio_nombres2 * cos(ang_j), radio_nombres2 * sin(ang_j),
+               labels = filogenia$tip.label[j], adj = adj_j, cex = cex_aj,
+               srt = srt_j, font = 3L)
+        }
+        par(xpd = old_xpd)
 
         .draw_simple_legend(pos_leyenda)
 
@@ -307,12 +339,12 @@ plot_simple_mapping <- function(filogenia, config) {
       if (simple_mode == "tip_color") {
         # ── MODE: colored terminal branches — one character only ───────────────
         # Edges whose child is a tip are painted with that tip's state color;
-        # all other edges stay black.
+        # all other edges (internal) stay gray.
         char1     <- caracteres[1L]
         col_tips1 <- sapply(datos_ord[[char1]], asignar_color,
                             colores_estado = colores_por_car[[char1]])
 
-        edge_col <- rep("black", nrow(filogenia$edge))
+        edge_col <- rep("gray70", nrow(filogenia$edge))
         for (e in seq_len(nrow(filogenia$edge))) {
           child <- filogenia$edge[e, 2L]
           if (child <= n_tips)
