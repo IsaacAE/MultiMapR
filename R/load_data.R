@@ -132,19 +132,57 @@
 #'   - Windows line endings (CR+LF converted to LF)
 #'   - Numbered comments in Mesquite TRANSLATE blocks (`[0]`, `[1]`, ...)
 #'     that ape cannot parse
+#'   - TNT `tread` format: strips the `tread` header and `proc-;` footer and
+#'     rewrites the file as plain Newick so that read.tree() can parse it.
+#'     TNT separates tips with spaces instead of commas; this function also
+#'     inserts the missing commas between adjacent taxon names / closing parens.
 #'
 #' @param tree_path Path to the original file.
 #' @return Path to the clean file (temporary if changes were made, original otherwise).
 .sanitize_tree <- function(tree_path) {
   lines <- readLines(tree_path, warn = FALSE)
 
-  # 1) readLines already handles \r\n on most platforms,
-  #    but we force explicit cleanup just in case
+  # 1) Normalize line endings
   lines <- gsub("\r", "", lines)
 
   # 2) Remove numeric comments at the start of lines: "[0]", "[12]", etc.
-  #    Pattern: line starting with optional spaces/tabs followed by [N]
   lines <- gsub("^(\\s*)\\[[0-9]+\\]\\s*", "\\1", lines, perl = TRUE)
+
+  # 3) Detect TNT tread format: first non-empty line is exactly "tread"
+  first_content <- which(nchar(trimws(lines)) > 0)[1]
+  is_tnt <- !is.na(first_content) &&
+    grepl("^\\s*tread\\s*$", lines[first_content], ignore.case = TRUE)
+
+  if (is_tnt) {
+    message("TNT 'tread' format detected. Converting to Newick...")
+
+    # Keep only lines between tread and proc-; (exclusive)
+    tree_lines <- lines[seq_len(length(lines))]
+    tree_lines <- tree_lines[!grepl("^\\s*tread\\s*$",  tree_lines, ignore.case = TRUE)]
+    tree_lines <- tree_lines[!grepl("^\\s*proc-?;?\\s*$", tree_lines, ignore.case = TRUE)]
+    tree_lines <- tree_lines[nchar(trimws(tree_lines)) > 0]
+
+    # Collapse into a single string and clean up
+    newick_str <- paste(trimws(tree_lines), collapse = " ")
+    newick_str <- trimws(newick_str)
+
+    # TNT separates terminals with spaces, not commas. Insert commas:
+    #   between a word boundary and '('          e.g.  "A ("  -> "A,("
+    #   between ')' and a word character         e.g.  ") A"  -> "),A"
+    #   between two word characters (tip names)  e.g.  "A B"  -> "A,B"
+    #   between ')' and '('                      e.g.  ") ("  -> "),("
+    newick_str <- gsub("([A-Za-z0-9_\\.])\\s+\\(", "\\1,(", newick_str, perl = TRUE)
+    newick_str <- gsub("\\)\\s+([A-Za-z0-9_\\.])", "),\\1", newick_str, perl = TRUE)
+    newick_str <- gsub("([A-Za-z0-9_\\.])\\s+([A-Za-z0-9_\\.])", "\\1,\\2", newick_str, perl = TRUE)
+    newick_str <- gsub("\\)\\s+\\(", "),(", newick_str, perl = TRUE)
+
+    # Ensure the string ends with a semicolon
+    if (!grepl(";\\s*$", newick_str)) newick_str <- paste0(newick_str, ";")
+
+    tmp <- tempfile(fileext = ".nwk")
+    writeLines(newick_str, tmp)
+    return(tmp)
+  }
 
   tmp <- tempfile(fileext = tools::file_ext(tree_path))
   writeLines(lines, tmp)
@@ -156,6 +194,8 @@
 #'
 #' Compatible with files from Mesquite, TNT, WinClada and other programs
 #' that produce non-standard variants of the NEXUS/Newick format.
+#' TNT files using the \code{tread} / \code{proc-;} syntax are automatically
+#' converted to plain Newick before parsing.
 #'
 #' @param tree_path    Path to the tree file.
 #' @param tree_format  "auto" (default), "newick" or "nexus".

@@ -1,0 +1,226 @@
+#NEXUS
+[written Sun May 31 21:23:09 CDT 2026 by Mesquite  version 3.80 (build 950) at MSI/192.168.56.1]
+
+BEGIN TAXA;
+	TITLE Taxa;
+	DIMENSIONS NTAX=17;
+	TAXLABELS
+		Saccopteryx_bilineata Noctilio_albiventris Noctilio_leporinus Mystacina_robusta Mystacina_tuberculata Macrotus_waterhousii Macrotus_californicus Artibeus_jamaicensis Pteronotus_parnellii Pteronotus_pristinus Pteronotus_personotus Pteronotus_macleayii Pterontous_quadridens Pteronotus_davyi Pteronotus_gymnonotus Mormoops_blainvillii Mormoops_megalophylla 
+	;
+
+END;
+
+
+BEGIN CHARACTERS;
+	TITLE  Character_Matrix;
+	DIMENSIONS  NCHAR=209;
+	FORMAT DATATYPE = STANDARD RESPECTCASE GAP = - MISSING = ? SYMBOLS = "  0 1 2 3 4 5 6";
+	MATRIX
+	Saccopteryx_bilineata  11-10000000000012000010211210-1-02001--01--0010?????00101100?0000021?000000000000000000000000100000010002010600010000020-010100000010011000000101100000000110013000000020220220000001000?0??????????1000010000011
+	Noctilio_albiventris   0020101100111001211101000120000122-11--10110021?????0??????????????????0001101000200000000100300000002000021120100001030-01000010100102110011100010100000010?10201110100011113100100000000???????0?010110100?0002
+	Noctilio_leporinus     0020101100111001211101000120000121-11--1011002101011012001131010002000?0001101000200000000100300000002000021120100001030-01000010100102110011100010100000010?10201110100011113100100000000???????0?010110100?0002
+	Mystacina_robusta      00000000012310010110100000110-0-22-100010100020?????01100013?2111002?????????0000000300000000000??????0???0???0002001010-10011111101000010220130010010010010?01110010?0000200011???????????????????????00000?????
+	Mystacina_tuberculata  00000000012310010110000000110-0-22-100010100020020?????????????????????111010000000030000000000010011102210002000200?????????????????????022013?0??01001101??0111?010?000030?011????????????????????01???????????
+	Macrotus_waterhousii   00001000001210002110101100001000111101000000020?????01120113?010112?0101110100000011220001020020201001022100200200000020-01001000110110100100021011011000111?000200011011140120010111100000010011001210??????0100
+	Macrotus_californicus  00001000001210002110101100001000111101000000020200?00??????????????????1110100000011220001020020201001022100200200000020-11001000110110100100021011011000111?00020001101114012001011110000001001100121021110?????
+	Artibeus_jamaicensis   0000100100021000211000100010010011110001010-13-2010201?20113001000200101121110100011220000000030012111111100510201000011000011100100100100100020010011000010?1000000110201000010???111??0????????0102103211121110
+	Pteronotus_parnellii   00002100001310010111021111201000121100100110020210012111011000110020101013000011011101011010010110110203200112020011102111011101010101220111012011110100100001000110111201302100001111000001002001110101110000002
+	Pteronotus_pristinus   00001100011310010???0??1???0???11??100?00110020??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
+	Pteronotus_personotus  000021000033110101100010012010011201001001110100111?210????????????????0130000110111310110101101101102022001420200111021011111010101011201110120011101001000010001101112013021000?????010001011001--010??????????
+	Pteronotus_macleayii   00001100101311010110001001201001120100100110010?????2??????????????????0130000110111010200101101101102042001420200111021010111010101011201110120111101001000010001001?12013022000?????0100010100011101111100?????
+	Pterontous_quadridens  00002100101311010110001001201001120100100110010?????2??????????????????0130000110111310200101101101102042001420200111021011111010101011201110120111101001000010001001?12013021000?????010001010001--01011100?????
+	Pteronotus_davyi       00001101002310010110001001201001120100100110020?????2????????1???????01013000011011131020010010110110200200102120010102101011101010101120111112011110100100001000100111201302200001111010001000001--010?????0????
+	Pteronotus_gymnonotus  00001101002310010110001001201001120100100110020????12??????????????????0130000110111310200100101101102000001021200101021010111010101011201111120111101001000010001001112013022000?????01000100000111010??????????
+	Mormoops_blainvillii   00002100000110110110001001201011120101100000010?????2??????????????????1110000101210101211110112002102022101310200101110-11110000101011101010120121100111111?00010001112013013000?????1011100010001101011100?????
+	Mormoops_megalophylla  00002100000110110110001001201011120101100000010101112????????1???????011110000101210101211110112002102053101310200101110-11100000101012201010121021100111011?000101011120130130000122110111000100011010?????10002
+
+;
+
+END;
+BEGIN ASSUMPTIONS;
+	TYPESET * UNTITLED   =  unord:  1- 209;
+
+END;
+
+BEGIN NOTES;
+
+	SU  C = 5 N = selected B = TRUE;
+
+END;
+
+BEGIN MESQUITECHARMODELS;
+	ProbModelSet * UNTITLED   =  'Mk1 (est.)':  1- 209;
+END;
+
+Begin MESQUITE;
+		MESQUITESCRIPTVERSION 2;
+		TITLE AUTO;
+		tell ProjectCoordinator;
+		timeSaved 1780280589916;
+		getEmployee #mesquite.minimal.ManageTaxa.ManageTaxa;
+		tell It;
+			setID 0 7892926991309131750;
+		endTell;
+		getEmployee #mesquite.charMatrices.ManageCharacters.ManageCharacters;
+		tell It;
+			setID 0 6338139903690942081;
+			tell It;
+				setSelected  5;
+				attachments ;
+			endTell;
+			mqVersion 380;
+			checksumv 0 3 2515299761 null  getNumChars 209 numChars 209 getNumTaxa 17 numTaxa 17   short true   bits 127   states 127   sumSquaresStatesOnly 20837.0 sumSquares 20837.0 longCompressibleToShort false usingShortMatrix true   NumFiles 1 NumMatrices 1;
+			mqVersion;
+		endTell;
+		getWindow;
+		tell It;
+			suppress;
+			setResourcesState false false 162;
+			setPopoutState 300;
+			setExplanationSize 0;
+			setAnnotationSize 0;
+			setFontIncAnnot 0;
+			setFontIncExp 0;
+			setSize 1920 930;
+			setLocation -11 -11;
+			setFont SanSerif;
+			setFontSize 10;
+			getToolPalette;
+			tell It;
+			endTell;
+			desuppress;
+		endTell;
+		getEmployee  #mesquite.minimal.ManageTaxa.ManageTaxa;
+		tell It;
+			showTaxa #7892926991309131750 #mesquite.lists.TaxonList.TaxonList;
+			tell It;
+				setTaxa #7892926991309131750;
+				getWindow;
+				tell It;
+					useTargetValue off;
+					setTargetValue ;
+					newAssistant  #mesquite.lists.TaxonListCurrPartition.TaxonListCurrPartition;
+					setExplanationSize 30;
+					setAnnotationSize 20;
+					setFontIncAnnot 0;
+					setFontIncExp 0;
+					setSize 1758 858;
+					setLocation -11 -11;
+					setFont SanSerif;
+					setFontSize 10;
+					getToolPalette;
+					tell It;
+					endTell;
+				endTell;
+				showWindow;
+				getEmployee #mesquite.lists.ColorTaxon.ColorTaxon;
+				tell It;
+					setColor Red;
+					removeColor off;
+				endTell;
+				getEmployee #mesquite.lists.TaxonListAnnotPanel.TaxonListAnnotPanel;
+				tell It;
+					togglePanel off;
+				endTell;
+			endTell;
+		endTell;
+		getEmployee  #mesquite.charMatrices.BasicDataWindowCoord.BasicDataWindowCoord;
+		tell It;
+			showDataWindow #6338139903690942081 #mesquite.charMatrices.BasicDataWindowMaker.BasicDataWindowMaker;
+			tell It;
+				getWindow;
+				tell It;
+					setExplanationSize 30;
+					setAnnotationSize 20;
+					setFontIncAnnot 0;
+					setFontIncExp 0;
+					setSize 1758 858;
+					setLocation -11 -11;
+					setFont SanSerif;
+					setFontSize 10;
+					getToolPalette;
+					tell It;
+					endTell;
+					setActive;
+					setTool mesquite.charMatrices.BasicDataWindowMaker.BasicDataWindow.arrow;
+					colorCells  #mesquite.charMatrices.NoColor.NoColor;
+					colorRowNames  #mesquite.charMatrices.TaxonGroupColor.TaxonGroupColor;
+					colorColumnNames  #mesquite.charMatrices.CharGroupColor.CharGroupColor;
+					colorText  #mesquite.charMatrices.NoColor.NoColor;
+					setBackground White;
+					toggleShowNames on;
+					toggleShowTaxonNames on;
+					toggleTight off;
+					toggleThinRows off;
+					toggleShowChanges on;
+					toggleSeparateLines off;
+					toggleShowStates on;
+					toggleReduceCellBorders off;
+					toggleAutoWCharNames on;
+					toggleAutoTaxonNames off;
+					toggleShowDefaultCharNames off;
+					toggleConstrainCW on;
+					toggleBirdsEye off;
+					toggleColorOnlyTaxonNames off;
+					toggleShowPaleGrid off;
+					toggleShowPaleCellColors off;
+					toggleShowPaleExcluded off;
+					togglePaleInapplicable on;
+					togglePaleMissing off;
+					toggleShowBoldCellText off;
+					toggleAllowAutosize on;
+					toggleColorsPanel off;
+					toggleDiagonal on;
+					setDiagonalHeight 80;
+					toggleLinkedScrolling on;
+					toggleScrollLinkedTables off;
+				endTell;
+				showWindow;
+				getWindow;
+				tell It;
+					forceAutosize;
+				endTell;
+				getEmployee #mesquite.charMatrices.AlterData.AlterData;
+				tell It;
+					toggleBySubmenus off;
+				endTell;
+				getEmployee #mesquite.charMatrices.ColorByState.ColorByState;
+				tell It;
+					setStateLimit 9;
+					toggleUniformMaximum on;
+				endTell;
+				getEmployee #mesquite.charMatrices.ColorCells.ColorCells;
+				tell It;
+					setColor Red;
+					removeColor off;
+				endTell;
+				getEmployee #mesquite.categ.StateNamesStrip.StateNamesStrip;
+				tell It;
+					showStrip off;
+				endTell;
+				getEmployee #mesquite.charMatrices.AnnotPanel.AnnotPanel;
+				tell It;
+					togglePanel off;
+				endTell;
+				getEmployee #mesquite.charMatrices.CharReferenceStrip.CharReferenceStrip;
+				tell It;
+					showStrip off;
+				endTell;
+				getEmployee #mesquite.charMatrices.QuickKeySelector.QuickKeySelector;
+				tell It;
+					autotabOff;
+				endTell;
+				getEmployee #mesquite.charMatrices.SelSummaryStrip.SelSummaryStrip;
+				tell It;
+					showStrip off;
+				endTell;
+				getEmployee #mesquite.categ.SmallStateNamesEditor.SmallStateNamesEditor;
+				tell It;
+					panelOpen true;
+				endTell;
+			endTell;
+		endTell;
+		endTell;
+end;
+
+

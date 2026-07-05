@@ -539,6 +539,28 @@ init_edge_colors <- function(filogenia) {
 }
 
 
+#' Injects the Fitch ambiguity entry into a state->color vector (Fitch only)
+#'
+#' When the selected algorithm is Fitch (config$algoritmo == 2), appends
+#' an "Ambiguous / Missing" entry with FITCH_AMBIG_COLOR to \code{colores_estado}
+#' so the legend always shows what the fuchsia branches mean.
+#' For any other algorithm the vector is returned unchanged.
+#'
+#' @param colores_estado Named character vector state -> color.
+#' @param config         Configuration list (uses config$algoritmo).
+#' @return Possibly extended named character vector.
+#' @keywords internal
+.add_fitch_ambig_to_legend <- function(colores_estado, config) {
+  if (!isTRUE(config$algoritmo == 2L)) return(colores_estado)
+  if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
+    ambig_col <- get("FITCH_AMBIG_COLOR")
+  } else {
+    ambig_col <- "#FF1493"
+  }
+  c(colores_estado, c("Ambiguous / Missing" = ambig_col))
+}
+
+
 #' Dispatches to the ancestral reconstruction algorithm selected in config
 #'
 #' @param tree         phylo object.
@@ -807,9 +829,12 @@ plot_ancestral_reconstruction <- function(filogenia, config) {
     edge_colors <- init_edge_colors(filogenia)
     edge_colors <- apply_ancestral_algorithm(filogenia, tip_colors, edge_colors, config)
 
+    # For Fitch, append the ambiguity entry to the legend (Fitch-only)
+    colores_estado_ley <- .add_fitch_ambig_to_legend(colores_estado, config)
+
     plot_ancestral_branches(filogenia, edge_colors, config,
                             titulo_leyenda = car,
-                            colores_estado = colores_estado)
+                            colores_estado = colores_estado_ley)
 
   } else {
     plot_superimposed_characters(filogenia, config)
@@ -871,6 +896,22 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
 
   # ── Step 2: build legend data (branches block, grouped by character) ─────────
   ley_data <- .build_legend_data(colores_por_car, caracteres)
+
+  # For Fitch: append the ambiguity entry to every character block (Fitch-only)
+  if (isTRUE(config$algoritmo == 2L)) {
+    if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
+      ambig_col <- get("FITCH_AMBIG_COLOR")
+    } else {
+      ambig_col <- "#FF1493"
+    }
+    ambig_label <- "Ambiguous / Missing"
+    for (nm in names(ley_data$by_char)) {
+      if (!ambig_label %in% ley_data$by_char[[nm]]$labels) {
+        ley_data$by_char[[nm]]$labels <- c(ley_data$by_char[[nm]]$labels, ambig_label)
+        ley_data$by_char[[nm]]$colors <- c(ley_data$by_char[[nm]]$colors, ambig_col)
+      }
+    }
+  }
 
   # ── Helper: overlay tip figures on an already-rendered phylogeny ────────────
   # Reads tip coordinates from .PlotPhyloEnv after the base plot is drawn.
@@ -1211,6 +1252,22 @@ plot_superimposed_characters <- function(filogenia, config,
   exportar  <- !is.null(config$export_filename)
   fn_export <- config$export_filename
   ley_data  <- .build_legend_data(colores_por_car, caracteres)
+
+  # For Fitch: append the ambiguity entry to every character block (Fitch-only)
+  if (isTRUE(config$algoritmo == 2L)) {
+    if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
+      ambig_col <- get("FITCH_AMBIG_COLOR")
+    } else {
+      ambig_col <- "#FF1493"
+    }
+    ambig_label <- "Ambiguous / Missing"
+    for (nm in names(ley_data$by_char)) {
+      if (!ambig_label %in% ley_data$by_char[[nm]]$labels) {
+        ley_data$by_char[[nm]]$labels <- c(ley_data$by_char[[nm]]$labels, ambig_label)
+        ley_data$by_char[[nm]]$colors <- c(ley_data$by_char[[nm]]$colors, ambig_col)
+      }
+    }
+  }
 
   if (exportar) {
     cat("    \u2192 Exporting to:", paste0(fn_export, ".", config$export_format %||% "png"), "\n")

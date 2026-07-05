@@ -4,6 +4,17 @@
 # Adapter for the Fitch algorithm for use as 'external_algorithm'
 # within the MultiMapR package.
 #
+# AMBIGUITY COLOR
+#   All ambiguous / missing-data states (?, -, and unresolved internal nodes)
+#   are ALWAYS rendered in FITCH_AMBIG_COLOR regardless of any color the user
+#   may have assigned to those states in the palette.  This is intentional:
+#   Fitch unresolved states carry a specific analytical meaning that must be
+#   visually distinguishable from any real character state.
+
+#' Fixed color for Fitch ambiguity / missing data.
+#' Used by external_algorithm() and exported so core_render can add it to the legend.
+FITCH_AMBIG_COLOR <- "#FF1493"   # deep pink / fuchsia
+#
 # When MultiMapR asks for the algorithm, select option 2 (Fitch).
 # The optimization mode is chosen interactively from the terminal:
 #   1 = ACCTRAN     (accelerated transformations -- toward the tips)
@@ -256,10 +267,13 @@
 #
 #   external_algorithm(tree, tip_colors, edge_colors, config) -> edge_colors
 #
-# tip_colors : named vector (name = tip state, value = color).
-#              If names(tip_colors) is available, it is used directly as the
-#              state->color palette, including the color assigned to "?" or "-".
-# edge_colors: initialized color vector (completely overwritten).
+# AMBIGUITY POLICY (Fitch-specific):
+#   Any state that is ?, -, or that cannot be unambiguously resolved
+#   (NA after .fitch_optimize) is painted with FITCH_AMBIG_COLOR (deep pink).
+#   This overrides whatever color the user assigned to those states so that
+#   Fitch ambiguity is always visually distinct from real character states.
+#   This behavior is EXCLUSIVE to this algorithm; other algorithms respect
+#   the user palette in full.
 # ============================================================================ #
 external_algorithm <- function(tree, tip_colors, edge_colors, config = NULL) {
   n_tips <- Ntip(tree)
@@ -267,18 +281,19 @@ external_algorithm <- function(tree, tip_colors, edge_colors, config = NULL) {
   tip_states <- names(tip_colors)
 
   if (!is.null(tip_states)) {
-    # Extract palette directly from vector names
+    # 1. Unify missing-data tokens: treat inapplicable "-" as unknown "?"
+    tip_states[tip_states == "-"] <- "?"
+    names(tip_colors) <- tip_states
+
+    # 2. Build palette from vector names.
+    #    Strip "?" so it never appears as a resolved state color.
     palette <- setNames(as.character(tip_colors), tip_states)
     palette <- palette[!duplicated(names(palette))]
+    palette <- palette[names(palette) != "?"]
 
-    # Preserve the color assigned to ambiguity / missing data
-    ambiguous_color <- "gray70"
-    for (m in c("?", "-")) {
-      if (m %in% names(palette) && palette[[m]] != "gray70") {
-        ambiguous_color <- palette[[m]]
-        break
-      }
-    }
+    # 3. Ambiguity / missing data: always FITCH_AMBIG_COLOR (user choice ignored)
+    ambiguous_color <- FITCH_AMBIG_COLOR
+
   } else {
     # Safety fallback when tip_colors has no names
     unique_colors  <- unique(tip_colors[tip_colors != "gray70"])
@@ -291,7 +306,7 @@ external_algorithm <- function(tree, tip_colors, edge_colors, config = NULL) {
       else color_to_state[col]
     }, character(1))
     names(tip_states) <- NULL
-    ambiguous_color   <- "gray70"
+    ambiguous_color   <- FITCH_AMBIG_COLOR   # consistent even in fallback
   }
 
   down_result <- .fitch_downpass(tree, tip_states)
@@ -305,7 +320,7 @@ external_algorithm <- function(tree, tip_colors, edge_colors, config = NULL) {
     if (!is.na(child_state) && child_state %in% names(palette)) {
       edge_colors[i] <- palette[child_state]
     } else {
-      # Use the preserved color for "?" instead of always forcing gray
+      # NA (unresolved after optimize), "?" or any unrecognised state -> fuchsia
       edge_colors[i] <- ambiguous_color
     }
   }
