@@ -44,33 +44,26 @@ FITCH_AMBIG_COLOR <- "#FF1493"   # deep pink / fuchsia
   n_nodes     <- phylo$Nnode
   total_nodes <- n_tips + n_nodes
 
-  # Unique real states (excludes "?" and "-")
   all_states <- sort(unique(tip_states[!tip_states %in% c("?", "-")]))
-
   sets       <- vector("list", total_nodes)
   operations <- character(total_nodes)
 
-  # Initialize terminals
   for (i in seq_len(n_tips)) {
     st <- tip_states[i]
     if (is.na(st) || st == "?" || st == "-" || trimws(st) == "") {
-      sets[[i]] <- all_states          # unknown = all states
+      sets[[i]] <- all_states
     } else {
       if (grepl("^[0-9]+$", st) && nchar(st) > 1) {
-        # Numeric polymorphisms without separator (e.g. "01" -> "0", "1")
         sets[[i]] <- unique(strsplit(st, "")[[1]])
       } else if (grepl("[,/&|]", st)) {
-        # Polymorphisms with explicit separator (e.g. "0/1" or "urban,forest")
         sets[[i]] <- unique(trimws(strsplit(st, "[,/&|]")[[1]]))
       } else {
-        # Whole words or single-character states ("forest", "granivore", "0", "A")
         sets[[i]] <- st
       }
     }
     operations[i] <- "terminal"
   }
 
-  # Sort internal nodes from tips to root (post-order by descendant count)
   internal_nodes <- (n_tips + 1):total_nodes
   count_desc <- function(nd) {
     if (nd <= n_tips) return(1L)
@@ -82,15 +75,21 @@ FITCH_AMBIG_COLOR <- "#FF1493"   # deep pink / fuchsia
 
   for (nd in postorder_seq) {
     children <- phylo$edge[phylo$edge[, 1] == nd, 2]
-    # Generalized Fitch: works with polytomies (2 or more children)
-    inter <- Reduce(intersect, lapply(children, function(h) sets[[h]]))
 
-    if (length(inter) > 0) {
-      sets[[nd]]       <- inter
-      operations[nd]   <- "inter"
+    # Swofford & Maddison rule: frequency count instead of binary intersect/union
+    child_states <- unlist(lapply(children, function(h) sets[[h]]))
+
+    if (length(child_states) > 0) {
+      state_counts <- table(child_states)
+      max_freq     <- max(state_counts)
+      sets[[nd]]   <- names(state_counts)[state_counts == max_freq]
+
+      # If the max frequency equals the number of children, it was a perfect intersection
+      operations[nd] <- if (max_freq == length(children)) "inter" else "union"
     } else {
-      sets[[nd]]       <- Reduce(union, lapply(children, function(h) sets[[h]]))
-      operations[nd]   <- "union"
+      # Escape hatch: avoid undefined sets when children resolve to no states
+      sets[[nd]] <- character(0)
+      operations[nd] <- "union"
     }
   }
 
@@ -114,11 +113,9 @@ FITCH_AMBIG_COLOR <- "#FF1493"   # deep pink / fuchsia
 # ============================================================================ #
 .fitch_uppass <- function(phylo, down_result) {
   s_down     <- down_result$sets
-  operations <- down_result$operations
   n_tips     <- down_result$n_tips
-
-  root  <- n_tips + 1L
-  s_up  <- s_down  # Initialize MPR as a copy of the downpass
+  root       <- n_tips + 1L
+  s_up       <- s_down
 
   preorder_int <- function(nd) {
     res      <- nd
@@ -132,15 +129,20 @@ FITCH_AMBIG_COLOR <- "#FF1493"   # deep pink / fuchsia
     parent <- phylo$edge[phylo$edge[, 2] == nd, 1][1]
 
     c_node   <- s_down[[nd]]
-    c_parent <- s_up[[parent]]  # Definitive MPR of the parent
+    c_parent <- s_up[[parent]]
 
-    if (operations[nd] == "union") {
-      s_up[[nd]] <- union(c_node, c_parent)
+    children     <- phylo$edge[phylo$edge[, 1] == nd, 2]
+    child_states <- unlist(lapply(children, function(h) s_down[[h]]))
+
+    # Swofford & Maddison rule for the uppass
+    if (length(child_states) > 0) {
+      state_counts <- table(child_states)
+      max_freq     <- max(state_counts)
+
+      valid_parent_states <- c_parent[c_parent %in% names(state_counts)[state_counts >= (max_freq - 1)]]
+      s_up[[nd]] <- union(c_node, valid_parent_states)
     } else {
-      children      <- phylo$edge[phylo$edge[, 1] == nd, 2]
-      child_states  <- unlist(lapply(children, function(h) s_down[[h]]))
-      valid         <- intersect(c_parent, child_states)
-      s_up[[nd]]    <- union(c_node, valid)
+      s_up[[nd]] <- union(c_node, c_parent)
     }
   }
 
@@ -172,8 +174,7 @@ FITCH_AMBIG_COLOR <- "#FF1493"   # deep pink / fuchsia
 # Terminals are always untouched: copied directly from tip_states,
 # and the pre-order traversal operates only on internal nodes.
 # ============================================================================ #
-.fitch_optimize <- function(phylo, down_result, up_result, tip_states,
-                            config = NULL) {
+.fitch_optimize <- function(phylo, down_result, up_result, tip_states, config = NULL) {
   s_down  <- down_result$sets
   s_up    <- up_result$sets
   n_tips  <- down_result$n_tips
@@ -181,23 +182,15 @@ FITCH_AMBIG_COLOR <- "#FF1493"   # deep pink / fuchsia
   total   <- n_tips + n_nodes
   root    <- n_tips + 1L
 
-  # ------------------------------------------------------------------
-  # LOCAL OPTIONS: extract mode from config (never from a global)
-  # ------------------------------------------------------------------
   current_mode <- tolower(config$fitch_mode %||% "deltran")
 
-  # ------------------------------------------------------------------
-  # Helper: computes the optimization for ACCTRAN or DELTRAN
-  # Argument `m`: "acctran" or "deltran"
-  # ------------------------------------------------------------------
   calc_mode <- function(m) {
     opt <- character(total)
-    opt[seq_len(n_tips)] <- tip_states  # Terminals: always untouched
+    opt[seq_len(n_tips)] <- tip_states
 
-    # Root takes the first element of the MPR set (single starting point)
-    opt[root] <- s_up[[root]][1]
+    # Strict tie-break with sort() at the root
+    opt[root] <- sort(s_up[[root]])[1]
 
-    # Pre-order traversal exclusively over internal nodes
     preorder_int <- function(nd) {
       res      <- nd
       children <- phylo$edge[phylo$edge[, 1] == nd, 2]
@@ -213,44 +206,36 @@ FITCH_AMBIG_COLOR <- "#FF1493"   # deep pink / fuchsia
       c_nd_up   <- s_up[[nd]]
       c_nd_down <- s_down[[nd]]
 
+      # sort() applied to guarantee deterministic alphabetic order on ties
       if (length(c_nd_up) == 1L) {
-        # Unambiguous node in MPR: direct assignment
         opt[nd] <- c_nd_up[1]
       } else if (m == "acctran") {
-        # ACCTRAN: inherit parent if it is in the DOWNPASS set
         if (!is.na(st_parent) && st_parent %in% c_nd_down) opt[nd] <- st_parent
-        else opt[nd] <- c_nd_down[1]
+        else opt[nd] <- sort(c_nd_down)[1]
       } else {
-        # DELTRAN: inherit parent if it is in the MPR UPPASS set
         if (!is.na(st_parent) && st_parent %in% c_nd_up) opt[nd] <- st_parent
-        else opt[nd] <- c_nd_up[1]
+        else opt[nd] <- sort(c_nd_up)[1]
       }
     }
     opt
   }
 
-  # ------------------------------------------------------------------
-  # Dispatch according to current_mode
-  # ------------------------------------------------------------------
   if (current_mode %in% c("acctran", "deltran")) {
     return(calc_mode(current_mode))
   }
 
-  # Unambiguous: unambiguous EXCLUSIVELY if ACCTRAN and DELTRAN agree
-  acc      <- calc_mode("acctran")
-  del      <- calc_mode("deltran")
+  acc       <- calc_mode("acctran")
+  del       <- calc_mode("deltran")
   opt_unamb <- character(total)
 
-  # Terminals: always untouched
   opt_unamb[seq_len(n_tips)] <- tip_states
 
   for (nd in (n_tips + 1L):total) {
     if (nd == root) {
-      # Root is unambiguous only if its MPR set has exactly one element
+      # Strict rigor at the root for Unambiguous
       if (length(s_up[[root]]) == 1L) opt_unamb[root] <- s_up[[root]][1]
-      else                             opt_unamb[root] <- NA_character_
+      else                            opt_unamb[root] <- NA_character_
     } else {
-      # Internal node: unambiguous if and only if ACCTRAN == DELTRAN (no NA)
       if (!is.na(acc[nd]) && !is.na(del[nd]) && acc[nd] == del[nd]) {
         opt_unamb[nd] <- acc[nd]
       } else {
