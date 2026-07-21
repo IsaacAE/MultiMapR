@@ -111,6 +111,23 @@
 #' @param strict             If TRUE raises an error on tree/CSV discrepancies;
 #'                           if FALSE (default) only warns.
 #'                           Only used when file paths are passed.
+#' @param use_palettes       Logical. If \code{TRUE}, color prompts are skipped and
+#'                           built-in palettes are assigned automatically.
+#' @param palette            Optional character vector of colors (e.g.
+#'                           \code{c("red", "blue", "green")}) or a single string
+#'                           naming a predefined palette (\code{"wc"} for Winclada
+#'                           or \code{"MM1"} for MultiMapR). When provided, color
+#'                           prompts are skipped and an error is raised if the
+#'                           palette has fewer colors than selected states.
+#' @param ambiguity_color    Color for ambiguous/missing branches in Fitch
+#'                           reconstructions. Defaults to magenta
+#'                           (\code{"#FF00FF"}) when NULL.
+#' @param terminal_stretch   Multiplier for terminal (tip) branches when the
+#'                           tree has no real edge lengths (the usual case for
+#'                           character-mapping cladograms). Internal branches
+#'                           stay at length 1 so the topology is preserved;
+#'                           only tip labels/colors get more visual space.
+#'                           Default \code{1} (no change).
 #' @return Invisible NULL.
 #' @export
 execute_phylogeny <- function(phylogeny, character_data,
@@ -123,7 +140,10 @@ execute_phylogeny <- function(phylogeny, character_data,
                               normalize_spaces     = FALSE,
                               tree_format          = "auto",
                               strict               = FALSE,
-                              use_palettes = FALSE) {
+                              use_palettes         = FALSE,
+                              palette              = NULL,
+                              ambiguity_color      = NULL,
+                              terminal_stretch     = 1) {
   tryCatch({
 
     # POLYMORPHISM: If file paths (character) are passed, load data automatically
@@ -140,56 +160,102 @@ execute_phylogeny <- function(phylogeny, character_data,
       character_data   <- loaded_data$characters
     }
 
-    # Continue with the normal system flow using the modular interface
-    config <- setup_mapping_config(phylogeny, character_data, use_palettes)
-    if (is.null(config)) return(invisible(NULL))
-
-    # -- Branch width (parameter overrides menu default of 2) ------------------
-    if (!is.numeric(branch_width) || length(branch_width) != 1L || branch_width <= 0)
-      stop("`branch_width` must be a positive number.")
-    config$grosor <- branch_width
-    offset_factor <- switch(config$tipo_arbol %||% "phylogram",
-                            "phylogram" = 0.012, "cladogram" = 0.012, "fan" = 0.003, 0.012)
-    config$rango_desfase <- max(0.05, branch_width * offset_factor)
-
-    # -- Branch lengths --------------------------------------------------------
-    # use_edge_length = NULL  -> respect menu choice stored in config
-    # use_edge_length = TRUE  -> always use lengths if present
-    # use_edge_length = FALSE -> always strip lengths (uniform branches)
-    if (!is.null(use_edge_length)) {
-      config$use_edge_length <- isTRUE(use_edge_length)
-    }
-    if (isFALSE(config$use_edge_length)) {
-      phylogeny$edge.length <- NULL
+    # Resolve named palette if the user passed a single string
+    if (is.character(palette) && length(palette) == 1L &&
+        exists("PALETAS_PREDEFINIDAS", mode = "list") &&
+        palette %in% names(PALETAS_PREDEFINIDAS)) {
+      palette <- PALETAS_PREDEFINIDAS[[palette]]
     }
 
-    # -- Ladderize -------------------------------------------------------------
-    # ladderize = TRUE    -> ape::ladderize(right = FALSE) [larger clade bottom]
-    # ladderize = "right" -> ape::ladderize(right = TRUE)  [larger clade top]
-    # ladderize = FALSE   -> no reordering
-    if (identical(ladderize, TRUE)) {
-      phylogeny <- ladderize(phylogeny, right = FALSE)
-    } else if (identical(ladderize, "right")) {
-      phylogeny <- ladderize(phylogeny, right = TRUE)
-    }
-    config$ladderize <- ladderize   # propagate to renderers for export consistency
+    # Keep an untouched copy of the tree: each loop iteration re-derives its
+    # working copy from here so that ladderizing / stripping edge lengths on
+    # one pass never leaks into the next (e.g. after switching algorithms).
+    original_phylogeny <- phylogeny
 
-    # Calculate tree geometric depth to assign a proportional 2.5% offset
-    phy_tmp <- phylogeny
-    if (is.null(phy_tmp$edge.length)) {
-      phy_tmp$edge.length <- rep(1, nrow(phy_tmp$edge))
-    }
-    max_depth <- max(node.depth.edgelength(phy_tmp))
-    config$label_offset <- max_depth * 0.025
+    config <- NULL  # NULL forces a full setup_mapping_config() run
 
-    # Dispatch to the corresponding graphics controller (core_render.R)
-    # plot_ancestral_reconstruction() internally handles multi_function:
-    #   multi_function == 1 -> branch overlay
-    #   multi_function == 2 -> ancestral reconstruction + tip figures
-    if (config$mapping_type == 1) {
-      plot_simple_mapping(phylogeny, config)
-    } else {
-      plot_ancestral_reconstruction(phylogeny, config)
+    # ==========================================================================
+    # MAIN SESSION LOOP
+    # Lets the user, after each rendered plot, either:
+    #   - run through the entire CLI again with a brand-new configuration, or
+    #   - keep everything as configured and only pick a different ancestral
+    #     reconstruction algorithm, or
+    #   - exit the session.
+    # ==========================================================================
+    repeat {
+
+      if (is.null(config)) {
+        # Continue with the normal system flow using the modular interface
+        config <- setup_mapping_config(original_phylogeny, character_data, use_palettes,
+                                       user_palette = palette,
+                                       ambiguity_color = ambiguity_color)
+        if (is.null(config)) return(invisible(NULL))
+      }
+
+      config$terminal_stretch <- terminal_stretch
+
+      # -- Branch width (parameter overrides menu default of 2) ----------------
+      if (!is.numeric(branch_width) || length(branch_width) != 1L || branch_width <= 0)
+        stop("`branch_width` must be a positive number.")
+      config$grosor <- branch_width
+      offset_factor <- switch(config$tipo_arbol %||% "phylogram",
+                              "phylogram" = 0.012, "cladogram" = 0.012, "fan" = 0.003, 0.012)
+      config$rango_desfase <- max(0.05, branch_width * offset_factor)
+
+      # -- Branch lengths --------------------------------------------------------
+      # use_edge_length = NULL  -> respect menu choice stored in config
+      # use_edge_length = TRUE  -> always use lengths if present
+      # use_edge_length = FALSE -> always strip lengths (uniform branches)
+      if (!is.null(use_edge_length)) {
+        config$use_edge_length <- isTRUE(use_edge_length)
+      }
+      working_tree <- original_phylogeny
+      if (isFALSE(config$use_edge_length)) {
+        working_tree$edge.length <- NULL
+      }
+
+      # -- Ladderize ---------------------------------------------------------
+      # ladderize = TRUE    -> ape::ladderize(right = FALSE) [larger clade bottom]
+      # ladderize = "right" -> ape::ladderize(right = TRUE)  [larger clade top]
+      # ladderize = FALSE   -> no reordering
+      if (identical(ladderize, TRUE)) {
+        working_tree <- ladderize(working_tree, right = FALSE)
+      } else if (identical(ladderize, "right")) {
+        working_tree <- ladderize(working_tree, right = TRUE)
+      }
+      config$ladderize <- ladderize   # propagate to renderers for export consistency
+
+      # Calculate tree geometric depth to assign a proportional 2.5% offset
+      phy_tmp <- working_tree
+      if (is.null(phy_tmp$edge.length)) {
+        phy_tmp$edge.length <- rep(1, nrow(phy_tmp$edge))
+      }
+      max_depth <- max(node.depth.edgelength(phy_tmp))
+      config$label_offset <- max_depth * 0.025
+
+      # Dispatch to the corresponding graphics controller (core_render.R)
+      # plot_ancestral_reconstruction() internally handles multi_function:
+      #   multi_function == 1 -> branch overlay
+      #   multi_function == 2 -> ancestral reconstruction + tip figures
+      if (config$mapping_type == 1) {
+        plot_simple_mapping(working_tree, config)
+      } else {
+        plot_ancestral_reconstruction(working_tree, config)
+      }
+
+      # -- What next? ----------------------------------------------------------
+      next_action <- prompt_post_run_menu(allow_algorithm_change = (config$mapping_type == 2))
+
+      if (next_action == "exit") {
+        break
+      } else if (next_action == "new") {
+        config <- NULL   # forces a full setup_mapping_config() on next loop
+      } else if (next_action == "algorithm") {
+        algo_result <- prompt_ancestral_algorithm()
+        if (is.null(algo_result)) break
+        config$algoritmo  <- algo_result$algoritmo
+        config$fitch_mode <- algo_result$fitch_mode
+      }
     }
 
   }, error = function(e) {

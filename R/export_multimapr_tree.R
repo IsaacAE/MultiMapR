@@ -411,7 +411,11 @@
       node_color <- if (!is.na(ie)) {
         ec[ie]
       } else {
-        ec[which(edges[, 1L] == internal_nodes[m])[1L]]
+        # Root has no incoming edge. Prefer the algorithm-supplied root
+        # color (its own resolved state) over borrowing the first child's
+        # edge color, which was the previous (incorrect) fallback.
+        rc <- attr(ec, "root_color")
+        if (!is.null(rc)) rc else ec[which(edges[, 1L] == internal_nodes[m])[1L]]
       }
 
       children_m <- children_of[[m]]
@@ -563,7 +567,12 @@
     for (m in seq_along(internal_nodes)) {
       nd         <- internal_nodes[m]
       ie         <- entry_idx[m]
-      node_color <- if (!is.na(ie)) ec[ie] else ec[which(edges[, 1L] == nd)[1L]]
+      node_color <- if (!is.na(ie)) {
+        ec[ie]
+      } else {
+        rc <- attr(ec, "root_color")
+        if (!is.null(rc)) rc else ec[which(edges[, 1L] == nd)[1L]]
+      }
 
       children_m <- children_of[[m]]
       R_nd       <- sqrt(xx[nd]^2 + yy[nd]^2)
@@ -705,6 +714,14 @@ export_multimapr_tree <- function(tree,
                                   offset_range  = 0.1,
                                   use_edge_length = TRUE,
                                   ladderize       = FALSE,
+                                  # terminal_stretch: multiplier applied ONLY to terminal
+                                  # (tip) branches when the tree has no real edge lengths
+                                  # (the usual case for character-mapping cladograms, where
+                                  # every edge defaults to length 1). Internal branches are
+                                  # left untouched so the topology's proportions don't change
+                                  # -- this only gives tip labels/colors more visual room.
+                                  # 1 = no change (default, backward compatible).
+                                  terminal_stretch = 1,
                                   mar           = c(1, 1, 1, 4),
                                   # -- CUSTOM DIMENSION PARAMETERS -----------------------
                                   # NULL -> automatic dimensions are used, calculated
@@ -755,6 +772,15 @@ export_multimapr_tree <- function(tree,
   }
   if (!isTRUE(use_edge_length)) {
     tree$edge.length <- NULL
+  }
+  if (is.null(tree$edge.length)) {
+    if (!is.numeric(terminal_stretch) || length(terminal_stretch) != 1L || terminal_stretch <= 0)
+      stop("`terminal_stretch` must be a positive number.")
+    if (terminal_stretch != 1) {
+      el <- rep(1, nrow(tree$edge))
+      el[tree$edge[, 2] <= Ntip(tree)] <- terminal_stretch
+      tree$edge.length <- el
+    }
   }
 
   if (!is.numeric(lwd)          || length(lwd) != 1L || lwd <= 0)
@@ -1161,6 +1187,7 @@ plot_multimapr_screen <- function(tree,
                                   offset_range  = 0.1,
                                   use_edge_length = TRUE,
                                   ladderize       = FALSE,
+                                  terminal_stretch = 1,
                                   legend_by_char = NULL,
                                   legend_labels  = NULL,
                                   legend_colors  = NULL,
@@ -1188,6 +1215,15 @@ plot_multimapr_screen <- function(tree,
   }
   if (!isTRUE(use_edge_length)) {
     tree$edge.length <- NULL
+  }
+  if (is.null(tree$edge.length)) {
+    if (!is.numeric(terminal_stretch) || length(terminal_stretch) != 1L || terminal_stretch <= 0)
+      stop("`terminal_stretch` must be a positive number.")
+    if (terminal_stretch != 1) {
+      el <- rep(1, nrow(tree$edge))
+      el[tree$edge[, 2] <= Ntip(tree)] <- terminal_stretch
+      tree$edge.length <- el
+    }
   }
 
   n_tips <- Ntip(tree)

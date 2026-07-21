@@ -552,10 +552,12 @@ init_edge_colors <- function(filogenia) {
 #' @keywords internal
 .add_fitch_ambig_to_legend <- function(colores_estado, config) {
   if (!isTRUE(config$algoritmo == 2L)) return(colores_estado)
-  if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
-    ambig_col <- get("FITCH_AMBIG_COLOR")
+  ambig_col <- if (!is.null(config$ambiguity_color)) {
+    config$ambiguity_color
+  } else if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
+    get("FITCH_AMBIG_COLOR")
   } else {
-    ambig_col <- "#FF1493"
+    "#FF00FF"
   }
   c(colores_estado, c("Ambiguous / Missing" = ambig_col))
 }
@@ -767,10 +769,12 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
       type          = tipo_arbol,
       format        = config$export_format %||% "png",
       lwd           = config$grosor,
-      legend_labels = ley_data$labels,
-      legend_colors = ley_data$colors,
-      legend_corner = config$legend_corner %||% "bottomleft",
-      legend_title  = titulo_leyenda
+       ladderize     = config$ladderize %||% FALSE,
+       terminal_stretch = config$terminal_stretch %||% 1,
+       legend_labels = ley_data$labels,
+       legend_colors = ley_data$colors,
+       legend_corner = config$legend_corner %||% "bottomleft",
+       legend_title  = titulo_leyenda
     )
   }
 
@@ -780,6 +784,8 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
     color_list     = list(edge_colors),
     type           = tipo_arbol,
     lwd            = config$grosor,
+    ladderize      = config$ladderize %||% FALSE,
+      terminal_stretch = config$terminal_stretch %||% 1,
     legend_labels  = if (!is.null(colores_estado)) names(colores_estado) else NULL,
     legend_colors  = if (!is.null(colores_estado)) unname(colores_estado) else NULL,
     legend_corner  = config$legend_corner %||% "bottomleft",
@@ -899,10 +905,12 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
 
   # For Fitch: append the ambiguity entry to every character block (Fitch-only)
   if (isTRUE(config$algoritmo == 2L)) {
-    if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
+    if (!is.null(config$ambiguity_color)) {
+      ambig_col <- config$ambiguity_color
+    } else if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
       ambig_col <- get("FITCH_AMBIG_COLOR")
     } else {
-      ambig_col <- "#FF1493"
+      ambig_col <- "#FF00FF"
     }
     ambig_label <- "Ambiguous / Missing"
     for (nm in names(ley_data$by_char)) {
@@ -1255,10 +1263,12 @@ plot_superimposed_characters <- function(filogenia, config,
 
   # For Fitch: append the ambiguity entry to every character block (Fitch-only)
   if (isTRUE(config$algoritmo == 2L)) {
-    if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
+    if (!is.null(config$ambiguity_color)) {
+      ambig_col <- config$ambiguity_color
+    } else if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
       ambig_col <- get("FITCH_AMBIG_COLOR")
     } else {
-      ambig_col <- "#FF1493"
+      ambig_col <- "#FF00FF"
     }
     ambig_label <- "Ambiguous / Missing"
     for (nm in names(ley_data$by_char)) {
@@ -1280,11 +1290,12 @@ plot_superimposed_characters <- function(filogenia, config,
       lwd             = grosor1,
       offset_range    = config$rango_desfase %||% 0.1,
       use_edge_length = isTRUE(config$use_edge_length),
-      ladderize       = config$ladderize %||% FALSE,
-      legend_by_char  = ley_data$by_char,
-      legend_corner   = config$legend_corner %||% "bottomleft"
-    )
-  }
+       ladderize       = config$ladderize %||% FALSE,
+       terminal_stretch = config$terminal_stretch %||% 1,
+       legend_by_char  = ley_data$by_char,
+       legend_corner   = config$legend_corner %||% "bottomleft"
+     )
+   }
 
   # SCREEN RENDER — integrated advanced visual engine
   plot_multimapr_screen(
@@ -1295,6 +1306,7 @@ plot_superimposed_characters <- function(filogenia, config,
     offset_range    = config$rango_desfase %||% 0.1,
     use_edge_length = isTRUE(config$use_edge_length),
     ladderize       = config$ladderize %||% FALSE,
+      terminal_stretch = config$terminal_stretch %||% 1,
     legend_by_char  = ley_data$by_char,
     legend_corner   = config$legend_corner %||% "bottomleft"
   )

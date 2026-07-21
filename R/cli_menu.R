@@ -87,6 +87,15 @@ GAMAS_MULTIMAPEO <- list(
   )
 )
 
+# ==============================================================================
+# SECTION 0b — NAMED PREDEFINED PALETTES
+# ==============================================================================
+
+PALETAS_PREDEFINIDAS <- list(
+  wc  = c("green", "blue", "black", "red", "yellow", "cyan1", "darkgreen"),
+  MM1 = c("darkviolet", "orange", "brown", "gray50", "firebrick1", "forestgreen")
+)
+
 
 # ==============================================================================
 # SECTION 1 — EXIT UTILITY
@@ -221,8 +230,10 @@ prompt_characters <- function(available_chars, prompt_n, min_n = 1,
 #' @param auto_palette  Optional character vector of colors (a palette).
 #'                      When not NULL, colors are auto-assigned but state
 #'                      selection is still shown interactively.
+#' @param strict        If TRUE, raises an error when auto_palette has fewer
+#'                      colors than selected states instead of recycling.
 #' @return Named character vector state -> color, or invisible(NULL) if cancelled.
-prompt_states_and_colors <- function(aligned_data, character, auto_palette = NULL) {
+prompt_states_and_colors <- function(aligned_data, character, auto_palette = NULL, strict = FALSE) {
   all_states <- sort_states(as.character(unique(aligned_data[[character]])))
 
   # --- State selection (always interactive) -----------------------------------
@@ -250,6 +261,10 @@ prompt_states_and_colors <- function(aligned_data, character, auto_palette = NUL
   # --- Color assignment: automatic (palette) or manual -----------------------
   if (!is.null(auto_palette)) {
     if (length(selected_states) > length(auto_palette)) {
+      if (strict) {
+        stop(sprintf("Insufficient colors in palette: character '%s' has %d selected state(s) but only %d color(s) provided. Add more colors to the palette.",
+                     character, length(selected_states), length(auto_palette)))
+      }
       cat(sprintf("  [!] Warning: '%s' has more selected states than colors in the palette. Colors will be recycled.\n",
                   character))
       colores_asignados <- rep(auto_palette, length.out = length(selected_states))
@@ -264,6 +279,90 @@ prompt_states_and_colors <- function(aligned_data, character, auto_palette = NUL
   # ----------------------------------------------------------------------------
 
   prompt_character_colors(selected_states, character)
+}
+
+
+#' Prompts for the ancestral reconstruction algorithm (and Fitch mode)
+#'
+#' Extracted as a standalone step so it can be reused both inside
+#' \code{setup_mapping_config()} (first-time setup) and directly from the
+#' main loop in \code{execute_phylogeny()} when the user only wants to try
+#' a different algorithm while keeping the rest of the configuration.
+#'
+#' @return A list with \code{algoritmo} (1 or 2) and \code{fitch_mode}
+#'         (NULL unless \code{algoritmo == 2}), or invisible(NULL) if the
+#'         user cancels.
+prompt_ancestral_algorithm <- function() {
+  cat("\nAncestral reconstruction algorithm:\n")
+  cat("  1: Default (depth-weighted majority)\n")
+  cat("  2: Fitch (ACCTRAN/DELTRAN/Unambiguous \u2014 loaded automatically from fitch.R)\n")
+  repeat {
+    algo_sel <- readline(prompt = "Select (1/2, or 'exit' to quit): ")
+    if (check_exit(algo_sel)) return(invisible(NULL))
+    algo_sel <- suppressWarnings(as.integer(algo_sel))
+    if (!is.na(algo_sel) && algo_sel %in% 1:2) break
+    cat("Invalid option. Please enter 1 or 2.\n")
+  }
+
+  fitch_mode <- NULL
+  if (algo_sel == 2) {
+    cat("\nFitch optimization mode:\n")
+    cat("  1: ACCTRAN     (accelerated transformation \u2014 toward tips)\n")
+    cat("  2: DELTRAN     (delayed transformation \u2014 toward root)\n")
+    cat("  3: Unambiguous (only unambiguous states after both passes)\n")
+    mode_str <- readline(prompt = "Select (1/2/3, Enter = 1): ")
+    if (check_exit(mode_str)) return(invisible(NULL))
+    fitch_sel <- if (nchar(trimws(mode_str)) == 0) 1L else as.integer(mode_str)
+    if (is.na(fitch_sel) || !fitch_sel %in% 1:3) {
+      cat("Invalid option, using ACCTRAN.\n")
+      fitch_sel <- 1L
+    }
+    fitch_mode <- c("acctran", "deltran", "unambiguous")[fitch_sel]
+  }
+
+  list(algoritmo = algo_sel, fitch_mode = fitch_mode)
+}
+
+
+# ==============================================================================
+# SECTION 2b — POST-RUN LOOP MENU
+# ==============================================================================
+
+#' Prompts the user for what to do after a plot has been rendered
+#'
+#' Drives the main loop in \code{execute_phylogeny()}: the user can start a
+#' completely new configuration from scratch, re-run keeping everything as
+#' before but choosing a different ancestral reconstruction algorithm, or
+#' exit the session.
+#'
+#' @param allow_algorithm_change Logical. TRUE only when the previous run was
+#'   an ancestral reconstruction (mapping_type == 2), since "algorithm" has
+#'   no meaning for simple mapping.
+#' @return One of \code{"new"}, \code{"algorithm"}, \code{"exit"}.
+prompt_post_run_menu <- function(allow_algorithm_change = FALSE) {
+  cat("\n=== What would you like to do next? ===\n")
+  cat("  1: Run again with a completely new configuration\n")
+  if (allow_algorithm_change) {
+    cat("  2: Keep the current configuration and choose a different algorithm\n")
+    cat("  3: Exit\n")
+    valid <- 1:3
+  } else {
+    cat("  3: Exit\n")
+    valid <- c(1L, 3L)
+  }
+
+  repeat {
+    opt <- readline(prompt = "Select an option: ")
+    if (check_exit(opt)) return("exit")
+    opt <- suppressWarnings(as.integer(opt))
+    if (!is.na(opt) && opt %in% valid) break
+    cat("Invalid option. Please try again.\n")
+  }
+
+  switch(as.character(opt),
+         "1" = "new",
+         "2" = "algorithm",
+         "3" = "exit")
 }
 
 
@@ -283,9 +382,18 @@ prompt_states_and_colors <- function(aligned_data, character, auto_palette = NUL
 #' @param use_palettes     Logical. If \code{TRUE}, colors are assigned automatically
 #'                         from \code{PALETAS_ACCESIBLES}; color prompts are skipped but
 #'                         state-selection prompts are still shown interactively.
+#' @param user_palette     Optional character vector of colors supplied directly by
+#'                         the user via the \code{palette} argument to
+#'                         \code{execute_phylogeny}. When provided, color prompts are
+#'                         skipped entirely and an error is raised if the palette has
+#'                         fewer colors than selected states. Takes precedence over
+#'                         \code{use_palettes}.
+#' @param ambiguity_color  Optional color string for ambiguous/missing branches in
+#'                         Fitch reconstructions. Defaults to magenta (\code{"#FF00FF"}).
 #' @return Configuration list, or invisible(NULL) if the user cancels.
 #' @seealso \code{\link{execute_phylogeny}}
-setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE) {
+setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE,
+                                 user_palette = NULL, ambiguity_color = NULL) {
 
   if (!inherits(phylogeny, "phylo"))
     stop("'phylogeny' must be a 'phylo' object.")
@@ -308,7 +416,8 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     if (!is.na(mapping_type) && mapping_type %in% 1:2) break
     cat("Invalid option. Please enter 1 or 2.\n")
   }
-  config <- list(mapping_type = mapping_type, aligned_data = aligned_data)
+  config <- list(mapping_type = mapping_type, aligned_data = aligned_data,
+                 ambiguity_color = ambiguity_color)
 
   # Alias kept for backward compatibility with rendering functions
   config$datos_ord <- aligned_data
@@ -328,9 +437,15 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     colors_by_char <- list()
     for (i in seq_along(selected_chars)) {
       char         <- selected_chars[i]
-      paleta_actual <- if (use_palettes && i <= length(PALETAS_ACCESIBLES))
-        PALETAS_ACCESIBLES[[i]] else NULL
-      cols <- prompt_states_and_colors(aligned_data, char, auto_palette = paleta_actual)
+      if (!is.null(user_palette)) {
+        paleta_actual <- user_palette
+      } else {
+        paleta_actual <- if (use_palettes && i <= length(PALETAS_ACCESIBLES))
+          PALETAS_ACCESIBLES[[i]] else NULL
+      }
+      cols <- prompt_states_and_colors(aligned_data, char,
+                                       auto_palette = paleta_actual,
+                                       strict = !is.null(user_palette))
       if (is.null(cols)) return(invisible(NULL))
       colors_by_char[[char]] <- cols
     }
@@ -393,8 +508,14 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     if (length(selected_chars) == 1) {
       # === 1 SOLO CARÁCTER: Usar Paleta Okabe-Ito (PALETAS_ACCESIBLES) ===
       char          <- selected_chars[1]
-      paleta_actual <- if (use_palettes) PALETAS_ACCESIBLES[[1]] else NULL
-      cols <- prompt_states_and_colors(aligned_data, char, auto_palette = paleta_actual)
+      if (!is.null(user_palette)) {
+        paleta_actual <- user_palette
+      } else {
+        paleta_actual <- if (use_palettes) PALETAS_ACCESIBLES[[1]] else NULL
+      }
+      cols <- prompt_states_and_colors(aligned_data, char,
+                                       auto_palette = paleta_actual,
+                                       strict = !is.null(user_palette))
       if (is.null(cols)) return(invisible(NULL))
       colors_by_char[[char]] <- cols
 
@@ -406,9 +527,15 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
       # Carácter 1: Magma, Carácter 2: Mako, Carácter 3: Plasma
       for (i in seq_along(selected_chars)) {
         char          <- selected_chars[i]
-        paleta_actual <- if (use_palettes && i <= length(GAMAS_MULTIMAPEO))
-          GAMAS_MULTIMAPEO[[i]] else NULL
-        cols <- prompt_states_and_colors(aligned_data, char, auto_palette = paleta_actual)
+        if (!is.null(user_palette)) {
+          paleta_actual <- user_palette
+        } else {
+          paleta_actual <- if (use_palettes && i <= length(GAMAS_MULTIMAPEO))
+            GAMAS_MULTIMAPEO[[i]] else NULL
+        }
+        cols <- prompt_states_and_colors(aligned_data, char,
+                                         auto_palette = paleta_actual,
+                                         strict = !is.null(user_palette))
         if (is.null(cols)) return(invisible(NULL))
         colors_by_char[[char]] <- cols
       }
@@ -441,32 +568,10 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
       }
     }
 
-    cat("\nAncestral reconstruction algorithm:\n")
-    cat("  1: Default (depth-weighted majority)\n")
-    cat("  2: Fitch (ACCTRAN/DELTRAN/Unambiguous \u2014 loaded automatically from fitch.R)\n")
-    repeat {
-      algo_sel <- readline(prompt = "Select (1/2, or 'exit' to quit): ")
-      if (check_exit(algo_sel)) return(invisible(NULL))
-      algo_sel <- suppressWarnings(as.integer(algo_sel))
-      if (!is.na(algo_sel) && algo_sel %in% 1:2) break
-      cat("Invalid option. Please enter 1 or 2.\n")
-    }
-    config$algoritmo <- algo_sel
-
-    if (algo_sel == 2) {
-      cat("\nFitch optimization mode:\n")
-      cat("  1: ACCTRAN     (accelerated transformation \u2014 toward tips)\n")
-      cat("  2: DELTRAN     (delayed transformation \u2014 toward root)\n")
-      cat("  3: Unambiguous (only unambiguous states after both passes)\n")
-      mode_str <- readline(prompt = "Select (1/2/3, Enter = 1): ")
-      if (check_exit(mode_str)) return(invisible(NULL))
-      fitch_mode <- if (nchar(trimws(mode_str)) == 0) 1L else as.integer(mode_str)
-      if (is.na(fitch_mode) || !fitch_mode %in% 1:3) {
-        cat("Invalid option, using ACCTRAN.\n")
-        fitch_mode <- 1L
-      }
-      config$fitch_mode <- c("acctran", "deltran", "unambiguous")[fitch_mode]
-    }
+    algo_result <- prompt_ancestral_algorithm()
+    if (is.null(algo_result)) return(invisible(NULL))
+    config$algoritmo  <- algo_result$algoritmo
+    config$fitch_mode <- algo_result$fitch_mode
   }
 
   # --- Tree type ---------------------------------------------------------------
@@ -611,3 +716,4 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
 
   config
 }
+
