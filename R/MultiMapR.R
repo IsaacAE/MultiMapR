@@ -167,6 +167,15 @@ execute_phylogeny <- function(phylogeny, character_data,
       palette <- PALETAS_PREDEFINIDAS[[palette]]
     }
 
+    # Validate the user-supplied ambiguity color, if any (applies to missing
+    # "?", inapplicable "-" and ambiguous nodes alike under Fitch).
+    if (!is.null(ambiguity_color)) {
+      if (!is.character(ambiguity_color) || length(ambiguity_color) != 1L ||
+          !is_valid_color(ambiguity_color)) {
+        stop("`ambiguity_color` must be a single valid R color name or hex code.")
+      }
+    }
+
     # Keep an untouched copy of the tree: each loop iteration re-derives its
     # working copy from here so that ladderizing / stripping edge lengths on
     # one pass never leaks into the next (e.g. after switching algorithms).

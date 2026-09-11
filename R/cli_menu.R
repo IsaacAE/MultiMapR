@@ -504,6 +504,7 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     config$caracteres <- selected_chars
 
     colors_by_char <- list()
+    manual_chars   <- character(0)  # chars whose colors were TYPED, not auto-assigned
 
     if (length(selected_chars) == 1) {
       # === 1 SOLO CARÁCTER: Usar Paleta Okabe-Ito (PALETAS_ACCESIBLES) ===
@@ -513,6 +514,7 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
       } else {
         paleta_actual <- if (use_palettes) PALETAS_ACCESIBLES[[1]] else NULL
       }
+      if (is.null(paleta_actual)) manual_chars <- c(manual_chars, char)
       cols <- prompt_states_and_colors(aligned_data, char,
                                        auto_palette = paleta_actual,
                                        strict = !is.null(user_palette))
@@ -533,6 +535,7 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
           paleta_actual <- if (use_palettes && i <= length(GAMAS_MULTIMAPEO))
             GAMAS_MULTIMAPEO[[i]] else NULL
         }
+        if (is.null(paleta_actual)) manual_chars <- c(manual_chars, char)
         cols <- prompt_states_and_colors(aligned_data, char,
                                          auto_palette = paleta_actual,
                                          strict = !is.null(user_palette))
@@ -547,6 +550,26 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
       }, logical(1)))
     }
     config$colores_por_caracter <- colors_by_char
+
+    # If the user manually typed a color for "?" or "-" while picking state
+    # colors above (Fitch always treats these as one ambiguity color, see
+    # fitch.R), and no global ambiguity_color was passed to
+    # execute_phylogeny(), promote that manual choice so Fitch actually
+    # renders it instead of silently falling back to magenta. Auto-assigned
+    # palette colors (use_palettes / palette=) are NOT eligible here, since
+    # landing on "?" there is incidental, not a deliberate user choice.
+    if (is.null(config$ambiguity_color)) {
+      for (char in manual_chars) {
+        cols <- colors_by_char[[char]]
+        if ("?" %in% names(cols)) {
+          config$ambiguity_color <- unname(cols[["?"]])
+          break
+        } else if ("-" %in% names(cols)) {
+          config$ambiguity_color <- unname(cols[["-"]])
+          break
+        }
+      }
+    }
 
     if (fun_sel == 2) {
       cat("\nFigure type at terminals:\n")

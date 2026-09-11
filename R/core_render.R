@@ -539,11 +539,34 @@ init_edge_colors <- function(filogenia) {
 }
 
 
+#' Resolves the single color used for missing ("?"), inapplicable ("-") and
+#' ambiguous states under the Fitch algorithm
+#'
+#' Centralizes the fallback chain so every call site (legend entries, branch
+#' coloring in fitch.R, and tip-figure coloring) agrees on the same color:
+#' \code{config$ambiguity_color} when the user supplied one, otherwise
+#' \code{FITCH_AMBIG_COLOR} (magenta) from fitch.R.
+#'
+#' @param config Configuration list (uses config$ambiguity_color).
+#' @return A single color string.
+#' @keywords internal
+.get_fitch_ambig_color <- function(config) {
+  if (!is.null(config$ambiguity_color)) {
+    config$ambiguity_color
+  } else if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
+    get("FITCH_AMBIG_COLOR")
+  } else {
+    "#FF00FF"
+  }
+}
+
+
 #' Injects the Fitch ambiguity entry into a state->color vector (Fitch only)
 #'
 #' When the selected algorithm is Fitch (config$algoritmo == 2), appends
-#' an "Ambiguous / Missing" entry with FITCH_AMBIG_COLOR to \code{colores_estado}
-#' so the legend always shows what the fuchsia branches mean.
+#' an "Ambiguous / Missing" entry with the color from
+#' \code{.get_fitch_ambig_color()} to \code{colores_estado} so the legend
+#' always shows what the ambiguous branches/figures mean.
 #' For any other algorithm the vector is returned unchanged.
 #'
 #' @param colores_estado Named character vector state -> color.
@@ -552,14 +575,7 @@ init_edge_colors <- function(filogenia) {
 #' @keywords internal
 .add_fitch_ambig_to_legend <- function(colores_estado, config) {
   if (!isTRUE(config$algoritmo == 2L)) return(colores_estado)
-  ambig_col <- if (!is.null(config$ambiguity_color)) {
-    config$ambiguity_color
-  } else if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
-    get("FITCH_AMBIG_COLOR")
-  } else {
-    "#FF00FF"
-  }
-  c(colores_estado, c("Ambiguous / Missing" = ambig_col))
+  c(colores_estado, c("Ambiguous / Missing" = .get_fitch_ambig_color(config)))
 }
 
 
@@ -882,9 +898,16 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
   fn_export       <- config$export_filename
   n_tips          <- Ntip(filogenia)
 
+  # Missing ("?") and inapplicable ("-") tip states must render in the same
+  # color as the Fitch ambiguity color used on branches (see fitch.R), so the
+  # terminal figures agree visually with the branches they sit on. Any other
+  # unmapped/excluded state (not "?"/"-") still falls back to neutral gray70.
   resolver_color <- function(valor, colores_estado) {
     valor <- as.character(valor)
-    if (is.na(valor) || valor == "") return("gray70")
+    if (is.na(valor) || valor %in% c("", "?", "-")) {
+      if (isTRUE(config$algoritmo == 2L)) return(.get_fitch_ambig_color(config))
+      return("gray70")
+    }
     if (valor %in% names(colores_estado)) return(colores_estado[[valor]])
     return("gray70")
   }
@@ -905,13 +928,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
 
   # For Fitch: append the ambiguity entry to every character block (Fitch-only)
   if (isTRUE(config$algoritmo == 2L)) {
-    if (!is.null(config$ambiguity_color)) {
-      ambig_col <- config$ambiguity_color
-    } else if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
-      ambig_col <- get("FITCH_AMBIG_COLOR")
-    } else {
-      ambig_col <- "#FF00FF"
-    }
+    ambig_col <- .get_fitch_ambig_color(config)
     ambig_label <- "Ambiguous / Missing"
     for (nm in names(ley_data$by_char)) {
       if (!ambig_label %in% ley_data$by_char[[nm]]$labels) {
@@ -1263,13 +1280,7 @@ plot_superimposed_characters <- function(filogenia, config,
 
   # For Fitch: append the ambiguity entry to every character block (Fitch-only)
   if (isTRUE(config$algoritmo == 2L)) {
-    if (!is.null(config$ambiguity_color)) {
-      ambig_col <- config$ambiguity_color
-    } else if (exists("FITCH_AMBIG_COLOR", mode = "character")) {
-      ambig_col <- get("FITCH_AMBIG_COLOR")
-    } else {
-      ambig_col <- "#FF00FF"
-    }
+    ambig_col <- .get_fitch_ambig_color(config)
     ambig_label <- "Ambiguous / Missing"
     for (nm in names(ley_data$by_char)) {
       if (!ambig_label %in% ley_data$by_char[[nm]]$labels) {
