@@ -1,0 +1,30 @@
+#NEXUS
+[written Wed Jul 02 17:29:56 CDT 2025 by Mesquite  version 3.80 (build 950) at MSI/192.168.101.12]
+BEGIN TREES;
+	Title 'Trees from "mbank_X677_7-2-2025_1826_no_notes.nex"';
+	ID 0197cd42cb183;
+	LINK Taxa = Taxa;
+	TRANSLATE
+[0] 		1 Saccopteryx_bilineata,
+[1] 		2 Noctilio_albiventris,
+[2] 		3 Noctilio_leporinus,
+[3] 		4 Mystacina_robusta,
+[4] 		5 Mystacina_tuberculata,
+[5] 		6 Macrotus_waterhousii,
+[6] 		7 Macrotus_californicus,
+[7] 		8 Artibeus_jamaicensis,
+[8] 		9 Pteronotus_parnellii,
+[9] 		10 Pteronotus_pristinus,
+[10] 		11 Pteronotus_personotus,
+[11] 		12 Pteronotus_macleayii,
+[12] 		13 Pterontous_quadridens,
+[13] 		14 Pteronotus_davyi,
+[14] 		15 Pteronotus_gymnonotus,
+[15] 		16 Mormoops_blainvillii,
+[16] 		17 Mormoops_megalophylla;
+	TREE Best_tree = (1,((2,3),((4,5),(((6,7),8),((16,17),((14,15),((9,10),(11,(12,13)))))))));
+
+END;
+
+
+

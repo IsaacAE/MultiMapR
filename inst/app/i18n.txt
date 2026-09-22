@@ -1,0 +1,287 @@
+# MultiMapR interface dictionary.  Format:  key|es|en   (UTF-8, one entry per line)
+# Spanish is the source text. Entries used with arguments are sprintf() formats:
+# keep the %d / %s / %.2f placeholders in the same order and write a literal % as %%.
+
+# ---- Shell ------------------------------------------------------------------
+tab_data|1 · Datos|1 · Data
+tab_map|2 · Mapear caracteres|2 · Map characters
+tab_help|Ayuda|Help
+theme_light|Claro|Light
+theme_dark|Oscuro|Dark
+
+# ---- 1 · Data ---------------------------------------------------------------
+data_input|Entrada de datos|Data input
+badge_preloaded|precargado desde R|preloaded from R
+badge_example|datos de ejemplo|example data
+badge_local|archivos locales|local files
+obj_phylo|objeto phylo|phylo object
+obj_df|data.frame|data.frame
+tree_file|Archivo del árbol|Tree file
+tree_file_help|Newick (.tre .tree .nwk) · NEXUS (.nex .nexus) · TNT|Newick (.tre .tree .nwk) · NEXUS (.nex .nexus) · TNT
+matrix_file|Matriz de caracteres|Character matrix
+matrix_file_help|CSV · TNT (xread) · NEXUS|CSV · TNT (xread) · NEXUS
+browse|Examinar…|Browse…
+no_file|Ningún archivo seleccionado|No file selected
+read_opts|Opciones de lectura (avanzado)|Reading options (advanced)
+tree_format|Formato del árbol|Tree format
+matrix_format|Formato de la matriz|Matrix format
+auto|Automático|Automatic
+auto_short|Auto|Auto
+csv_sep|Separador CSV|CSV separator
+species_col|Columna de especies|Species column
+header|Encabezado del CSV|CSV header
+yes|Sí|Yes
+no|No|No
+normalize_spaces|Reemplazar espacios por «_» en los nombres de especie|Replace spaces with “_” in species names
+prune|Eliminar del árbol las terminales que no estén en la matriz|Drop tree tips that are not in the matrix
+load|Cargar datos|Load data
+clear|Limpiar|Clear
+empty_title|Sin datos cargados|No data loaded
+empty_body_1|Selecciona un árbol y una matriz de caracteres y pulsa |Select a tree and a character matrix and press
+empty_body_2|. Después podrás revisar la calidad de la matriz y pasar a |. You can then review the quality of the matrix and move on to
+load_example|Cargar datos de ejemplo (murciélagos)|Load example data (bats)
+see_formats|Ver formatos admitidos|See supported formats
+example_missing|No se encontraron los datos de ejemplo del paquete.|The package example data could not be found.
+need_files|Selecciona un árbol y una matriz de caracteres y pulsa «Cargar datos».|Select a tree and a character matrix, then press “Load data”.
+err_tree_title|No se pudo leer el árbol|The tree could not be read
+err_matrix_title|No se pudo leer la matriz de caracteres|The character matrix could not be read
+err_match_title|El árbol y la matriz no coinciden|The tree and the matrix do not match
+err_match_body|%d terminal(es) del árbol no están en la matriz: %s. Corrige los nombres o activa «Eliminar del árbol las terminales que no estén en la matriz».|%d tree tip(s) are not in the matrix: %s. Fix the names or enable “Drop tree tips that are not in the matrix”.
+err_match_few|%d terminal(es) del árbol no están en la matriz (%s): quedarían menos de 3 terminales. Revisa los nombres de especie o la columna de especies.|%d tree tip(s) are not in the matrix (%s): fewer than 3 tips would remain. Check the species names or the species column.
+err_hint|Revisa el formato, el separador y el encabezado en «Opciones de lectura».|Check the format, separator and header under “Reading options”.
+err_tree_ok|El árbol se leyó correctamente (%d terminales).|The tree was read correctly (%d tips).
+open_opts|Abrir opciones de lectura|Open reading options
+retry|Reintentar|Retry
+vb_tips|Terminales|Tips
+vb_lengths|con longitudes de rama|with branch lengths
+vb_nolengths|sin longitudes de rama|without branch lengths
+vb_chars|Caracteres|Characters
+vb_missing|Faltantes (?)|Missing (?)
+vb_inapp|Inaplicables (-)|Inapplicable (-)
+kpi_binary|binarios (%d–%d)|binary (%d–%d)
+kpi_multistate|binarios y multiestado (%d–%d)|binary and multistate (%d–%d)
+kpi_states_max|hasta %d estados por carácter|up to %d states per character
+n_cells|%d celdas|%d cells
+n_rows|%d filas|%d rows
+stats_title|Estadísticas por carácter|Per-character statistics
+download_csv|Descargar CSV|Download CSV
+col_character|Carácter|Character
+col_states|Estados|States
+col_scored|Codificados|Coded
+col_missing|Faltantes (?)|Missing (?)
+col_inapp|Inaplicables (-)|Inapplicable (-)
+per_char|Por carácter|Per character
+heatmap|Taxón × carácter|Taxon × character
+sort_by|Ordenar por|Sort by
+sort_none|Orden de la matriz|Matrix order
+sort_missing|% faltantes|% missing
+sort_inapp|% inaplicables|% inapplicable
+sort_name|Nombre|Name
+log_title|Mensajes de lectura|Reading messages
+goto_map|Ir a Mapear caracteres →|Go to Map characters →
+
+# ---- Log ----------------------------------------------------------------------
+log_empty|Sin mensajes todavía.|No messages yet.
+lvl_info|INFO|INFO
+lvl_warn|AVISO|WARN
+lvl_error|ERROR|ERROR
+lvl_ok|OK|OK
+n_warning|1 aviso|1 warning
+n_warnings|%d avisos|%d warnings
+log_aborted|Carga abortada. No se generaron estadísticas.|Loading aborted. No statistics were computed.
+log_tree_read|Árbol leído: %s, %d terminales, sin longitudes de rama.|Tree read: %s, %d tips, no branch lengths.
+log_tree_read_bl|Árbol leído: %s, %d terminales, con longitudes de rama.|Tree read: %s, %d tips, branch lengths present.
+log_matrix_read|Matriz leída: %s (%s), %d filas × %d caracteres.|Matrix read: %s (%s), %d rows × %d characters.
+log_rows_extra|%d fila(s) de la matriz no están en el árbol y se ignoran: %s|%d matrix row(s) are not in the tree and are ignored: %s
+log_tips_missing|%d terminal(es) del árbol no están en la matriz: %s|%d tree tip(s) are not in the matrix: %s
+log_pruned|Se eliminaron del árbol %d terminal(es) sin datos.|%d tip(s) without data were dropped from the tree.
+log_poly|Polimorfismos detectados en %d carácter(es) (p. ej. %s en %s).|Polymorphisms detected in %d character(s) (e.g. %s in %s).
+log_ready|Datos listos. Continúa en «2 · Mapear caracteres».|Data ready. Continue in “2 · Map characters”.
+
+# ---- 2 · Map ----------------------------------------------------------------
+config|Configuración|Configuration
+side_counter|%d terminales · %d car.|%d tips · %d chars
+no_data_short|sin datos|no data
+step_mapping|Tipo de mapeo|Mapping type
+simple|Mapeo simple|Simple mapping
+simple_hint|Árbol gris neutro; los estados solo en las terminales. Admite uno o más caracteres.|Neutral gray tree; states only at the tips. One or more characters.
+ancestral|Reconstrucción ancestral|Ancestral reconstruction
+ancestral_hint|Las ramas se colorean según el estado inferido. Hasta 3 caracteres superpuestos.|Branches are colored by the inferred state. Up to 3 superimposed characters.
+presentation|Presentación|Display
+pres_shapes|Figuras en las terminales|Figures at the tips
+pres_shapes_hint|Una columna de símbolos por carácter (anillos en abanico).|One column of symbols per character (rings in a fan).
+pres_labels|Solo etiquetas o ramas terminales coloreadas|Colored tip labels or terminal branches only
+pres_labels_hint|Más limpio con muchas terminales; un solo carácter se lee mejor.|Cleaner with many tips; best with a single character.
+viz|Visualización|Visualization
+viz_branches|Superposición en ramas|Branch superimposition
+viz_branches_hint|Líneas paralelas, una por carácter, sobre la misma rama.|Parallel lines, one per character, on the same branch.
+viz_tree_tips|Árbol coloreado + figuras terminales|Colored tree + tip figures
+viz_tree_tips_hint|Añade forma y tamaño de figura en las terminales.|Adds figure shape and size at the tips.
+figure|Figura|Figure
+circle|Círculo|Circle
+square|Cuadrado|Square
+triangle|Triángulo|Triangle
+diamond|Rombo|Diamond
+size|Tamaño|Size
+algorithm|Algoritmo|Algorithm
+algo_majority|Mayoría ponderada por profundidad|Depth-weighted majority
+algo_majority_hint|Rápido y sin parámetros; heurístico, no una optimización formal.|Fast, no parameters; a heuristic, not a formal optimization.
+algo_fitch|Parsimonia de Fitch|Fitch parsimony
+algo_fitch_hint|Optimización por pasadas arriba–abajo; requiere elegir resolución.|Down- and up-pass optimization; choose how ambiguity is resolved.
+resolution|Resolución de ambigüedad|Ambiguity resolution
+acctran|ACCTRAN|ACCTRAN
+acctran_hint|Los cambios se colocan cerca de la raíz; los estados derivados se propagan hacia las terminales.|Changes are placed near the root; derived states spread toward the tips.
+deltran|DELTRAN|DELTRAN
+deltran_hint|Los cambios se retrasan hacia las terminales; los nodos profundos quedan plesiomórficos.|Changes are delayed toward the tips; deep nodes stay plesiomorphic.
+unambiguous|Solo no ambiguos|Unambiguous only
+unambiguous_hint|Solo se colorean las ramas con un único estado posible; el resto queda en el color de ambigüedad.|Only branches with a single possible state are colored; the rest use the ambiguity color.
+ambig_color|Ramas ambiguas o faltantes|Ambiguous or missing branches
+step_chars|Caracteres|Characters
+chars_hint_simple|Uno o más caracteres: una columna de símbolos por carácter; en abanico, anillos concéntricos. El orden de selección es el orden de dibujo.|One or more characters: one column of symbols per character; concentric rings in a fan. Selection order is drawing order.
+chars_hint_anc|Hasta 3 caracteres superpuestos sobre las mismas ramas. El orden de selección es el orden de dibujo.|Up to 3 characters superimposed on the same branches. Selection order is drawing order.
+search_ph|Buscar carácter (C23, diet, habitat…)|Search character (C23, diet, habitat…)
+no_chars|Selecciona al menos un carácter.|Select at least one character.
+need_data|Primero carga un árbol y una matriz en «1 · Datos».|Load a tree and a matrix in “1 · Data” first.
+remove_char|Quitar %s|Remove %s
+trim_warn|Elegiste %d caracteres. La reconstrucción admite 3: se usarán %s.|You chose %d characters. The reconstruction supports 3: %s will be used.
+step_colors|Estados y colores|States and colors
+pal_global|Paleta global|Global palette
+colors_hint|Desmarca un estado para excluirlo (se dibuja en gris). Haz clic en un color para cambiarlo.|Uncheck a state to leave it out (drawn in gray). Click a swatch to change its color.
+palette|Paleta|Palette
+pal_use_global|(paleta global)|(global palette)
+pal_auto|Automática|Automatic
+pal_okabe|Okabe-Ito|Okabe-Ito
+pal_tol|Paul Tol|Paul Tol
+pal_plasma|Plasma|Plasma
+pal_reds|Rojos|Reds
+pal_greens|Verdes|Greens
+pal_blues|Azules|Blues
+pal_wc|Winclada (wc)|Winclada (wc)
+pal_mm1|MultiMapR (MM1)|MultiMapR (MM1)
+card_meta|%d taxones · %d estados|%d taxa · %d states
+n_tax|%d tax.|%d taxa
+include_state|Incluir el estado %s|Include state %s
+state_color|Color del estado %s|Color of state %s
+state_missing|faltante|missing
+state_inapp|inaplicable|inapplicable
+no_states|El carácter %s no tiene estados seleccionados.|Character %s has no state selected.
+step_tree|Árbol|Tree
+topology|Topología|Topology
+phylogram|Filograma|Phylogram
+cladogram|Cladograma|Cladogram
+fan|Abanico|Fan
+use_bl|Usar longitudes de rama|Use branch lengths
+bl_has|El árbol tiene longitudes de rama.|The tree has branch lengths.
+bl_none|El árbol no tiene longitudes de rama.|The tree has no branch lengths.
+bl_clado|No disponible en cladograma (las terminales van alineadas).|Not available for a cladogram (tips are aligned).
+ladderize|Ladderize|Ladderize
+ladder_bottom|Clados mayores abajo|Larger clades at the bottom
+ladder_top|Clados mayores arriba|Larger clades at the top
+ladder_none|Orden original|Original order
+branch_width|Grosor de rama|Branch width
+thin_1|fino 1|thin 1
+normal_2|normal 2|normal 2
+thick_4|grueso 4|thick 4
+terminal_stretch|Alargar ramas terminales|Stretch terminal branches
+tip_bl|Sin efecto: se están usando longitudes de rama reales.|No effect: real branch lengths are being used.
+tip_simple|Sin efecto en el mapeo simple; solo aplica a la reconstrucción ancestral.|No effect in simple mapping; it only applies to ancestral reconstruction.
+step_view|Leyenda y vista|Legend and view
+legend_corner|Posición de la leyenda|Legend position
+corner_topleft|Arriba-izquierda|Top left
+corner_topright|Arriba-derecha|Top right
+corner_bottomleft|Abajo-izquierda|Bottom left
+corner_bottomright|Abajo-derecha|Bottom right
+preview_height|Altura de la vista previa|Preview height
+step_export|Exportar|Export
+format|Formato|Format
+fmt_png|PNG · 300 dpi|PNG · 300 dpi
+fmt_png_hint|Para pantalla, presentaciones y revisión rápida.|For screens, slides and quick review.
+fmt_pdf|PDF vectorial|Vector PDF
+fmt_pdf_hint|Para publicación; texto editable en Illustrator/Inkscape.|For publication; text editable in Illustrator/Inkscape.
+filename|Nombre de archivo (sin extensión)|File name (no extension)
+dims|Dimensiones|Dimensions
+dims_auto|Automáticas|Automatic
+dims_custom|Personalizadas|Custom
+dims_note|ancho 12 in · alto %d × 0.25 + 2 = %.2f in|width 12 in · height %d × 0.25 + 2 = %.2f in
+dims_note_fan|abanico cuadrado · %.2f × %.2f in|square fan · %.2f × %.2f in
+width_in|Ancho (in)|Width (in)
+height_in|Alto (in)|Height (in)
+download|Descargar|Download
+save_exports|Guardar en Exports/|Save to Exports/
+saved_to|Archivo guardado: %s|File saved: %s
+export_nothing|No hay figura que exportar: revisa los caracteres y estados seleccionados.|Nothing to export: check the selected characters and states.
+log_export_error|Falló la exportación: %s|Export failed: %s
+log_downloaded|Descarga generada: %s|Download generated: %s
+
+# ---- Summaries --------------------------------------------------------------
+sum_simple|Simple|Simple
+sum_ancestral|Ancestral|Ancestral
+sum_majority|Mayoría|Majority
+sum_majority_long|Mayoría ponderada|Weighted majority
+sum_shapes|figuras|figures
+sum_labels|etiquetas|labels
+n_char_1|1 carácter|1 character
+n_chars|%d caracteres|%d characters
+n_tips|%d terminales|%d tips
+n_nodes|%d nodos|%d nodes
+export_fmt|Exportar %s|Export %s
+
+# ---- Preview ----------------------------------------------------------------
+preview|Vista previa|Preview
+compare|Comparar ACCTRAN / DELTRAN|Compare ACCTRAN / DELTRAN
+recalc|Recalcular|Recalculate
+cmp_title|Comparar optimizaciones — misma configuración, solo cambia el algoritmo|Compare optimizations — same configuration, only the algorithm changes
+close|Cerrar|Close
+cmp_note_acctran|Cambios adelantados hacia la raíz|Changes pushed toward the root
+cmp_note_deltran|Cambios retrasados hacia las terminales|Changes delayed toward the tips
+n_ambig|%d ramas ambiguas|%d ambiguous branches
+in_use|En uso|In use
+use_x|Usar %s|Use %s
+computing|Calculando reconstrucción…|Computing reconstruction…
+canvas_foot|La vista previa siempre va sobre fondo blanco — así sale la figura exportada.|The preview is always on white — this is how the exported figure looks.
+preview_alt|Vista previa de la figura|Figure preview
+map_empty_body|Carga un árbol y una matriz de caracteres en «1 · Datos» para ver aquí la figura.|Load a tree and a character matrix in “1 · Data” to see the figure here.
+goto_data|Ir a Datos|Go to Data
+map_nochars_title|Ningún carácter seleccionado|No character selected
+map_nochars_body|Elige al menos un carácter en el paso B.|Choose at least one character in step B.
+map_nostates_title|Ningún estado seleccionado|No state selected
+map_nostates_body|Ningún carácter tiene estados incluidos (%s). Marca al menos un estado en el paso C.|No character has any state included (%s). Tick at least one state in step C.
+render_error_title|No se pudo dibujar la figura|The figure could not be drawn
+map_log_title|Log del mapeo|Mapping log
+session_at|sesión %s|session %s
+log_active|Caracteres activos: %s|Active characters: %s
+log_trimmed|Elegiste %d caracteres; la reconstrucción usa solo %s.|You chose %d characters; the reconstruction only uses %s.
+log_no_states|El carácter %s no tiene estados seleccionados: no se dibuja.|Character %s has no state selected: it is not drawn.
+log_clado_bl|El cladograma ignora las longitudes de rama.|The cladogram ignores branch lengths.
+log_ambig|Fitch · %s: %d ramas sin resolver, dibujadas en %s.|Fitch · %s: %d unresolved branches, drawn in %s.
+log_rendered|Vista previa regenerada en %s s.|Preview regenerated in %s s.
+
+# ---- Help -------------------------------------------------------------------
+help_title|Ayuda y referencia|Help and reference
+help_intro|Formatos de entrada, notación de polimorfismos y qué significan exactamente las optimizaciones ACCTRAN, DELTRAN y «solo no ambiguos».|Input formats, polymorphism notation and what the ACCTRAN, DELTRAN and “unambiguous only” optimizations mean exactly.
+help_formats|Formatos admitidos|Supported formats
+help_tree|Árbol|Tree
+help_tree_note|Se leen longitudes de rama si existen.|Branch lengths are read when present.
+help_matrix|Matriz|Matrix
+help_matrix_csv|CSV (coma, punto y coma o tabulador)|CSV (comma, semicolon or tab)
+help_names|Nombres|Names
+help_names_note|Deben coincidir con las terminales del árbol. Los nombres que solo difieren en espacios, guiones bajos, comillas o mayúsculas se emparejan automáticamente; opcionalmente se reemplazan los espacios por «_».|They must match the tree tips. Names that differ only in spaces, underscores, quotes or case are matched automatically; spaces can optionally be replaced with “_”.
+help_csv_header|CSV con encabezado|CSV with header
+help_csv_noheader|CSV sin encabezado|CSV without header
+help_csv_noheader_note|# encabezado = No: los caracteres se nombran automáticamente|# header = No: characters are named automatically
+help_poly|Polimorfismos y símbolos especiales|Polymorphisms and special symbols
+help_poly_slash|Polimorfismo separado por barra: el taxón presenta ambos estados.|Slash-separated polymorphism: the taxon shows both states.
+help_poly_comma|Polimorfismo de estados nominales separados por coma (requiere un separador CSV distinto de la coma).|Polymorphism of named states separated by a comma (needs a CSV separator other than the comma).
+help_poly_concat|Estados numéricos concatenados: 0 y 1 a la vez (en TNT/NEXUS, [01] o {01}).|Concatenated numeric states: 0 and 1 at once ([01] or {01} in TNT/NEXUS).
+help_missing|Dato faltante. Siempre gris, no editable, fuera de la leyenda.|Missing data. Always gray, not editable, left out of the legend.
+help_inapp|Inaplicable. Siempre gris; se distingue del faltante en las estadísticas.|Inapplicable. Always gray; kept apart from missing data in the statistics.
+help_modes|Modos de mapeo y optimizaciones|Mapping modes and optimizations
+help_simple|No infiere nada: dibuja los estados observados en las terminales sobre un árbol gris. Es la figura correcta cuando quieres mostrar datos, no hipótesis.|Infers nothing: draws the observed states at the tips on a gray tree. The right figure when you want to show data, not hypotheses.
+help_ancestral|Infiere el estado de los nodos internos y colorea las ramas. Es una hipótesis dependiente del criterio elegido: dilo en el pie de figura.|Infers the state of internal nodes and colors the branches. It is a hypothesis that depends on the chosen criterion: say so in the figure caption.
+help_acctran|Accelerated transformation: los cambios se colocan lo más cerca posible de la raíz, de modo que los estados derivados se propagan hacia las terminales. Menos ramas ambiguas.|Accelerated transformation: changes are placed as close to the root as possible, so derived states spread toward the tips. Fewer ambiguous branches.
+help_deltran|Delayed transformation: los cambios se retrasan hacia las terminales, favoreciendo estados plesiomórficos en los nodos profundos.|Delayed transformation: changes are delayed toward the tips, favoring plesiomorphic states at deep nodes.
+help_unambiguous|Conservador: solo colorea las ramas con un único estado posible en todas las reconstrucciones más parsimoniosas; todo lo demás queda en el color de ambigüedad (magenta por defecto).|Conservative: only colors branches with a single possible state across all most-parsimonious reconstructions; everything else uses the ambiguity color (magenta by default).
+help_algo_majority|Heurística rápida y sin parámetros: cada rama toma el estado que predomina entre sus descendientes, priorizando los nodos internos más cercanos. Útil para explorar; acláralo si lo publicas.|Fast, parameter-free heuristic: each branch takes the state that predominates among its descendants, favoring the closest internal nodes. Useful for exploration; say so if you publish it.
+help_console|Desde la consola de R|From the R console
+help_console_text|El flujo interactivo en consola sigue disponible con execute_phylogeny(árbol, matriz). «Guardar en Exports/» escribe en la carpeta Exports del directorio de trabajo, igual que el menú de consola, y las figuras son idénticas a las de execute_phylogeny().|The interactive console workflow is still available with execute_phylogeny(tree, matrix). “Save to Exports/” writes to the Exports folder of the working directory, as the console menu does, and the figures are identical to those of execute_phylogeny().
+help_cite|Cómo citar|How to cite
