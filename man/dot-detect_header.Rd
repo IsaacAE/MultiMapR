@@ -2,27 +2,28 @@
 % Please edit documentation in R/load_data.R
 \name{.detect_header}
 \alias{.detect_header}
-\title{Decides whether a CSV has a header row for the character columns}
+\title{Decides whether the first row of a raw table is a header}
 \usage{
-.detect_header(csv_path, sep = ",")
+.detect_header(raw, sp_idx = 1L)
 }
 \arguments{
-\item{csv_path}{Path to the CSV file (already BOM-free).}
+\item{raw}{Data.frame read with \code{header = FALSE} (all character).}
 
-\item{sep}{Field separator (default ",").}
+\item{sp_idx}{Index of the species column.}
 }
 \value{
 TRUE if a header is detected, FALSE otherwise.
 }
 \description{
-Heuristic based on the species column (column 1):
-taxon names always contain a space or underscore
-("Homo_sapiens", "Homo sapiens"). If the first cell has
-neither, it is treated as a column label -> there is a header.
+Rules, in order:
+\enumerate{
+\item The species cell is a typical label ("Species", "Taxon", "OTU",
+"Especie"...)                                       -> header.
+\item The character cells are consecutive integers 1..k   -> header.
+\item Most character cells of the first row are values that also appear
+in the same column further down (e.g. "0", "1", "?"), or all of them
+look like state codes                               -> data (no header).
+\item Otherwise                                           -> header.
+With a single row the old rule is used: taxon names contain a space or "_".
 }
-\details{
-"Species"               -> header = TRUE   (no space or "\emph{")
-"Taxon"                 -> header = TRUE
-"Saccopteryx bilineata" -> header = FALSE  (has space)
-"Passer_domesticus"     -> header = FALSE  (has "}")
 }

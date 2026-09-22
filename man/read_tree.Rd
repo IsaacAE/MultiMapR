@@ -2,7 +2,7 @@
 % Please edit documentation in R/load_data.R
 \name{read_tree}
 \alias{read_tree}
-\title{Reads a phylogenetic tree file (Newick or NEXUS)}
+\title{Reads a phylogenetic tree file (Newick, NEXUS or TNT)}
 \usage{
 read_tree(tree_path, tree_format = "auto")
 }
@@ -17,4 +17,8 @@ phylo object.
 \description{
 Compatible with files from Mesquite, TNT, WinClada and other programs
 that produce non-standard variants of the NEXUS/Newick format.
+TNT files using the \code{tread} / \code{proc-;} syntax are automatically
+converted to plain Newick before parsing. Tip labels are trimmed and
+surrounding quotes are removed. If the file holds several trees, the first
+one is used.
 }

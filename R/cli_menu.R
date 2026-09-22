@@ -405,6 +405,8 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
 
   cat("\n=== Welcome to MultiMapR ===\n")
 
+  print_character_stats(aligned_data, available_chars)
+
   # --- Mapping type ------------------------------------------------------------
   cat("\nMapping type:\n")
   cat("  1: Simple mapping \u2014 colored figures at terminals\n")

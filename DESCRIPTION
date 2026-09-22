@@ -4,7 +4,10 @@ Version: 1.0.1.1
 Authors@R: c(
     person("Kevin Isaac", "Alcántara Estrada", role = c("aut", "cre"),
            email = "isaac.ae@ciencias.unam.mx"),
-    person("Jatziri", "Linares Rios", role = "aut", email= "jatzirilin@ciencias.unam.mx "))
+    person("Jatziri", "Linares Rios", role = "aut",
+           email = "jatzirilin@ciencias.unam.mx"),
+    person("Jesús Alberto", "Díaz Cruz", role = "aut",
+           email = "vertebrata.j@geologia.unam.mx"))
 Description: Maps and visualizes discrete morphological, ecological, or molecular
     characters on phylogenetic trees. Supports simple terminal mapping and ancestral
     state reconstruction (depth-weighted majority and Fitch parsimony with ACCTRAN,
@@ -14,5 +17,7 @@ License: GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.1.0)
 Imports:
     ape (>= 5.0)

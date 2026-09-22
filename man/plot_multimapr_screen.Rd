@@ -13,6 +13,7 @@ plot_multimapr_screen(
   offset_range = 0.1,
   use_edge_length = TRUE,
   ladderize = FALSE,
+  terminal_stretch = 1,
   legend_by_char = NULL,
   legend_labels = NULL,
   legend_colors = NULL,

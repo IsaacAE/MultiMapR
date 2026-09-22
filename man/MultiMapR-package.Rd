@@ -14,6 +14,7 @@ Maps and visualizes discrete morphological, ecological, or molecular characters 
 Authors:
 \itemize{
   \item Jatziri Linares Rios \email{jatzirilin@ciencias.unam.mx}
+  \item Jesús Alberto Díaz Cruz \email{vertebrata.j@geologia.unam.mx}
 }
 
 }

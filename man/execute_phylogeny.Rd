@@ -15,14 +15,19 @@ execute_phylogeny(
   species_col = 1,
   normalize_spaces = FALSE,
   tree_format = "auto",
-  strict = FALSE
+  strict = FALSE,
+  use_palettes = FALSE,
+  palette = NULL,
+  ambiguity_color = NULL,
+  terminal_stretch = 1
 )
 }
 \arguments{
 \item{phylogeny}{phylo object -- OR -- string path to the tree file.}
 
 \item{character_data}{Data.frame with a "Species" column -- OR -- string path
-to the character CSV file.}
+to the character matrix (CSV, TNT \code{xread} or
+NEXUS; the format is detected automatically).}
 
 \item{branch_width}{Branch width in points (default \code{2}).
 Reference values: thin \eqn{\approx} 1, normal = 2,
@@ -67,6 +72,27 @@ Only used when file paths are passed.}
 \item{strict}{If TRUE raises an error on tree/CSV discrepancies;
 if FALSE (default) only warns.
 Only used when file paths are passed.}
+
+\item{use_palettes}{Logical. If \code{TRUE}, color prompts are skipped and
+built-in palettes are assigned automatically.}
+
+\item{palette}{Optional character vector of colors (e.g.
+\code{c("red", "blue", "green")}) or a single string
+naming a predefined palette (\code{"wc"} for Winclada
+or \code{"MM1"} for MultiMapR). When provided, color
+prompts are skipped and an error is raised if the
+palette has fewer colors than selected states.}
+
+\item{ambiguity_color}{Color for ambiguous/missing branches in Fitch
+reconstructions. Defaults to magenta
+(\code{"#FF00FF"}) when NULL.}
+
+\item{terminal_stretch}{Multiplier for terminal (tip) branches when the
+tree has no real edge lengths (the usual case for
+character-mapping cladograms). Internal branches
+stay at length 1 so the topology is preserved;
+only tip labels/colors get more visual space.
+Default \code{1} (no change).}
 }
 \value{
 Invisible NULL.

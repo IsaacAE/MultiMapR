@@ -8,22 +8,31 @@ read_csv_characters(
   csv_path,
   sep = ",",
   species_col = 1,
-  normalize_spaces = FALSE
+  normalize_spaces = FALSE,
+  header = NA
 )
 }
 \arguments{
 \item{csv_path}{Path to the CSV file.}
 
-\item{sep}{Field separator (default ",").}
+\item{sep}{Field separator (default ","). Use \code{"auto"}
+to detect ",", ";" or tab. If the given separator
+yields a single column, the others are tried.}
 
 \item{species_col}{Index or name of the species column (default 1).}
 
 \item{normalize_spaces}{If TRUE, replaces spaces with "_" in species names
 (default FALSE).}
+
+\item{header}{\code{NA} (default, automatic), \code{TRUE} or
+\code{FALSE}.}
 }
 \value{
 Data.frame with a "Species" column and "charN" or custom-named columns.
 }
 \description{
-Reads a character CSV file and prepares it for MultiMapR
+Rows may have different numbers of fields (trailing separators are common
+in files exported from Excel); columns that are completely empty are
+discarded. The header is detected automatically (see \code{.detect_header})
+unless \code{header} is given.
 }

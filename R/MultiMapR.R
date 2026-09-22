@@ -6,7 +6,7 @@
 # ==============================================================================
 
 #' @importFrom grDevices adjustcolor colors dev.list dev.new dev.off pdf png
-#' @importFrom graphics  legend lines par plot.new points segments strheight strwidth text
+#' @importFrom graphics  axis barplot legend lines par plot plot.new points rect segments strheight strwidth text
 #' @importFrom stats     setNames
 #' @importFrom utils     head read.csv
 #' @import ape
@@ -75,7 +75,8 @@
 #'
 #' @param phylogeny          phylo object -- OR -- string path to the tree file.
 #' @param character_data     Data.frame with a "Species" column -- OR -- string path
-#'                           to the character CSV file.
+#'                           to the character matrix (CSV, TNT \code{xread} or
+#'                           NEXUS; the format is detected automatically).
 #' @param branch_width       Branch width in points (default \code{2}).
 #'                           Reference values: thin \eqn{\approx} 1, normal = 2,
 #'                           thick \eqn{\approx} 4, very thick \eqn{\approx} 8.

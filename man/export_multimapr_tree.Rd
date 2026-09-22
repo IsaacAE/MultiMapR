@@ -15,6 +15,7 @@ export_multimapr_tree(
   offset_range = 0.1,
   use_edge_length = TRUE,
   ladderize = FALSE,
+  terminal_stretch = 1,
   mar = c(1, 1, 1, 4),
   width = NULL,
   height = NULL,
