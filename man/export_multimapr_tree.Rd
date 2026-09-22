@@ -68,6 +68,11 @@ at top). Must match the value used in
 \code{execute_phylogeny()} to ensure export and screen
 render are identical.}
 
+\item{terminal_stretch}{Multiplier applied only to the terminal (tip) branches
+when the tree has no real edge lengths, so tip labels and
+colors get more visual space. Internal branches stay at
+length 1 and the topology is preserved. Default \code{1}.}
+
 \item{mar}{Plot margins as vector \code{c(b, l, t, r)}
 in lines (default: \code{c(1, 1, 1, 4)}).}
 

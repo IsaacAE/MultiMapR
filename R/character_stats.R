@@ -225,9 +225,10 @@ plot_character_stats <- function(character_data, characters = NULL,
   if (!is.null(export_filename)) {
     w_in <- width  %||% 8
     h_in <- height %||% max(3, 0.28 * n_char + 1.5)
+    prev_dev <- dev.cur()
     .emtree_open_device(export_filename, export_format, w_in, h_in)
     draw()
-    dev.off()
+    .close_device_restore(prev_dev)
     cat("Saved:", paste0(export_filename, ".", export_format), "\n")
   }
 
@@ -334,9 +335,10 @@ plot_character_completeness <- function(character_data, characters = NULL,
   if (!is.null(export_filename)) {
     w_in <- width  %||% max(6, 0.15 * n_char + 3)
     h_in <- height %||% max(4, 0.22 * n_taxa + 1.5)
+    prev_dev <- dev.cur()
     .emtree_open_device(export_filename, export_format, w_in, h_in)
     draw()
-    dev.off()
+    .close_device_restore(prev_dev)
     cat("Saved:", paste0(export_filename, ".", export_format), "\n")
   }
 

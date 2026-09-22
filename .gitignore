@@ -1,2 +1,12 @@
 .Rproj.user
 Exports/
+# R session artefacts
+.Rhistory
+.RData
+.Rproj.user/
+*.Rcheck/
+*.tar.gz
+
+# Plots written to the working directory by ad-hoc runs
+Rplots.pdf
+Rplot*.png

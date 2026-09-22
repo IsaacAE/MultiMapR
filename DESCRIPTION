@@ -21,3 +21,7 @@ Depends:
     R (>= 4.1.0)
 Imports:
     ape (>= 5.0)
+Suggests:
+    shiny (>= 1.7.0),
+    bslib (>= 0.6.0),
+    htmltools (>= 0.5.4)

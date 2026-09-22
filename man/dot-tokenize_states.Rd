@@ -13,5 +13,5 @@
 Character vector of tokens.
 }
 \description{
-"01?\link{01}-{12}(34)" -> "0" "1" "?" "\link{01}" "-" "{12}" "(34)"
+\verb{01?[01]-\{12\}(34)} -> \code{0} \code{1} \verb{?} \verb{[01]} \code{-} \code{{12}} \code{(34)}
 }

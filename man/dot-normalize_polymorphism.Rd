@@ -13,7 +13,7 @@
 Character vector of the same length.
 }
 \description{
-"\link{01}", "{01}", "(01)", "\link{0 1}", "(0,1)", "{0/1}"  ->  "0/1"
-"\link{0}"                                            ->  "0"
+\verb{[01]}, \code{{01}}, \code{(01)}, \verb{[0 1]}, \verb{(0,1)}, \code{{0/1}}  ->  \code{0/1}
+\verb{[0]}                                              ->  \code{0}
 Any other value is returned unchanged (trimmed).
 }

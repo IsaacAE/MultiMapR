@@ -172,8 +172,8 @@
 
 #' Converts polymorphism notations to the "0/1" form used by Fitch
 #'
-#'   "[01]", "{01}", "(01)", "[0 1]", "(0,1)", "{0/1}"  ->  "0/1"
-#'   "[0]"                                            ->  "0"
+#'   `[01]`, `{01}`, `(01)`, `[0 1]`, `(0,1)`, `{0/1}`  ->  `0/1`
+#'   `[0]`                                              ->  `0`
 #' Any other value is returned unchanged (trimmed).
 #'
 #' @param x Character vector of states.
@@ -195,7 +195,7 @@
 
 #' Splits a TNT/NEXUS state string into one token per character
 #'
-#' "01?[01]-{12}(34)" -> "0" "1" "?" "[01]" "-" "{12}" "(34)"
+#' `01?[01]-{12}(34)` -> `0` `1` `?` `[01]` `-` `{12}` `(34)`
 #'
 #' @param s Single string without whitespace.
 #' @return Character vector of tokens.

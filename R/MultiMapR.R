@@ -5,7 +5,7 @@
 # to repeat these.
 # ==============================================================================
 
-#' @importFrom grDevices adjustcolor colors dev.list dev.new dev.off pdf png
+#' @importFrom grDevices adjustcolor colors dev.cur dev.list dev.new dev.off dev.set pdf png
 #' @importFrom graphics  axis barplot legend lines par plot plot.new points rect segments strheight strwidth text
 #' @importFrom stats     setNames
 #' @importFrom utils     head read.csv
@@ -38,6 +38,7 @@
 
   dir.create("Exports", showWarnings = FALSE, recursive = TRUE)
   path <- file.path("Exports", paste0(basename(filename), ".", format))
+  prev_dev <- dev.cur()
   if (format == "pdf") {
     pdf(file = path, width = width_in, height = height_in)
   } else {
@@ -52,7 +53,7 @@
     force(expr),
     error   = function(e) stop(sprintf("[MultiMapR] Error exporting %s: %s",
                                        toupper(format), conditionMessage(e))),
-    finally = dev.off()
+    finally = .close_device_restore(prev_dev)
   )
   dims_origin <- if (!is.null(width) || !is.null(height)) " [custom]" else " [auto]"
   message(sprintf("[MultiMapR] File exported: %s  (%.1f \u00d7 %.1f in%s%s)",
@@ -60,6 +61,95 @@
                   if (format == "png") " @ 300 dpi" else "",
                   dims_origin))
   invisible(path)
+}
+
+#' Closes the current device and re-activates a previously active one
+#'
+#' \code{dev.off()} activates the *next* device in the list, which is not
+#' necessarily the one that was active before a temporary device was opened
+#' (e.g. RStudio's plot pane instead of a Shiny plot device). Restoring it
+#' explicitly keeps subsequent drawing on the intended device.
+#'
+#' @param prev Device number returned by \code{dev.cur()} before the temporary
+#'             device was opened.
+#' @keywords internal
+.close_device_restore <- function(prev) {
+  dev.off()
+  if (prev > 1L && prev %in% dev.list()) dev.set(prev)
+  invisible(NULL)
+}
+
+#' Prepares the tree for a configured mapping and draws it
+#'
+#' Applies the rendering parameters (branch width, branch lengths,
+#' ladderization, label offset) to \code{config} and a working copy of the
+#' tree, then dispatches to the matching graphics controller in
+#' \code{core_render.R}. Shared by \code{\link{execute_phylogeny}} (CLI loop)
+#' and \code{\link{run_multimapr_app}} (graphical interface).
+#'
+#' @param phylogeny        Untouched \code{phylo} object.
+#' @param config           Configuration list (see \code{setup_mapping_config()}).
+#' @param branch_width,use_edge_length,ladderize,terminal_stretch
+#'                         See \code{\link{execute_phylogeny}}.
+#' @return Invisibly, the updated \code{config}.
+#' @keywords internal
+.render_configured_mapping <- function(phylogeny, config,
+                                       branch_width     = 2,
+                                       use_edge_length  = NULL,
+                                       ladderize        = TRUE,
+                                       terminal_stretch = 1) {
+  config$terminal_stretch <- terminal_stretch
+
+  # -- Branch width (parameter overrides menu default of 2) ------------------
+  if (!is.numeric(branch_width) || length(branch_width) != 1L || branch_width <= 0)
+    stop("`branch_width` must be a positive number.")
+  config$grosor <- branch_width
+  offset_factor <- switch(config$tipo_arbol %||% "phylogram",
+                          "phylogram" = 0.012, "cladogram" = 0.012, "fan" = 0.003, 0.012)
+  config$rango_desfase <- max(0.05, branch_width * offset_factor)
+
+  # -- Branch lengths ----------------------------------------------------------
+  # use_edge_length = NULL  -> respect menu choice stored in config
+  # use_edge_length = TRUE  -> always use lengths if present
+  # use_edge_length = FALSE -> always strip lengths (uniform branches)
+  if (!is.null(use_edge_length)) {
+    config$use_edge_length <- isTRUE(use_edge_length)
+  }
+  working_tree <- phylogeny
+  if (isFALSE(config$use_edge_length)) {
+    working_tree$edge.length <- NULL
+  }
+
+  # -- Ladderize ---------------------------------------------------------------
+  # ladderize = TRUE    -> ape::ladderize(right = FALSE) [larger clade bottom]
+  # ladderize = "right" -> ape::ladderize(right = TRUE)  [larger clade top]
+  # ladderize = FALSE   -> no reordering
+  if (identical(ladderize, TRUE)) {
+    working_tree <- ladderize(working_tree, right = FALSE)
+  } else if (identical(ladderize, "right")) {
+    working_tree <- ladderize(working_tree, right = TRUE)
+  }
+  config$ladderize <- ladderize   # propagate to renderers for export consistency
+
+  # Calculate tree geometric depth to assign a proportional 2.5% offset
+  phy_tmp <- working_tree
+  if (is.null(phy_tmp$edge.length)) {
+    phy_tmp$edge.length <- rep(1, nrow(phy_tmp$edge))
+  }
+  max_depth <- max(node.depth.edgelength(phy_tmp))
+  config$label_offset <- max_depth * 0.025
+
+  # Dispatch to the corresponding graphics controller (core_render.R)
+  # plot_ancestral_reconstruction() internally handles multi_function:
+  #   multi_function == 1 -> branch overlay
+  #   multi_function == 2 -> ancestral reconstruction + tip figures
+  if (config$mapping_type == 1) {
+    plot_simple_mapping(working_tree, config)
+  } else {
+    plot_ancestral_reconstruction(working_tree, config)
+  }
+
+  invisible(config)
 }
 
 
@@ -202,56 +292,11 @@ execute_phylogeny <- function(phylogeny, character_data,
         if (is.null(config)) return(invisible(NULL))
       }
 
-      config$terminal_stretch <- terminal_stretch
-
-      # -- Branch width (parameter overrides menu default of 2) ----------------
-      if (!is.numeric(branch_width) || length(branch_width) != 1L || branch_width <= 0)
-        stop("`branch_width` must be a positive number.")
-      config$grosor <- branch_width
-      offset_factor <- switch(config$tipo_arbol %||% "phylogram",
-                              "phylogram" = 0.012, "cladogram" = 0.012, "fan" = 0.003, 0.012)
-      config$rango_desfase <- max(0.05, branch_width * offset_factor)
-
-      # -- Branch lengths --------------------------------------------------------
-      # use_edge_length = NULL  -> respect menu choice stored in config
-      # use_edge_length = TRUE  -> always use lengths if present
-      # use_edge_length = FALSE -> always strip lengths (uniform branches)
-      if (!is.null(use_edge_length)) {
-        config$use_edge_length <- isTRUE(use_edge_length)
-      }
-      working_tree <- original_phylogeny
-      if (isFALSE(config$use_edge_length)) {
-        working_tree$edge.length <- NULL
-      }
-
-      # -- Ladderize ---------------------------------------------------------
-      # ladderize = TRUE    -> ape::ladderize(right = FALSE) [larger clade bottom]
-      # ladderize = "right" -> ape::ladderize(right = TRUE)  [larger clade top]
-      # ladderize = FALSE   -> no reordering
-      if (identical(ladderize, TRUE)) {
-        working_tree <- ladderize(working_tree, right = FALSE)
-      } else if (identical(ladderize, "right")) {
-        working_tree <- ladderize(working_tree, right = TRUE)
-      }
-      config$ladderize <- ladderize   # propagate to renderers for export consistency
-
-      # Calculate tree geometric depth to assign a proportional 2.5% offset
-      phy_tmp <- working_tree
-      if (is.null(phy_tmp$edge.length)) {
-        phy_tmp$edge.length <- rep(1, nrow(phy_tmp$edge))
-      }
-      max_depth <- max(node.depth.edgelength(phy_tmp))
-      config$label_offset <- max_depth * 0.025
-
-      # Dispatch to the corresponding graphics controller (core_render.R)
-      # plot_ancestral_reconstruction() internally handles multi_function:
-      #   multi_function == 1 -> branch overlay
-      #   multi_function == 2 -> ancestral reconstruction + tip figures
-      if (config$mapping_type == 1) {
-        plot_simple_mapping(working_tree, config)
-      } else {
-        plot_ancestral_reconstruction(working_tree, config)
-      }
+      config <- .render_configured_mapping(original_phylogeny, config,
+                                           branch_width     = branch_width,
+                                           use_edge_length  = use_edge_length,
+                                           ladderize        = ladderize,
+                                           terminal_stretch = terminal_stretch)
 
       # -- What next? ----------------------------------------------------------
       next_action <- prompt_post_run_menu(allow_algorithm_change = (config$mapping_type == 2))

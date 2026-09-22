@@ -49,6 +49,10 @@ original order. \code{TRUE} calls
 \code{ape::ladderize(right = FALSE)}. \code{"right"}
 calls \code{ape::ladderize(right = TRUE)}.}
 
+\item{terminal_stretch}{Multiplier applied only to the terminal (tip) branches
+when the tree has no real edge lengths. Internal
+branches stay at length 1. Default \code{1}.}
+
 \item{legend_by_char}{Named list character -> list(labels, colors) for
 grouped legend. If not NULL takes precedence over
 \code{legend_labels} / \code{legend_colors}.}
