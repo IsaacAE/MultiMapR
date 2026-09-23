@@ -155,6 +155,42 @@
     rows.forEach(function (r) { tbody.appendChild(r); });
   });
 
+  /* ---- Data-category colors (scored / missing / inapplicable) ------------------- */
+  // Matrix cells, table bars and KPI accents read these CSS variables.
+  Shiny.addCustomMessageHandler('mm-stats-colors', function (msg) {
+    var st = document.documentElement.style;
+    [['s', 'scored'], ['m', 'missing'], ['i', 'inapplicable']].forEach(function (p) {
+      st.setProperty('--mm-c-' + p[0], msg[p[1]]);
+      st.setProperty('--mm-c-' + p[0] + '-ink', msg[p[1] + '_ink']);
+    });
+    document.documentElement.classList.toggle('mm-no-borders', !msg.borders);
+  });
+
+  /* ---- Taxon x character matrix: row/column highlight + readout ----------------- */
+  MM.mxCategory = { 'mm-c-s': 'col_scored', 'mm-c-m': 'col_missing', 'mm-c-i': 'col_inapp' };
+  MM.mxClear = function (table) {
+    $(table).find('.is-hl, .is-hl-cell').removeClass('is-hl is-hl-cell');
+  };
+  $(document).on('mouseover', '.mm-matrix td', function () {
+    var td = this, row = td.parentNode, table = td.closest('table');
+    var ci = td.cellIndex;
+    MM.mxClear(table);
+    row.classList.add('is-hl');
+    var head = table.tHead.rows[0].cells[ci];
+    head.classList.add('is-hl');
+    Array.prototype.forEach.call(table.tBodies[0].rows, function (r) {
+      if (r.cells[ci]) r.cells[ci].classList.add('is-hl');
+    });
+    td.classList.add('is-hl-cell');
+    var info = document.getElementById('mx_info');
+    if (info) {
+      var cat = MM.t(MM.mxCategory[td.className.split(' ')[0]]) || '';
+      info.textContent = row.cells[0].textContent + '  ·  ' + head.textContent +
+        '  =  ' + td.textContent + (cat ? '   (' + cat + ')' : '');
+    }
+  });
+  $(document).on('mouseleave', '.mm-matrix', function () { MM.mxClear(this); });
+
   /* ---- Preview canvas height ---------------------------------------------------- */
   MM.setCanvasHeight = function (h) {
     var c = document.getElementById('mm-canvas'); if (c && h) c.style.height = h + 'px';

@@ -222,8 +222,8 @@ button, .btn, input, select, .form-control, .form-select, a, label, .mm-charrow,
 /* KPIs */
 .mm-kpis { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: var(--sp4); }
 .mm-kpi { background: var(--mm-surface); border:1px solid var(--mm-border); border-top: 3px solid var(--mm-accent); border-radius: var(--r2); box-shadow: var(--sh1); padding: 10px 14px 12px; min-width: 0; }
-.mm-kpi.mm-kpi-warn { border-top-color: var(--mm-warn); }
-.mm-kpi.mm-kpi-neutral { border-top-color: var(--mm-ink3); }
+.mm-kpi.mm-kpi-missing { border-top-color: var(--mm-c-m); }
+.mm-kpi.mm-kpi-inapp { border-top-color: var(--mm-c-i); }
 .mm-kpi .mm-kpi-label { text-transform:uppercase; font-weight:600; font-size:10.5px; letter-spacing:.05em; color: var(--mm-ink2); }
 .mm-kpi .mm-kpi-value { font-weight:700; font-size:28px; line-height:1.15; letter-spacing:-.02em; margin: 4px 0 2px; }
 .mm-kpi .mm-kpi-note { font-size:11.5px; color: var(--mm-ink3); overflow-wrap:anywhere; }
@@ -241,8 +241,13 @@ button, .btn, input, select, .form-control, .form-select, a, label, .mm-charrow,
 .mm-table thead th .mm-sort { font-size: 9px; margin-left: 4px; color: var(--mm-accent); visibility: hidden; }
 .mm-table thead th.is-sorted .mm-sort { visibility: visible; }
 .mm-table thead th.mm-num, .mm-table td.mm-num { text-align: right; }
+.mm-table th, .mm-table td { border-right: 1px solid var(--mm-border); }
+.mm-table th:last-child, .mm-table td:last-child { border-right: 0; }
+.mm-table tbody td { border-bottom: 1px solid var(--mm-border); }
 .mm-table tbody tr:nth-child(odd) td { background: var(--mm-surface); }
 .mm-table tbody tr:nth-child(even) td { background: var(--mm-surface2); }
+.mm-table tbody tr:hover td { background: var(--mm-accent-weak); }
+.mm-table td.mm-dist-cell { width: 1%; }
 .mm-table td.mm-id { font-family: var(--mm-mono); font-size: 12.5px; }
 .mm-table td.mm-num { font-variant-numeric: tabular-nums; }
 .mm-table tfoot td {
@@ -265,9 +270,62 @@ button, .btn, input, select, .form-control, .form-select, a, label, .mm-charrow,
 .mm-tabtools .form-group .control-label { margin:0; font-size: 11.5px; white-space: nowrap; }
 .mm-tabtools .form-select, .mm-tabtools select { min-height: 28px; padding: 3px 26px 3px 8px; font-size: 12px; width: auto; }
 .mm-tabtools .shiny-input-container { width: auto !important; }
-.mm-tabcard .card-body { padding: 0; }
+.mm-tabcard .card-body { padding: 0; gap: 0; }
 .mm-plotbox { background: #ffffff; max-height: 360px; overflow: auto; padding: 8px; }
 .mm-plotbox img { max-width: none; }
+
+/* data categories (scored / missing / inapplicable): colors picked by the user,
+   pushed as CSS variables by the server (see 'mm-stats-colors' in multimapr.js) */
+:root {
+  --mm-c-s:#009E73; --mm-c-m:#E69F00; --mm-c-i:#56B4E9;
+  --mm-c-s-ink:#000000; --mm-c-m-ink:#000000; --mm-c-i-ink:#000000;
+  --mm-mx-border: rgba(0,0,0,.38); --mm-mx-guide: rgba(0,0,0,.85);
+}
+.mm-no-borders { --mm-mx-border: transparent; --mm-mx-guide: transparent; }
+.mm-c-s { background: var(--mm-c-s); color: var(--mm-c-s-ink); }
+.mm-c-m { background: var(--mm-c-m); color: var(--mm-c-m-ink); }
+.mm-c-i { background: var(--mm-c-i); color: var(--mm-c-i-ink); }
+.mm-dot { display:inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; box-shadow: 0 0 0 1px var(--mm-mx-border); }
+.mm-dist { display:flex; width: 130px; height: 11px; border-radius: 2px; overflow:hidden; background: var(--mm-surface2); box-shadow: 0 0 0 1px var(--mm-mx-border); }
+.mm-dist span { display:block; height: 100%; }
+.mm-dist span + span { border-left: 1px solid var(--mm-mx-border); }
+
+/* view options bar above the completeness tabs */
+.mm-viewopts { display:flex; flex-wrap: wrap; align-items:center; gap: 6px 14px; padding: 8px 12px; border-bottom: 1px solid var(--mm-border); background: var(--mm-surface); font-size: 12.5px; }
+.mm-viewopts-label { text-transform: uppercase; font-weight: 600; font-size: 10.5px; letter-spacing: .05em; color: var(--mm-ink2); }
+.mm-swatch { display:inline-flex; align-items:center; gap: 6px; margin: 0; cursor: pointer; color: var(--mm-ink); }
+.mm-viewopts .mm-spacer { flex: 1; }
+.mm-viewopts .shiny-input-container { margin: 0; width: auto !important; }
+.mm-viewopts .checkbox { margin: 0; }
+.mm-viewopts .checkbox label { font-size: 12.5px; }
+.mm-linkbtn { all: unset; cursor: pointer; color: var(--mm-accent); font-size: 12px; text-decoration: underline; text-underline-offset: 2px; }
+.mm-linkbtn:focus-visible { outline: 2px solid var(--mm-accent); outline-offset: 2px; }
+
+.mm-plotbox-tall { max-height: 540px; }
+
+/* taxon x character matrix */
+.mm-mx-info { padding: 6px 12px; min-height: 30px; font-family: var(--mm-mono); font-size: 12px; color: var(--mm-ink2); background: var(--mm-surface); border-bottom: 1px solid var(--mm-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-plotbox.mm-mx-wrap { background: var(--mm-surface); padding: 0; }
+.mm-mx-note { padding: 6px 12px; }
+.mm-matrix { border-collapse: separate; border-spacing: 0; font-family: var(--mm-mono); font-size: 11.5px; line-height: 1; }
+.mm-matrix td { min-width: 22px; height: 22px; padding: 0 3px; text-align: center; white-space: nowrap; cursor: default;
+  border-right: 1px solid var(--mm-mx-border); border-bottom: 1px solid var(--mm-mx-border); }
+.mm-matrix thead th { position: sticky; top: 0; z-index: 2; background: var(--mm-surface2); color: var(--mm-ink2);
+  font-weight: 600; font-size: 10.5px; vertical-align: bottom; text-align: center; padding: 5px 2px;
+  border-right: 1px solid var(--mm-border); border-bottom: 2px solid var(--mm-border2); }
+.mm-matrix thead th span { display:inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; max-height: 130px; overflow: hidden; text-overflow: ellipsis; }
+.mm-matrix tbody th { position: sticky; left: 0; z-index: 1; background: var(--mm-surface); color: var(--mm-ink);
+  font-family: var(--mm-sans); font-style: italic; font-weight: 500; font-size: 12.5px; text-align: left; white-space: nowrap; padding: 0 10px;
+  border-right: 2px solid var(--mm-border2); border-bottom: 1px solid var(--mm-border); }
+.mm-matrix thead th.mm-mx-corner { left: 0; z-index: 3; text-align: left; padding: 5px 10px; border-right: 2px solid var(--mm-border2);
+  text-transform: uppercase; letter-spacing: .05em; }
+/* heavier guide line every 5 taxa / 5 characters */
+.mm-matrix tbody tr:nth-child(5n) > td { border-bottom: 2px solid var(--mm-mx-guide); }
+.mm-matrix td:nth-child(5n+1) { border-right: 2px solid var(--mm-mx-guide); }
+/* hover: row + column headers in accent, crossing cells slightly darkened */
+.mm-matrix tr.is-hl > th, .mm-matrix thead th.is-hl { background: var(--mm-accent); color: var(--mm-accent-ink); }
+.mm-matrix tr.is-hl > td, .mm-matrix td.is-hl { box-shadow: inset 0 0 0 999px rgba(0,0,0,.16); }
+.mm-matrix td.is-hl-cell { box-shadow: none; outline: 2px solid var(--mm-ink); outline-offset: -2px; font-weight: 700; }
 
 /* log */
 .mm-log { font-family: var(--mm-mono); font-size: 11.5px; line-height: 1.5; display:flex; flex-direction:column; gap: 4px; overflow:auto; }

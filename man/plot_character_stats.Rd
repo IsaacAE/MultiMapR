@@ -9,6 +9,7 @@ plot_character_stats(
   characters = NULL,
   sort_by = c("none", "pct_missing", "pct_inapplicable", "character"),
   colors = CHAR_STATS_COLORS,
+  border = "grey25",
   export_filename = NULL,
   export_format = c("png", "pdf"),
   width = NULL,
@@ -28,7 +29,11 @@ characters appear at the top of the plot.}
 
 \item{colors}{Named vector with entries \code{scored},
 \code{missing}, \code{inapplicable}. Defaults to
-an Okabe-Ito colorblind-safe triplet.}
+an Okabe-Ito colorblind-safe triplet; any entry
+left out keeps its default.}
+
+\item{border}{Color of the outline drawn around every bar
+segment, or \code{NA} for none.}
 
 \item{export_filename}{Optional path (without extension) to also save
 the plot as PNG/PDF. \code{NULL} (default) draws
