@@ -670,6 +670,10 @@
 #' @param legend_colors  Flat character vector of legend colors (legacy mode).
 #' @param legend_corner  Corner for the legend: \code{"topleft"}, \code{"topright"},
 #'                       \code{"bottomleft"} (default), or \code{"bottomright"}.
+#' @param terminal_stretch Multiplier applied only to the terminal (tip) branches
+#'                       when the tree has no real edge lengths, so tip labels and
+#'                       colors get more visual space. Internal branches stay at
+#'                       length 1 and the topology is preserved. Default \code{1}.
 #' @param legend_title   Single legend block title string (legacy mode). \code{NULL} = no title.
 #' @param overlay_fn     Optional function called after the legend, inside the open device,
 #'                       with \code{par("usr")} already set. Receives \code{pp}, \code{cex_aj},
@@ -907,6 +911,7 @@ export_multimapr_tree <- function(tree,
   ylim_final <- NULL
 
   if (has_legend || (type == "fan" && hide_fan_labels && !is.null(overlay_fn))) {
+    prev_dev <- dev.cur()
     pdf(NULL, width = width_in, height = height_in)   # off-screen, no file
     tryCatch({
       .render_canvas()   # only to establish par("usr")
@@ -968,10 +973,11 @@ export_multimapr_tree <- function(tree,
         ylim_final <- if (med$going_down) c(usr[3L], usr[4L] + med$dy)
         else               c(usr[3L] - med$dy, usr[4L])
       }
-    }, finally = dev.off())   # always close; leaves no file on disk
+    }, finally = .close_device_restore(prev_dev))   # always close; leaves no file on disk
   }
 
   # -- 4. Open final device and render --------------------------------------
+  prev_dev <- dev.cur()
   .emtree_open_device(filename, format, width_in, height_in)
   output_path <- paste0(filename, ".", format)
 
@@ -1062,7 +1068,7 @@ export_multimapr_tree <- function(tree,
     stop(sprintf("[export_multimapr_tree] Error during rendering (%s, %s): %s",
                  type, format, conditionMessage(e)))
   }, finally = {
-    dev.off()   # Close the device in all cases
+    .close_device_restore(prev_dev)   # Close the device in all cases
   })
 
   invisible(output_path)
@@ -1173,6 +1179,9 @@ if (FALSE) {
 #' @param legend_colors  Flat color vector (legacy mode).
 #' @param legend_corner  Legend corner: \code{"topleft"}, \code{"topright"},
 #'                       \code{"bottomleft"} (default) or \code{"bottomright"}.
+#' @param terminal_stretch Multiplier applied only to the terminal (tip) branches
+#'                        when the tree has no real edge lengths. Internal
+#'                        branches stay at length 1. Default \code{1}.
 #' @param legend_title    Single legend block title (legacy mode).
 #' @param overlay_fn      Optional function called after the legend, inside the
 #'                        active device with \code{par("usr")} already set.

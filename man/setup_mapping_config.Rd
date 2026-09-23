@@ -4,12 +4,32 @@
 \alias{setup_mapping_config}
 \title{Orchestrates all interactive menus and returns the configuration list}
 \usage{
-setup_mapping_config(phylogeny, character_data)
+setup_mapping_config(
+  phylogeny,
+  character_data,
+  use_palettes = FALSE,
+  user_palette = NULL,
+  ambiguity_color = NULL
+)
 }
 \arguments{
 \item{phylogeny}{\code{phylo} object (ape).}
 
 \item{character_data}{Data.frame with a \code{"Species"} column and characters.}
+
+\item{use_palettes}{Logical. If \code{TRUE}, colors are assigned automatically
+from \code{PALETAS_ACCESIBLES}; color prompts are skipped but
+state-selection prompts are still shown interactively.}
+
+\item{user_palette}{Optional character vector of colors supplied directly by
+the user via the \code{palette} argument to
+\code{execute_phylogeny}. When provided, color prompts are
+skipped entirely and an error is raised if the palette has
+fewer colors than selected states. Takes precedence over
+\code{use_palettes}.}
+
+\item{ambiguity_color}{Optional color string for ambiguous/missing branches in
+Fitch reconstructions. Defaults to magenta (\code{"#FF00FF"}).}
 }
 \value{
 Configuration list, or invisible(NULL) if the user cancels.

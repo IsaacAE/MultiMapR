@@ -4,17 +4,32 @@
 \alias{prompt_states_and_colors}
 \title{Prompts the user which states of a character to include and their colors}
 \usage{
-prompt_states_and_colors(aligned_data, character)
+prompt_states_and_colors(
+  aligned_data,
+  character,
+  auto_palette = NULL,
+  strict = FALSE
+)
 }
 \arguments{
 \item{aligned_data}{Data.frame aligned with the phylogeny.}
 
 \item{character}{Name of the character column to configure.}
+
+\item{auto_palette}{Optional character vector of colors (a palette).
+When not NULL, colors are auto-assigned but state
+selection is still shown interactively.}
+
+\item{strict}{If TRUE, raises an error when auto_palette has fewer
+colors than selected states instead of recycling.}
 }
 \value{
 Named character vector state -> color, or invisible(NULL) if cancelled.
 }
 \description{
 Displays the unique states of the character, allows choosing a subset
-(or all with option 0), then requests a color for each one.
+(or all with option 0), then requests a color for each selected state.
+State selection is always interactive. If \code{auto_palette} is supplied,
+colors are assigned automatically from that palette (no color prompts);
+otherwise the user is asked to type a color for each state.
 }

@@ -307,9 +307,9 @@ prompt_ancestral_algorithm <- function() {
   fitch_mode <- NULL
   if (algo_sel == 2) {
     cat("\nFitch optimization mode:\n")
-    cat("  1: ACCTRAN     (accelerated transformation \u2014 toward tips)\n")
-    cat("  2: DELTRAN     (delayed transformation \u2014 toward root)\n")
-    cat("  3: Unambiguous (only unambiguous states after both passes)\n")
+    cat("  1: ACCTRAN     (accelerated transformation \u2014 changes placed near the root)\n")
+    cat("  2: DELTRAN     (delayed transformation \u2014 changes delayed toward the tips)\n")
+    cat("  3: Unambiguous (only nodes with a single state in their MPR set)\n")
     mode_str <- readline(prompt = "Select (1/2/3, Enter = 1): ")
     if (check_exit(mode_str)) return(invisible(NULL))
     fitch_sel <- if (nchar(trimws(mode_str)) == 0) 1L else as.integer(mode_str)
@@ -404,6 +404,8 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
   available_chars <- colnames(aligned_data)[-1]
 
   cat("\n=== Welcome to MultiMapR ===\n")
+
+  print_character_stats(aligned_data, available_chars)
 
   # --- Mapping type ------------------------------------------------------------
   cat("\nMapping type:\n")

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 26 26" aria-label="MultiMapR">
+  <rect x="0" y="0" width="26" height="26" rx="5" fill="#1b1c1a"/>
+  <path d="M6 13 H10 M10 6 V20 M10 6 H15 M10 13 H15 M10 20 H15" stroke="#f4f4f1" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <circle cx="17.5" cy="6" r="2.1" fill="#E69F00"/>
+  <circle cx="17.5" cy="13" r="2.1" fill="#56B4E9"/>
+  <circle cx="17.5" cy="20" r="2.1" fill="#009E73"/>
+</svg>

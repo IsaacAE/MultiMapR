@@ -10,13 +10,16 @@
 \item{tree_path}{Path to the original file.}
 }
 \value{
-Path to the clean file (temporary if changes were made, original otherwise).
+Path to the clean file (temporary).
 }
 \description{
 Removes common problems produced by different phylogenetic programs:
 \itemize{
-\item Windows line endings (CR+LF converted to LF)
+\item Windows line endings (CR+LF converted to LF) and UTF-8 BOM
 \item Numbered comments in Mesquite TRANSLATE blocks (\verb{[0]}, \verb{[1]}, ...)
 that ape cannot parse
+\item TNT \code{tread} format (with or without a quoted title): rewritten as plain
+Newick so that read.tree() can parse it. TNT separates tips with spaces
+instead of commas; the missing commas are inserted.
 }
 }

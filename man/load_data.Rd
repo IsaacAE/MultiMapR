@@ -2,7 +2,7 @@
 % Please edit documentation in R/load_data.R
 \name{load_data}
 \alias{load_data}
-\title{Loads a tree and a character CSV ready to use with MultiMapR}
+\title{Loads a tree and a character matrix ready to use with MultiMapR}
 \usage{
 load_data(
   tree_path,
@@ -11,15 +11,18 @@ load_data(
   species_col = 1,
   normalize_spaces = FALSE,
   tree_format = "auto",
-  strict = FALSE
+  strict = FALSE,
+  matrix_format = "auto",
+  header = NA
 )
 }
 \arguments{
 \item{tree_path}{Path to the tree file (.tre, .nwk, .nex, .nexus, ...).}
 
-\item{csv_path}{Path to the character CSV file.}
+\item{csv_path}{Path to the character matrix (.csv, .tnt, .nex, ...).}
 
-\item{sep}{CSV field separator (default ",").}
+\item{sep}{CSV field separator (default ","; \code{"auto"}
+detects it).}
 
 \item{species_col}{Species column: integer index or column name (default 1).}
 
@@ -30,6 +33,11 @@ load_data(
 
 \item{strict}{If TRUE, raises an error on tree/CSV discrepancies
 (default FALSE).}
+
+\item{matrix_format}{"auto" (default), "csv", "tnt" or "nexus".}
+
+\item{header}{CSV header: \code{NA} (default, automatic),
+\code{TRUE} or \code{FALSE}.}
 }
 \value{
 List with:
@@ -39,10 +47,14 @@ List with:
 \description{
 Automatically detects:
 \itemize{
-\item Tree format (Newick / NEXUS) by extension.
-\item Presence or absence of a header in the CSV.
-\item UTF-8 BOM in the CSV (files exported from Excel).
+\item Tree format (Newick / NEXUS / TNT \code{tread}).
+\item Matrix format (CSV / TNT \code{xread} / NEXUS CHARACTERS block).
+\item Presence or absence of a header in the CSV, and its separator
+problems (trailing separators, ";" or tab instead of ",").
+\item UTF-8 BOM (files exported from Excel).
 \item Character types (numeric or strings): preserved as text.
+\item Species names that differ from the tips only in spaces vs "_",
+quotes or letter case (renamed to the tree labels).
 }
 }
 \examples{
@@ -60,6 +72,9 @@ Automatically detects:
   d3 <- load_data("tree.nex", "data.csv",
                   sep = ";", species_col = "Taxon")
   execute_phylogeny(d3$tree, d3$characters)
+
+  # TNT matrix and TNT tree
+  d4 <- load_data("tree_tnt.tre", "matrix.tnt")
 
   # Polymorphic use: pass paths directly to the orchestrator
   execute_phylogeny("my_tree.tre", "my_characters.csv")

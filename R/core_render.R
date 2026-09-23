@@ -422,6 +422,7 @@ plot_simple_mapping <- function(filogenia, config) {
   computed_xlim <- NULL
 
   if (tipo_arbol == "fan") {
+    prev_dev <- dev.cur()
     pdf(NULL, width = 7, height = 7)
     .fan_coords_explorador <- tryCatch({
       plot(filogenia,
@@ -434,7 +435,7 @@ plot_simple_mapping <- function(filogenia, config) {
            no.margin      = TRUE)
       get("last_plot.phylo", envir = .PlotPhyloEnv)
     }, error = function(e) NULL,
-    finally = dev.off())
+    finally = .close_device_restore(prev_dev))
   }
 
   if (tipo_arbol != "fan" && simple_mode == "figures") {
@@ -444,6 +445,7 @@ plot_simple_mapping <- function(filogenia, config) {
     height_in_tmp   <- if (!is.null(config$height)) config$height else default_height
     width_in_tmp  <- if (!is.null(config$width))  config$width  else default_width
 
+    prev_dev <- dev.cur()
     pdf(NULL, width = width_in_tmp, height = height_in_tmp)
     computed_xlim <- tryCatch({
 
@@ -502,7 +504,7 @@ plot_simple_mapping <- function(filogenia, config) {
       }
 
     }, error = function(e) NULL,
-    finally = dev.off())
+    finally = .close_device_restore(prev_dev))
   }
 
   # ── PHASE 2: export or draw on screen ───────────────────────────────────────
@@ -785,6 +787,8 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
       type          = tipo_arbol,
       format        = config$export_format %||% "png",
       lwd           = config$grosor,
+      width         = config$width,
+      height        = config$height,
        ladderize     = config$ladderize %||% FALSE,
        terminal_stretch = config$terminal_stretch %||% 1,
        legend_labels = ley_data$labels,
@@ -1299,6 +1303,8 @@ plot_superimposed_characters <- function(filogenia, config,
       type            = tipo_arbol,
       format          = config$export_format %||% "png",
       lwd             = grosor1,
+      width           = config$width,
+      height          = config$height,
       offset_range    = config$rango_desfase %||% 0.1,
       use_edge_length = isTRUE(config$use_edge_length),
        ladderize       = config$ladderize %||% FALSE,
