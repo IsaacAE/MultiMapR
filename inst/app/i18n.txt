@@ -77,6 +77,15 @@ sort_none|Orden de la matriz|Matrix order
 sort_missing|% faltantes|% missing
 sort_inapp|% inaplicables|% inapplicable
 sort_name|Nombre|Name
+col_dist|Distribución|Distribution
+col_taxon|Taxón|Taxon
+matrix_tab|Matriz|Matrix
+data_colors|Colores|Colors
+reset_colors|Restablecer|Reset
+borders|Bordes|Borders
+cell_values|Estados en celdas|States in cells
+mx_hint|Pasa el cursor sobre una celda para ver su taxón, carácter y estado.|Hover over a cell to see its taxon, character and state.
+mx_trunc|Matriz muy grande: se muestran los primeros %d de %d caracteres. El mapa de calor y sus descargas incluyen todos.|Very large matrix: showing the first %d of %d characters. The heatmap and its downloads include all of them.
 log_title|Mensajes de lectura|Reading messages
 goto_map|Ir a Mapear caracteres →|Go to Map characters →
 

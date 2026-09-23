@@ -243,14 +243,37 @@
                                    class = "btn-mm-secondary btn-mm-sm")),
     tags$div(class = "mm-table-wrap", shiny::uiOutput("stats_table")))
 
+  swatch <- function(id, key, value) {
+    tags$label(class = "mm-swatch",
+               .gui_color_input(id, value, label = tr(key)),
+               t(key))
+  }
+  view_opts <- tags$div(
+    class = "mm-viewopts",
+    t("data_colors", class = "mm-viewopts-label"),
+    swatch("stats_col_scored",  "col_scored",  CHAR_STATS_COLORS[["scored"]]),
+    swatch("stats_col_missing", "col_missing", CHAR_STATS_COLORS[["missing"]]),
+    swatch("stats_col_inapp",   "col_inapp",   CHAR_STATS_COLORS[["inapplicable"]]),
+    tags$button(id = "stats_col_reset", type = "button", class = "mm-linkbtn action-button",
+                t("reset_colors")),
+    tags$span(class = "mm-spacer"),
+    shiny::checkboxInput("stats_borders", t("borders"), TRUE),
+    shiny::conditionalPanel("input.cmp_tabs == 'heat'",
+                            shiny::checkboxInput("heat_values", t("cell_values"), TRUE)))
+
   completeness <- bslib::navset_card_tab(
     id = "cmp_tabs",
+    bslib::nav_panel(t("matrix_tab"), value = "matrix",
+                     tags$div(class = "mm-mx-info", `aria-live` = "polite",
+                              t("mx_hint", id = "mx_info")),
+                     tags$div(class = "mm-plotbox mm-plotbox-tall mm-mx-wrap",
+                              shiny::uiOutput("matrix_table"))),
     bslib::nav_panel(t("per_char"), value = "per",
                      tags$div(class = "mm-plotbox",
                               shiny::plotOutput("stats_plot", height = "auto"))),
     bslib::nav_panel(t("heatmap"), value = "heat",
-                     tags$div(class = "mm-plotbox",
-                              shiny::plotOutput("heat_plot", height = "auto"))),
+                     tags$div(class = "mm-plotbox mm-plotbox-tall",
+                              shiny::uiOutput("heat_box"))),
     bslib::nav_spacer(),
     bslib::nav_item(tags$div(
       class = "mm-tabtools d-flex align-items-center gap-2 py-1",
@@ -262,6 +285,8 @@
       shiny::downloadButton("dl_cmp_pdf", "PDF", icon = NULL, class = "btn-mm-secondary btn-mm-sm")))
   )
   completeness <- htmltools::tagAppendAttributes(completeness, class = "mm-tabcard")
+  # The options bar sits between the tabs and their content (shared by all tabs)
+  completeness <- htmltools::tagQuery(completeness)$find(".card-header")$after(view_opts)$allTags()
 
   goto_map <- tags$div(class = "mm-card-foot",
                        shiny::actionButton("goto_map", t("goto_map"), class = "btn-mm-primary"))

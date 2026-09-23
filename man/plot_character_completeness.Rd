@@ -8,6 +8,9 @@ plot_character_completeness(
   character_data,
   characters = NULL,
   colors = CHAR_STATS_COLORS,
+  border = "grey30",
+  show_values = NULL,
+  guide_every = 5,
   show_char_labels = NULL,
   export_filename = NULL,
   export_format = c("png", "pdf"),
@@ -24,13 +27,20 @@ all).}
 
 \item{colors}{Named vector with entries \code{scored},
 \code{missing}, \code{inapplicable}. Defaults to
-an Okabe-Ito colorblind-safe triplet.}
+an Okabe-Ito colorblind-safe triplet; any entry
+left out keeps its default.}
 
-\item{show_char_labels}{Show character names on the x-axis. Default
-\code{NULL} auto-decides: \code{TRUE} when there
-are \code{<= 60} characters, \code{FALSE}
-otherwise (labels would overlap into
-illegibility).}
+\item{border}{Color of the cell outlines, or \code{NA} for none.}
+
+\item{show_values}{Write the coded state inside each cell.
+\code{NULL} (default) does so whenever the text
+fits the cell.}
+
+\item{guide_every}{Draw a heavier guide line every this many rows
+and columns (\code{0} disables them).}
+
+\item{show_char_labels}{Show character names. \code{NULL} (default)
+shows them whenever they fit the column width.}
 
 \item{export_filename}{Optional path (without extension) to also save
 the plot as PNG/PDF. \code{NULL} (default) draws
@@ -46,8 +56,10 @@ Invisibly, \code{NULL}.
 }
 \description{
 Tile plot with one row per taxon and one column per character, colored by
-whether that cell is scored, missing ("?") or inapplicable ("-"). Gives an
-at-a-glance view of where missing/inapplicable data cluster across the
-whole matrix -- complementary to the per-character summary in
-\code{\link{plot_character_stats}}.
+whether that cell is scored, missing ("?") or inapplicable ("-"). Each
+cell is outlined and, when there is room, labelled with the state coded
+for that taxon, so the matrix can be read cell by cell. Taxon names are
+repeated on the right and character names on top for wide / tall
+matrices, and heavier guide lines every \code{guide_every} rows/columns
+help follow a row or column across the plot.
 }

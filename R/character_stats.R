@@ -14,6 +14,38 @@
 CHAR_STATS_COLORS <- c(scored = "#009E73", missing = "#E69F00", inapplicable = "#56B4E9")
 
 
+#' Completes a (possibly partial) scored/missing/inapplicable color vector
+#'
+#' Entries missing from \code{colors} or not valid R colors fall back to
+#' \code{\link{CHAR_STATS_COLORS}}, so callers can override just one of the
+#' three categories (e.g. \code{c(missing = "grey80")}).
+#' @param colors Named character vector (any subset of \code{scored},
+#'   \code{missing}, \code{inapplicable}).
+#' @return Named character vector with all three entries.
+#' @keywords internal
+.resolve_stats_colors <- function(colors) {
+  out <- CHAR_STATS_COLORS
+  if (is.null(colors)) return(out)
+  for (k in intersect(names(colors), names(out))) {
+    v <- as.character(colors[[k]])
+    if (length(v) == 1 && !is.na(v) && is_valid_color(v)) out[[k]] <- v
+  }
+  out
+}
+
+
+#' Black or white, whichever reads better on top of each fill color
+#' @param fill Vector of R colors.
+#' @return Character vector of \code{"#000000"} / \code{"#FFFFFF"}.
+#' @keywords internal
+.contrast_ink <- function(fill) {
+  m <- grDevices::col2rgb(fill) / 255
+  lin <- ifelse(m <= 0.03928, m / 12.92, ((m + 0.055) / 1.055)^2.4)
+  lum <- 0.2126 * lin[1, ] + 0.7152 * lin[2, ] + 0.0722 * lin[3, ]
+  ifelse(lum > 0.179, "#000000", "#FFFFFF")
+}
+
+
 #' Classifies each cell of a character column as scored/missing/inapplicable
 #'
 #' @param vals  Character (or coercible) vector: one character column.
@@ -167,7 +199,10 @@ print_character_stats <- function(character_data, characters = NULL) {
 #'                         characters appear at the top of the plot.
 #' @param colors           Named vector with entries \code{scored},
 #'                         \code{missing}, \code{inapplicable}. Defaults to
-#'                         an Okabe-Ito colorblind-safe triplet.
+#'                         an Okabe-Ito colorblind-safe triplet; any entry
+#'                         left out keeps its default.
+#' @param border           Color of the outline drawn around every bar
+#'                         segment, or \code{NA} for none.
 #' @param export_filename  Optional path (without extension) to also save
 #'                         the plot as PNG/PDF. \code{NULL} (default) draws
 #'                         on the active graphics device only.
@@ -180,11 +215,13 @@ print_character_stats <- function(character_data, characters = NULL) {
 plot_character_stats <- function(character_data, characters = NULL,
                                   sort_by = c("none", "pct_missing", "pct_inapplicable", "character"),
                                   colors = CHAR_STATS_COLORS,
+                                  border = "grey25",
                                   export_filename = NULL,
                                   export_format = c("png", "pdf"),
                                   width = NULL, height = NULL) {
   sort_by       <- match.arg(sort_by)
   export_format <- match.arg(export_format)
+  colors        <- .resolve_stats_colors(colors)
 
   st <- character_stats(character_data, characters)
   st <- st[st$character != "TOTAL", , drop = FALSE]
@@ -210,8 +247,8 @@ plot_character_stats <- function(character_data, characters = NULL,
     old_par  <- par(mar = c(4, left_mar, 3, 9), xpd = NA)
     on.exit(par(old_par))
 
-    barplot(mat, horiz = TRUE, col = colors[rownames(mat)], border = NA,
-            las = 1, cex.names = min(0.9, max(0.35, 30 / n_char)),
+    barplot(mat, horiz = TRUE, col = colors[rownames(mat)], border = border,
+            lwd = 0.6, las = 1, cex.names = min(0.9, max(0.35, 30 / n_char)),
             xlab = "Number of taxa",
             main = "Character data completeness")
 
@@ -219,6 +256,7 @@ plot_character_stats <- function(character_data, characters = NULL,
     legend(x = usr[2], y = usr[4], xjust = 0, yjust = 1,
            legend = c("Scored", "Missing (?)", "Inapplicable (-)"),
            fill = colors[c("scored", "missing", "inapplicable")],
+           border = if (is.na(border)) "grey25" else border,
            bty = "n", cex = 0.85, xpd = NA)
   }
 
@@ -237,13 +275,45 @@ plot_character_stats <- function(character_data, characters = NULL,
 }
 
 
+#' Page layout (in inches) of the taxon x character heatmap
+#'
+#' Shared by \code{\link{plot_character_completeness}} (margins and default
+#' export size) and the graphical interface (preview size), so the preview
+#' and the exported file are laid out the same way.
+#'
+#' @param species     Taxon labels (rows).
+#' @param characters  Character labels (columns).
+#' @param cell_in     Target cell side, in inches.
+#' @return List with \code{mai} (bottom, left, top, right margins),
+#'   \code{width}, \code{height} (suggested device size) and the logical
+#'   flags \code{right_labels} / \code{top_labels}.
+#' @keywords internal
+.completeness_layout <- function(species, characters, cell_in = 0.2) {
+  n_taxa <- length(species); n_char <- length(characters)
+  ch_w   <- 0.075                                # ~ width of one glyph at cex 0.8
+  sp_w   <- max(nchar(species))    * ch_w + 0.2
+  cl_h   <- max(nchar(characters)) * ch_w + 0.2
+  right_labels <- n_char > 15                    # repeat taxa on the right
+  top_labels   <- n_taxa > 20                    # repeat characters on top
+  head_h <- 0.7                                  # title + legend
+  mai <- c(cl_h, sp_w, head_h + if (top_labels) cl_h else 0.1,
+           if (right_labels) sp_w else 0.25)
+  list(mai = mai,
+       width  = n_char * cell_in + mai[2] + mai[4],
+       height = n_taxa * cell_in + mai[1] + mai[3],
+       right_labels = right_labels, top_labels = top_labels)
+}
+
+
 #' Taxon x character completeness heatmap
 #'
 #' Tile plot with one row per taxon and one column per character, colored by
-#' whether that cell is scored, missing ("?") or inapplicable ("-"). Gives an
-#' at-a-glance view of where missing/inapplicable data cluster across the
-#' whole matrix -- complementary to the per-character summary in
-#' \code{\link{plot_character_stats}}.
+#' whether that cell is scored, missing ("?") or inapplicable ("-"). Each
+#' cell is outlined and, when there is room, labelled with the state coded
+#' for that taxon, so the matrix can be read cell by cell. Taxon names are
+#' repeated on the right and character names on top for wide / tall
+#' matrices, and heavier guide lines every \code{guide_every} rows/columns
+#' help follow a row or column across the plot.
 #'
 #' @param character_data    Data.frame with a \code{"Species"} column and one
 #'                          column per character.
@@ -251,12 +321,16 @@ plot_character_stats <- function(character_data, characters = NULL,
 #'                          all).
 #' @param colors            Named vector with entries \code{scored},
 #'                          \code{missing}, \code{inapplicable}. Defaults to
-#'                          an Okabe-Ito colorblind-safe triplet.
-#' @param show_char_labels  Show character names on the x-axis. Default
-#'                          \code{NULL} auto-decides: \code{TRUE} when there
-#'                          are \code{<= 60} characters, \code{FALSE}
-#'                          otherwise (labels would overlap into
-#'                          illegibility).
+#'                          an Okabe-Ito colorblind-safe triplet; any entry
+#'                          left out keeps its default.
+#' @param border            Color of the cell outlines, or \code{NA} for none.
+#' @param show_values       Write the coded state inside each cell.
+#'                          \code{NULL} (default) does so whenever the text
+#'                          fits the cell.
+#' @param guide_every       Draw a heavier guide line every this many rows
+#'                          and columns (\code{0} disables them).
+#' @param show_char_labels  Show character names. \code{NULL} (default)
+#'                          shows them whenever they fit the column width.
 #' @param export_filename   Optional path (without extension) to also save
 #'                          the plot as PNG/PDF. \code{NULL} (default) draws
 #'                          on the active graphics device only.
@@ -267,6 +341,9 @@ plot_character_stats <- function(character_data, characters = NULL,
 #' @export
 plot_character_completeness <- function(character_data, characters = NULL,
                                          colors = CHAR_STATS_COLORS,
+                                         border = "grey30",
+                                         show_values = NULL,
+                                         guide_every = 5,
                                          show_char_labels = NULL,
                                          export_filename = NULL,
                                          export_format = c("png", "pdf"),
@@ -281,6 +358,7 @@ plot_character_completeness <- function(character_data, characters = NULL,
     stop("No characters to summarize.")
 
   export_format <- match.arg(export_format)
+  colors        <- .resolve_stats_colors(colors)
 
   species <- if ("Species" %in% colnames(character_data)) {
     as.character(character_data$Species)
@@ -289,52 +367,96 @@ plot_character_completeness <- function(character_data, characters = NULL,
   }
   n_taxa <- length(species)
   n_char <- length(characters)
-  if (is.null(show_char_labels)) show_char_labels <- n_char <= 60
 
-  cls_mat <- vapply(characters, function(ch) .classify_character_values(character_data[[ch]]),
-                    character(n_taxa))
-  # cls_mat is n_taxa x n_char (one .classify_character_values() result per
-  # column); flatten column-major (matches `matrix()`'s default fill order)
-  # to recover a same-shaped color matrix.
-  code <- matrix(match(as.character(cls_mat), c("scored", "missing", "inapplicable")),
-                 nrow = n_taxa, ncol = n_char)
-  cell_colors <- matrix(colors[c("scored", "missing", "inapplicable")][code],
-                        nrow = n_taxa, ncol = n_char)
+  vals <- vapply(characters, function(ch) {
+    v <- trimws(as.character(character_data[[ch]]))
+    v[is.na(v) | v == ""] <- "?"
+    v
+  }, character(n_taxa))
+  vals <- matrix(vals, nrow = n_taxa, ncol = n_char)
+  cls  <- .classify_character_values(vals)          # column-major, like `vals`
+  fill <- unname(colors[cls])
+  ink  <- .contrast_ink(fill)
+
+  layout <- .completeness_layout(species, characters)
 
   draw <- function() {
-    left_mar   <- max(6, max(nchar(species)) * 0.55 + 2)
-    bottom_mar <- if (show_char_labels) max(4, max(nchar(characters)) * 0.45 + 2) else 3
-    old_par <- par(mar = c(bottom_mar, left_mar, 3, 9), xpd = NA)
+    din <- par("din")
+    mai <- layout$mai
+    # Shrink the label margins if the device is too small to hold them.
+    for (idx in list(c(2, 4), c(1, 3))) {
+      avail <- din[if (idx[1] == 2) 1 else 2] - 0.8
+      if (sum(mai[idx]) > avail) mai[idx] <- mai[idx] * max(avail, 0.1) / sum(mai[idx])
+    }
+    old_par <- par(mai = mai, xpd = NA)
     on.exit(par(old_par))
 
-    plot(NA, xlim = c(0, n_char), ylim = c(0, n_taxa), xaxs = "i", yaxs = "i",
-         axes = FALSE, xlab = "", ylab = "", main = "Character matrix completeness")
+    plot.new()
+    plot.window(xlim = c(0, n_char), ylim = c(0, n_taxa), xaxs = "i", yaxs = "i")
+    pin    <- par("pin")
+    cell_w <- pin[1] / n_char
+    cell_h <- pin[2] / n_taxa
+    line_h <- par("cin")[2]                             # text line height at cex 1
 
-    row_idx  <- seq_len(n_taxa)
-    y_top    <- n_taxa - row_idx + 1
-    y_bottom <- n_taxa - row_idx
-    for (j in seq_len(n_char)) {
-      rect(xleft = j - 1, xright = j, ybottom = y_bottom, ytop = y_top,
-           col = cell_colors[, j], border = NA)
+    xl <- rep(seq_len(n_char) - 1, each = n_taxa)
+    yb <- rep(n_taxa - seq_len(n_taxa), times = n_char)
+    # Outlines on cells narrower than ~1.5 mm would just grey the whole plot.
+    rect(xl, yb, xl + 1, yb + 1, col = fill,
+         border = if (min(cell_w, cell_h) < 0.06) NA else border, lwd = 0.6)
+
+    if (guide_every > 0) {
+      guide_col <- "grey10"
+      if (n_char > guide_every) {
+        gx <- seq(guide_every, n_char - 1, by = guide_every)
+        segments(gx, 0, gx, n_taxa, col = guide_col, lwd = 1.8)
+      }
+      if (n_taxa > guide_every) {
+        gy <- n_taxa - seq(guide_every, n_taxa - 1, by = guide_every)
+        segments(0, gy, n_char, gy, col = guide_col, lwd = 1.8)
+      }
+    }
+    rect(0, 0, n_char, n_taxa, border = "grey15", lwd = 1.2)
+
+    # State written inside each cell
+    val_cex <- min(0.8, 0.75 * cell_h / line_h,
+                   0.8 * cell_w / (max(nchar(vals)) * 0.6 * par("cin")[1]))
+    fits <- val_cex >= 0.35 && min(cell_w, cell_h) >= 0.11
+    if (isTRUE(show_values) || (is.null(show_values) && fits)) {
+      text(xl + 0.5, yb + 0.5, labels = as.vector(vals), cex = max(val_cex, 0.2),
+           col = ink, family = "mono")
     }
 
-    axis(2, at = y_bottom + 0.5, labels = species, las = 1,
-         cex.axis = min(0.9, max(0.25, 25 / n_taxa)), tick = FALSE, line = -0.5)
-    if (show_char_labels) {
-      axis(1, at = seq_len(n_char) - 0.5, labels = characters, las = 2,
-           cex.axis = min(0.8, max(0.25, 40 / n_char)), tick = FALSE, line = -0.5)
+    # Taxon labels (left, and right on wide matrices)
+    sp_cex <- min(0.8, 0.9 * cell_h / line_h)
+    sp_at  <- n_taxa - seq_len(n_taxa) + 0.5
+    mtext(species, side = 2, at = sp_at, las = 1, line = 0.3, cex = sp_cex, adj = 1)
+    if (layout$right_labels)
+      mtext(species, side = 4, at = sp_at, las = 1, line = 0.3, cex = sp_cex, adj = 0)
+
+    # Character labels (bottom, and top on tall matrices)
+    ch_cex <- min(0.8, 0.9 * cell_w / line_h)
+    if (isTRUE(show_char_labels) || (is.null(show_char_labels) && ch_cex >= 0.3)) {
+      ch_at <- seq_len(n_char) - 0.5
+      mtext(characters, side = 1, at = ch_at, las = 2, line = 0.3, cex = ch_cex, adj = 1)
+      if (layout$top_labels)
+        mtext(characters, side = 3, at = ch_at, las = 2, line = 0.3, cex = ch_cex, adj = 0)
     }
 
-    usr <- par("usr")
-    legend(x = usr[2], y = usr[4], xjust = 0, yjust = 1,
+    # Title and a horizontal legend in the top margin
+    top_y  <- function(inches) grconvertY(din[2] - inches, from = "inches", to = "user")
+    left_x <- grconvertX(0.15, from = "inches", to = "user")
+    text(left_x, top_y(0.2), "Character matrix completeness", adj = c(0, 0.5),
+         font = 2, cex = 1)
+    legend(x = left_x, y = top_y(0.47), xjust = 0, yjust = 0.5, horiz = TRUE,
            legend = c("Scored", "Missing (?)", "Inapplicable (-)"),
            fill = colors[c("scored", "missing", "inapplicable")],
-           bty = "n", cex = 0.85, xpd = NA)
+           border = if (is.na(border)) "grey25" else border,
+           bty = "n", cex = 0.8, xpd = NA)
   }
 
   if (!is.null(export_filename)) {
-    w_in <- width  %||% max(6, 0.15 * n_char + 3)
-    h_in <- height %||% max(4, 0.22 * n_taxa + 1.5)
+    w_in <- width  %||% max(6, layout$width)
+    h_in <- height %||% max(4, layout$height)
     prev_dev <- dev.cur()
     .emtree_open_device(export_filename, export_format, w_in, h_in)
     draw()

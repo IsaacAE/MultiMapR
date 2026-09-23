@@ -382,9 +382,9 @@
                kpi("", tr("vb_tips"), Ntip(d$tree),
                    if (d$has_lengths) tr("vb_lengths") else tr("vb_nolengths")),
                kpi("", tr("vb_chars"), length(d$chars), chars_note),
-               kpi("mm-kpi-warn", tr("vb_missing"), sprintf("%.1f%%", tot$pct_missing),
+               kpi("mm-kpi-missing", tr("vb_missing"), sprintf("%.1f%%", tot$pct_missing),
                    tr("n_cells", tot$n_missing)),
-               kpi("mm-kpi-neutral", tr("vb_inapp"), sprintf("%.1f%%", tot$pct_inapplicable),
+               kpi("mm-kpi-inapp", tr("vb_inapp"), sprintf("%.1f%%", tot$pct_inapplicable),
                    tr("n_cells", tot$n_inapplicable)))
     })
 
@@ -400,10 +400,21 @@
       body <- st[st$character != "TOTAL", ]
       tot  <- st[st$character == "TOTAL", ]
       cnt <- function(n, p) sprintf("%d \u00B7 %.0f%%", n, p)
-      th <- function(i, key, num = FALSE) {
+      th <- function(i, key, num = FALSE, dot = NULL) {
         tags$th(scope = "col", `data-col` = i - 1L, `data-type` = if (num) "num" else "txt",
                 class = if (num) "mm-num", `aria-sort` = "none",
-                tags$button(type = "button", tr(key), tags$span(class = "mm-sort", "\u25B2")))
+                tags$button(type = "button",
+                            if (!is.null(dot)) tags$span(class = paste("mm-dot", dot), `aria-hidden` = "true"),
+                            tr(key), tags$span(class = "mm-sort", "\u25B2")))
+      }
+      # Stacked scored / missing / inapplicable bar, colored by the user's picks (CSS vars)
+      dist <- function(r) {
+        seg <- function(cls, n) {
+          if (n > 0) tags$span(class = cls, style = sprintf("width:%.2f%%", 100 * n / r$n_taxa))
+        }
+        tags$span(class = "mm-dist", `aria-hidden` = "true",
+                  seg("mm-c-s", r$n_scored), seg("mm-c-m", r$n_missing),
+                  seg("mm-c-i", r$n_inapplicable))
       }
       rows <- lapply(seq_len(nrow(body)), function(i) {
         r <- body[i, ]
@@ -412,36 +423,105 @@
                 tags$td(class = "mm-num", `data-v` = r$n_scored, r$n_scored),
                 tags$td(class = "mm-num", `data-v` = r$n_missing, cnt(r$n_missing, r$pct_missing)),
                 tags$td(class = "mm-num", `data-v` = r$n_inapplicable,
-                        cnt(r$n_inapplicable, r$pct_inapplicable)))
+                        cnt(r$n_inapplicable, r$pct_inapplicable)),
+                tags$td(class = "mm-dist-cell", dist(r)))
       })
       tags$table(class = "mm-table",
                  tags$thead(tags$tr(th(1, "col_character"), th(2, "col_states", TRUE),
-                                    th(3, "col_scored", TRUE), th(4, "col_missing", TRUE),
-                                    th(5, "col_inapp", TRUE))),
+                                    th(3, "col_scored", TRUE, "mm-c-s"),
+                                    th(4, "col_missing", TRUE, "mm-c-m"),
+                                    th(5, "col_inapp", TRUE, "mm-c-i"),
+                                    tags$th(scope = "col", tr("col_dist")))),
                  tags$tbody(rows),
                  tags$tfoot(tags$tr(tags$td("TOTAL"), tags$td(class = "mm-num", ""),
                                     tags$td(class = "mm-num", tot$n_scored),
                                     tags$td(class = "mm-num", cnt(tot$n_missing, tot$pct_missing)),
                                     tags$td(class = "mm-num",
-                                            cnt(tot$n_inapplicable, tot$pct_inapplicable)))))
+                                            cnt(tot$n_inapplicable, tot$pct_inapplicable)),
+                                    tags$td(class = "mm-dist-cell", dist(tot)))))
+    })
+
+    # ---- Data-category colors (scored / missing / inapplicable) and borders -------
+    stats_colors <- shiny::reactive(.resolve_stats_colors(c(
+      scored       = input$stats_col_scored,
+      missing      = input$stats_col_missing,
+      inapplicable = input$stats_col_inapp)))
+    stats_border <- shiny::reactive(if (isFALSE(input$stats_borders)) NA else "grey30")
+    heat_values  <- shiny::reactive(if (isFALSE(input$heat_values)) FALSE else NULL)
+
+    # The HTML views (matrix, table bars, KPIs) take the colors from CSS variables,
+    # so changing a color does not re-render them.
+    shiny::observe({
+      cols <- .gui_hex(stats_colors())
+      ink  <- .contrast_ink(cols)
+      session$sendCustomMessage("mm-stats-colors", list(
+        scored = cols[[1]], missing = cols[[2]], inapplicable = cols[[3]],
+        scored_ink = ink[[1]], missing_ink = ink[[2]], inapplicable_ink = ink[[3]],
+        borders = !isFALSE(input$stats_borders)))
+    })
+    shiny::observeEvent(input$stats_col_reset, {
+      ids <- c(scored = "stats_col_scored", missing = "stats_col_missing",
+               inapplicable = "stats_col_inapp")
+      for (k in names(ids))
+        session$sendInputMessage(ids[[k]], list(value = .gui_hex(CHAR_STATS_COLORS[[k]])))
     })
 
     stats_height <- function() {
       d <- dat(); if (is.null(d)) return(300)
       max(320, round((0.28 * length(d$chars) + 1.5) * 80))
     }
+    heat_layout <- shiny::reactive({
+      d <- dat(); shiny::req(d)
+      .completeness_layout(as.character(d$aligned$Species), d$chars, cell_in = 0.22)
+    })
+    # Wide matrices get a plot wider than the box (it scrolls) so cells stay legible;
+    # a fixed-width container stops Shiny from squeezing the image to 100%.
+    output$heat_box <- shiny::renderUI({
+      shiny::plotOutput("heat_plot", height = "auto",
+                        width = paste0(max(600, round(heat_layout()$width * 96)), "px"))
+    })
     heat_height <- function() {
-      d <- dat(); if (is.null(d)) return(300)
-      max(360, round((0.22 * Ntip(d$tree) + 1.5) * 80))
+      if (is.null(dat())) return(300)
+      max(360, round(heat_layout()$height * 96))
     }
     output$stats_plot <- shiny::renderPlot({
       d <- dat(); shiny::req(d)
-      plot_character_stats(d$aligned, sort_by = input$stats_sort %||% "none")
+      plot_character_stats(d$aligned, sort_by = input$stats_sort %||% "none",
+                           colors = stats_colors(), border = stats_border())
     }, height = stats_height, res = 96, bg = "white")
     output$heat_plot <- shiny::renderPlot({
       d <- dat(); shiny::req(d)
-      plot_character_completeness(d$aligned)
+      plot_character_completeness(d$aligned, colors = stats_colors(),
+                                  border = stats_border(), show_values = heat_values())
     }, height = heat_height, res = 96, bg = "white")
+
+    # Interactive taxon x character matrix (hover highlights row + column, see multimapr.js)
+    output$matrix_table <- shiny::renderUI({
+      tr <- trr()
+      d <- dat(); shiny::req(d)
+      esc     <- htmltools::htmlEscape
+      species <- as.character(d$aligned$Species)
+      n_show  <- min(length(d$chars), max(1L, floor(60000 / max(1L, length(species)))))
+      chars   <- d$chars[seq_len(n_show)]
+      cells <- vapply(chars, function(ch) {
+        v <- trimws(as.character(d$aligned[[ch]]))
+        v[is.na(v) | v == ""] <- "?"
+        cls <- c(scored = "mm-c-s", missing = "mm-c-m",
+                 inapplicable = "mm-c-i")[.classify_character_values(v)]
+        paste0('<td class="', cls, '">', esc(v), "</td>")
+      }, character(length(species)))
+      cells <- matrix(cells, nrow = length(species))
+      body <- paste0('<tr><th scope="row">', esc(species), "</th>",
+                     apply(cells, 1, paste, collapse = ""), "</tr>", collapse = "")
+      head <- paste0('<tr><th scope="col" class="mm-mx-corner">', esc(tr("col_taxon")), "</th>",
+                     paste0('<th scope="col"><span>', esc(chars), "</span></th>", collapse = ""),
+                     "</tr>")
+      note <- if (n_show < length(d$chars))
+        tags$div(class = "mm-note mm-mx-note", tr("mx_trunc", n_show, length(d$chars)))
+      htmltools::tagList(note,
+              shiny::HTML(paste0('<table class="mm-matrix"><thead>', head, "</thead><tbody>",
+                                 body, "</tbody></table>")))
+    })
 
     output$dl_stats_csv <- shiny::downloadHandler(
       filename = function() "MultiMapR_character_stats.csv",
@@ -453,18 +533,23 @@
     completeness_download <- function(format) {
       shiny::downloadHandler(
         filename = function() {
-          kind <- if (identical(input$cmp_tabs, "heat")) "completeness" else "character_stats"
+          kind <- if (identical(input$cmp_tabs, "per")) "character_stats" else "completeness"
           paste0("MultiMapR_", kind, ".", format)
         },
         content = function(file) {
           d <- dat(); shiny::req(d)
           base <- tempfile("mmr_stats_")
           .gui_with_sink_device(utils::capture.output(
-            if (identical(input$cmp_tabs, "heat")) {
-              plot_character_completeness(d$aligned, export_filename = base, export_format = format)
-            } else {
+            if (identical(input$cmp_tabs, "per")) {
               plot_character_stats(d$aligned, sort_by = input$stats_sort %||% "none",
+                                   colors = stats_colors(), border = stats_border(),
                                    export_filename = base, export_format = format)
+            } else {
+              # "matrix" and "heat" tabs both export the heatmap (with states in cells
+              # unless switched off on the heatmap tab)
+              plot_character_completeness(d$aligned, colors = stats_colors(),
+                                          border = stats_border(), show_values = heat_values(),
+                                          export_filename = base, export_format = format)
             }))
           file.copy(paste0(base, ".", format), file, overwrite = TRUE)
         })
