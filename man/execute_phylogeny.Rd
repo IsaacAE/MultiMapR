@@ -25,7 +25,8 @@ execute_phylogeny(
   show_labels = TRUE,
   label_size = 1,
   label_color = "black",
-  show_legend = TRUE
+  show_legend = TRUE,
+  missing_colors = NULL
 )
 }
 \arguments{
@@ -127,6 +128,19 @@ again as large).}
 \item{show_legend}{Logical. Draw the legend of character states
 (default \code{TRUE}). When \code{FALSE} no space
 is reserved for it.}
+
+\item{missing_colors}{Colors for missing (\code{"?"}) and inapplicable
+(\code{"-"}) tips in the ancestral reconstruction
+with the default (depth-weighted majority)
+algorithm: a vector named \code{"?"} and/or
+\code{"-"} applied to every character, e.g.
+\code{c("?" = "grey80", "-" = "black")}, or a list
+named by character to give each one its own
+colors. The chosen colors take part in the
+reconstruction and appear in the legend.
+\code{NULL} (default) keeps them gray. Fitch
+ignores it: there \code{"?"} and \code{"-"} always
+take \code{ambiguity_color}.}
 }
 \value{
 Invisible NULL.

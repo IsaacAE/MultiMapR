@@ -648,6 +648,7 @@
 
   # ---- States and colors ------------------------------------------------------------
   card_prefix <- function(d, ch) paste0("d", d$id, "_c", match(ch, d$chars))
+  missing_input_id <- function(pfx, s) paste0(pfx, if (s == "?") "_miss" else "_inapp")
   card_states <- function(d, ch) setdiff(d$states[[ch]], c("?", "-"))
   card_choice <- function(d, ch) {
     pal <- input[[paste0(card_prefix(d, ch), "_pal")]] %||% "global"
@@ -683,15 +684,32 @@
                  tags$span(class = "mm-state-label", states[si]),
                  tags$span(class = "mm-state-count", tr("n_tax", sum(vals == states[si], na.rm = TRUE))))
       })
-      special <- lapply(c("?", "-"), function(s) {
-        tags$div(class = "mm-state mm-special",
+      # "?" and "-": editable per character only for the depth-weighted
+      # majority reconstruction; gray in simple mapping; under Fitch they take
+      # the ambiguity color chosen in step A.
+      special_row <- function(s, editable) {
+        key <- if (s == "?") "state_missing" else "state_inapp"
+        swatch <- if (editable) {
+          col_id <- missing_input_id(pfx, s)
+          .gui_color_input(col_id, input[[col_id]] %||% .GUI_MISSING_DEFAULT,
+                           label = tr("state_color", s))
+        } else {
+          tags$span(class = "mm-state-swatch", style = "background:#b3b3b3", `aria-hidden` = "true")
+        }
+        tags$div(class = paste("mm-state", if (!editable) "mm-special"),
                  tags$input(type = "checkbox", disabled = NA, checked = NA,
-                            `aria-label` = tr(if (s == "?") "state_missing" else "state_inapp")),
-                 tags$span(class = "mm-state-swatch", style = "background:#b3b3b3", `aria-hidden` = "true"),
-                 tags$span(class = "mm-state-label",
-                           paste(s, tr(if (s == "?") "state_missing" else "state_inapp"))),
+                            `aria-label` = tr(key)),
+                 swatch,
+                 tags$span(class = "mm-state-label", paste(s, tr(key))),
                  tags$span(class = "mm-state-count", tr("n_tax", sum(vals == s, na.rm = TRUE))))
-      })
+      }
+      special <- shiny::tagList(
+        shiny::conditionalPanel("input.mode == 'ancestral' && input.algo != 'fitch'",
+                                lapply(c("?", "-"), special_row, editable = TRUE)),
+        shiny::conditionalPanel("!(input.mode == 'ancestral' && input.algo != 'fitch')",
+                                lapply(c("?", "-"), special_row, editable = FALSE)),
+        shiny::conditionalPanel("input.mode == 'ancestral' && input.algo == 'fitch'",
+                                tags$div(class = "mm-note", tr("missing_fitch_note"))))
 
       tags$div(class = "mm-ccard",
                tags$div(class = "mm-ccard-head",
@@ -836,6 +854,13 @@
       config$mapear_todos  <- all_selected
       config$algoritmo     <- if (identical(input$algo, "fitch")) 2L else 1L
       config$fitch_mode    <- if (config$algoritmo == 2L) input$optim %||% "acctran" else NULL
+      if (config$algoritmo == 1L) {
+        config$missing_colors <- stats::setNames(lapply(draw, function(ch) {
+          pfx <- card_prefix(d, ch)
+          c("?" = input[[missing_input_id(pfx, "?")]] %||% .GUI_MISSING_DEFAULT,
+            "-" = input[[missing_input_id(pfx, "-")]] %||% .GUI_MISSING_DEFAULT)
+        }), draw)
+      }
       if (config$algoritmo == 2L) config$ambiguity_color <- input$ambiguity_color %||% "#FF00FF"
       if (config$funcion_multi == 2L) {
         config$pch_figura <- pch

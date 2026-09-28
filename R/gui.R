@@ -292,6 +292,10 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
   if (nzchar(x)) x else gsub("[\\\\/:*?\"<>|]", "_", fallback)
 }
 
+#' Default color for missing / inapplicable tips in the interface (gray70)
+#' @noRd
+.GUI_MISSING_DEFAULT <- "#B3B3B3"
+
 #' Figure dimensions in inches, as computed by .export_device()
 #'
 #' @param n_tips    Number of terminals.

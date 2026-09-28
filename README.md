@@ -140,7 +140,7 @@ than hidden.
 |----|----|
 | **A · Mapping type** | Simple mapping (display as figures or as coloured labels / terminal branches, with figure shape and size) or ancestral reconstruction (branch superimposition or coloured tree + tip figures; depth-weighted majority or Fitch with ACCTRAN / DELTRAN / Unambiguous and the colour of ambiguous branches). |
 | **B · Characters** | Searchable list with the number of states and % missing per character. Selection order is drawing order; ancestral reconstruction keeps the first 3 and says so. |
-| **C · States and colours** | A global palette plus one card per character: every observed state can be recoloured or unticked (unticked states are drawn in grey), and `?` / `-` always stay grey and out of the legend. |
+| **C · States and colours** | A global palette plus one card per character: every observed state can be recoloured or unticked (unticked states are drawn in grey). `?` (missing) and `-` (inapplicable) get their own colour per character in the depth-weighted majority reconstruction (and then appear in the legend); they stay grey in simple mapping and take the ambiguity colour under Fitch. |
 | **D · Tree** | Phylogram / cladogram / fan, branch lengths, ladderisation, branch width and terminal-branch stretch; for cladograms, the shape of the branch tips (round / flat / square) and the branch angle (30–60°, or stretched to the full width). |
 | **E · Legend and view** | Legend on / off and its corner; species names on / off, with their size and colour; preview height. |
 | **F · Export** | PNG (300 dpi) or vector PDF, file name, automatic or custom dimensions in inches, “Download” and “Save to Exports/”., and an “Export preview” at the chosen size. |
@@ -277,6 +277,24 @@ Traverses internal nodes in post-order and assigns each edge the colour
 that predominates among its descendants, prioritising the closest
 internal nodes in the hierarchy. Fast, requires no extra parameters, and
 works well for trees with many states.
+
+**Missing and inapplicable data.** By default `?` and `-` tips are grey and,
+like any other tip, take part in the majority vote. `missing_colors` gives them
+their own colours, either for every character or per character; the chosen
+colours are used on tip figures and branches and appear in the legend:
+
+``` r
+# same colours for every character
+execute_phylogeny(tree, data, missing_colors = c("?" = "grey85", "-" = "black"))
+
+# one pair per character
+execute_phylogeny(tree, data, missing_colors = list(
+  char30 = c("?" = "grey85", "-" = "black"),
+  char35 = c("?" = "#FFD1DC", "-" = "#5B2C6F")))
+```
+
+Under Fitch, `?` and `-` are always treated as fully ambiguous and drawn with
+`ambiguity_color` (magenta by default), so `missing_colors` is ignored there.
 
 ### Fitch algorithm
 

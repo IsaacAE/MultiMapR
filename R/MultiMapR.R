@@ -89,7 +89,7 @@
 #'
 #' @param phylogeny        Untouched \code{phylo} object.
 #' @param config           Configuration list (see \code{setup_mapping_config()}).
-#' @param branch_width,use_edge_length,ladderize,terminal_stretch,tip_end,branch_angle,show_labels,label_size,label_color,show_legend
+#' @param branch_width,use_edge_length,ladderize,terminal_stretch,tip_end,branch_angle,show_labels,label_size,label_color,show_legend,missing_colors
 #'                         See \code{\link{execute_phylogeny}}.
 #' @return Invisibly, the updated \code{config}.
 #' @keywords internal
@@ -103,7 +103,8 @@
                                        show_labels      = TRUE,
                                        label_size       = 1,
                                        label_color      = "black",
-                                       show_legend      = TRUE) {
+                                       show_legend      = TRUE,
+                                       missing_colors   = NULL) {
   config$terminal_stretch <- terminal_stretch
   if (!tip_end %in% c("round", "butt", "square"))
     stop("`tip_end` must be one of \"round\", \"butt\" or \"square\".")
@@ -115,6 +116,9 @@
   config$label_size  <- label_size
   config$label_color <- label_color
   config$show_legend <- isTRUE(show_legend)
+  # NULL keeps what the config already carries (e.g. set by the interface)
+  if (!is.null(missing_colors))
+    config$missing_colors <- .normalize_missing_colors(missing_colors, config$caracteres)
 
   # -- Branch width (parameter overrides menu default of 2) ------------------
   if (!is.numeric(branch_width) || length(branch_width) != 1L || branch_width <= 0)
@@ -257,6 +261,18 @@
 #' @param show_legend        Logical. Draw the legend of character states
 #'                           (default \code{TRUE}). When \code{FALSE} no space
 #'                           is reserved for it.
+#' @param missing_colors     Colors for missing (\code{"?"}) and inapplicable
+#'                           (\code{"-"}) tips in the ancestral reconstruction
+#'                           with the default (depth-weighted majority)
+#'                           algorithm: a vector named \code{"?"} and/or
+#'                           \code{"-"} applied to every character, e.g.
+#'                           \code{c("?" = "grey80", "-" = "black")}, or a list
+#'                           named by character to give each one its own
+#'                           colors. The chosen colors take part in the
+#'                           reconstruction and appear in the legend.
+#'                           \code{NULL} (default) keeps them gray. Fitch
+#'                           ignores it: there \code{"?"} and \code{"-"} always
+#'                           take \code{ambiguity_color}.
 #' @return Invisible NULL.
 #' @export
 execute_phylogeny <- function(phylogeny, character_data,
@@ -278,7 +294,8 @@ execute_phylogeny <- function(phylogeny, character_data,
                               show_labels          = TRUE,
                               label_size           = 1,
                               label_color          = "black",
-                              show_legend          = TRUE) {
+                              show_legend          = TRUE,
+                              missing_colors       = NULL) {
   tryCatch({
 
     # POLYMORPHISM: If file paths (character) are passed, load data automatically
@@ -346,7 +363,8 @@ execute_phylogeny <- function(phylogeny, character_data,
                                            show_labels      = show_labels,
                                            label_size       = label_size,
                                            label_color      = label_color,
-                                           show_legend      = show_legend)
+                                           show_legend      = show_legend,
+                                           missing_colors   = missing_colors)
 
       # -- What next? ----------------------------------------------------------
       next_action <- prompt_post_run_menu(allow_algorithm_change = (config$mapping_type == 2))

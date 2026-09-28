@@ -587,6 +587,106 @@ init_edge_colors <- function(filogenia) {
 }
 
 
+#' Normalizes the colors chosen for missing ("?") and inapplicable ("-") tips
+#'
+#' Used by the depth-weighted majority reconstruction, where each character
+#' may give "?" and "-" their own color (Fitch always uses the single
+#' ambiguity color instead, see \code{.get_fitch_ambig_color()}).
+#'
+#' @param missing_colors \code{NULL}; a vector named \code{"?"} and/or
+#'   \code{"-"} applied to every character; or a named list
+#'   \emph{character} -> such a vector.
+#' @param characters Names of the mapped characters.
+#' @return Named list \emph{character} -> \code{c("?" = color, "-" = color)}
+#'   (only the symbols supplied), or \code{NULL}.
+#' @keywords internal
+.normalize_missing_colors <- function(missing_colors, characters) {
+  if (is.null(missing_colors) || length(missing_colors) == 0L) return(NULL)
+  check <- function(v) {
+    v <- unlist(v)
+    if (is.null(names(v)) || !all(names(v) %in% c("?", "-")))
+      stop("`missing_colors` must be named \"?\" and/or \"-\".")
+    bad <- !vapply(v, is_valid_color, logical(1))
+    if (any(bad))
+      stop("`missing_colors`: invalid color(s): ", paste(v[bad], collapse = ", "), ".")
+    v
+  }
+  if (is.list(missing_colors)) {
+    if (is.null(names(missing_colors)))
+      stop("A `missing_colors` list must be named by character.")
+    out <- lapply(missing_colors, check)
+    out[intersect(names(out), characters)]
+  } else {
+    v <- check(missing_colors)
+    stats::setNames(rep(list(v), length(characters)), characters)
+  }
+}
+
+#' Color of a tip state for ancestral reconstruction
+#'
+#' Observed states take their mapped color. Missing (\code{"?"}, empty or
+#' \code{NA}) and inapplicable (\code{"-"}) tips take the Fitch ambiguity color
+#' under Fitch, or the per-character color from \code{config$missing_colors}
+#' under the depth-weighted majority algorithm (gray70 when none was chosen).
+#' Unmapped (unticked) states stay gray70.
+#'
+#' @param valor          Tip state.
+#' @param colores_estado Named vector state -> color of the character.
+#' @param config         Configuration list.
+#' @param car            Character name.
+#' @return A single color string.
+#' @keywords internal
+.ancestral_tip_color <- function(valor, colores_estado, config, car) {
+  valor <- as.character(valor)
+  if (!is.na(valor) && valor %in% names(colores_estado)) return(colores_estado[[valor]])
+  if (is.na(valor) || valor %in% c("", "?", "-")) {
+    if (isTRUE(config$algoritmo == 2L)) return(.get_fitch_ambig_color(config))
+    sym <- if (is.na(valor) || valor == "") "?" else valor
+    mc  <- config$missing_colors[[car]]
+    if (!is.null(mc) && sym %in% names(mc)) return(unname(mc[[sym]]))
+  }
+  "gray70"
+}
+
+#' Legend entries for the missing / inapplicable colors of one character
+#'
+#' Depth-weighted majority only (Fitch shows one "Ambiguous / Missing" entry).
+#' An entry is added when the user chose a color for that symbol and the
+#' symbol occurs in the character's data.
+#'
+#' @param config Configuration list.
+#' @param car    Character name.
+#' @return Named vector label -> color, or \code{NULL}.
+#' @keywords internal
+.missing_legend_entries <- function(config, car) {
+  if (isTRUE(config$algoritmo == 2L)) return(NULL)
+  mc <- config$missing_colors[[car]]
+  if (is.null(mc)) return(NULL)
+  vals    <- as.character(config$datos_ord[[car]])
+  present <- c("?" = any(is.na(vals) | vals %in% c("", "?")), "-" = any(vals %in% "-"))
+  syms    <- intersect(names(mc), names(present)[present])
+  syms    <- setdiff(syms, names(config$colores_por_caracter[[car]]))
+  if (length(syms) == 0L) return(NULL)
+  labels  <- c("?" = "Missing (?)", "-" = "Inapplicable (-)")
+  stats::setNames(unname(mc[syms]), labels[syms])
+}
+
+#' Appends the missing / inapplicable entries to grouped legend data
+#' @param ley_data Output of \code{.build_legend_data()}.
+#' @param config   Configuration list.
+#' @return \code{ley_data} with the extra entries.
+#' @keywords internal
+.add_missing_to_legend_data <- function(ley_data, config) {
+  for (nm in names(ley_data$by_char)) {
+    extra <- .missing_legend_entries(config, nm)
+    if (length(extra) == 0L) next
+    ley_data$by_char[[nm]]$labels <- c(ley_data$by_char[[nm]]$labels, names(extra))
+    ley_data$by_char[[nm]]$colors <- c(ley_data$by_char[[nm]]$colors, unname(extra))
+  }
+  ley_data
+}
+
+
 #' Dispatches to the ancestral reconstruction algorithm selected in config
 #'
 #' @param tree         phylo object.
@@ -848,13 +948,6 @@ plot_ancestral_reconstruction <- function(filogenia, config) {
   caracteres      <- config$caracteres
   colores_por_car <- config$colores_por_caracter
 
-  resolver_color <- function(valor, colores_estado) {
-    valor <- as.character(valor)
-    if (is.na(valor) || valor == "") return("gray70")
-    if (valor %in% names(colores_estado)) return(colores_estado[[valor]])
-    return("gray70")
-  }
-
   # funcion_multi == 2: ancestral reconstruction + terminal figures
   if (!is.null(config$funcion_multi) && config$funcion_multi == 2) {
     plot_ancestral_with_terminals(filogenia, config)
@@ -865,14 +958,15 @@ plot_ancestral_reconstruction <- function(filogenia, config) {
   if (length(caracteres) == 1) {
     car            <- caracteres[1]
     colores_estado <- colores_por_car[[car]]
-    tip_colors     <- sapply(datos_ord[[car]], resolver_color,
-                             colores_estado = colores_estado)
+    tip_colors     <- sapply(datos_ord[[car]], .ancestral_tip_color,
+                             colores_estado = colores_estado, config = config, car = car)
 
     edge_colors <- init_edge_colors(filogenia)
     edge_colors <- apply_ancestral_algorithm(filogenia, tip_colors, edge_colors, config)
 
     # For Fitch, append the ambiguity entry to the legend (Fitch-only)
-    colores_estado_ley <- .add_fitch_ambig_to_legend(colores_estado, config)
+    colores_estado_ley <- c(.add_fitch_ambig_to_legend(colores_estado, config),
+                            .missing_legend_entries(config, car))
 
     plot_ancestral_branches(filogenia, edge_colors, config,
                             titulo_leyenda = car,
@@ -918,26 +1012,18 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
   fn_export       <- config$export_filename
   n_tips          <- Ntip(filogenia)
 
-  # Missing ("?") and inapplicable ("-") tip states must render in the same
-  # color as the Fitch ambiguity color used on branches (see fitch.R), so the
-  # terminal figures agree visually with the branches they sit on. Any other
-  # unmapped/excluded state (not "?"/"-") still falls back to neutral gray70.
-  resolver_color <- function(valor, colores_estado) {
-    valor <- as.character(valor)
-    if (is.na(valor) || valor %in% c("", "?", "-")) {
-      if (isTRUE(config$algoritmo == 2L)) return(.get_fitch_ambig_color(config))
-      return("gray70")
-    }
-    if (valor %in% names(colores_estado)) return(colores_estado[[valor]])
-    return("gray70")
-  }
+  # Missing ("?") and inapplicable ("-") tips use the same color on figures and
+  # branches: the Fitch ambiguity color, or the per-character colors chosen for
+  # the depth-weighted majority (see .ancestral_tip_color()).
+  resolver_color <- function(valor, colores_estado, car)
+    .ancestral_tip_color(valor, colores_estado, config, car)
 
   cat("\n=== Generating plot (Ancestral Reconstruction + Terminal Figures) ===\n")
 
   # ── Step 1: compute ancestral edge colors for each character ────────────────
   lista_ec <- lapply(caracteres, function(car) {
     col_e      <- colores_por_car[[car]]
-    tip_colors <- sapply(datos_ord[[car]], resolver_color, colores_estado = col_e)
+    tip_colors <- sapply(datos_ord[[car]], resolver_color, colores_estado = col_e, car = car)
     ec         <- init_edge_colors(filogenia)
     ec         <- apply_ancestral_algorithm(filogenia, tip_colors, ec, config)
     ec
@@ -957,6 +1043,8 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       }
     }
   }
+  # Majority: per-character missing / inapplicable colors (when chosen)
+  ley_data <- .add_missing_to_legend_data(ley_data, config)
 
   # ── Helper: overlay tip figures on an already-rendered phylogeny ────────────
   # Reads tip coordinates from .PlotPhyloEnv after the base plot is drawn.
@@ -1012,7 +1100,8 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
 
       for (i in seq_len(n_car_ov)) {
         col_tips     <- sapply(datos_ord[[caracteres[i]]], resolver_color,
-                               colores_estado = colores_por_car[[caracteres[i]]])
+                               colores_estado = colores_por_car[[caracteres[i]]],
+                               car = caracteres[i])
         radio_actual <- radio_base + (i - 1L) * incremento_radio
 
         # ── Ring i figures ───────────────────────────────────────────────────
@@ -1085,7 +1174,8 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       # ── Figures per column ────────────────────────────────────────────────────
       for (i in seq_along(caracteres)) {
         col_tips <- sapply(datos_ord[[caracteres[i]]], resolver_color,
-                           colores_estado = colores_por_car[[caracteres[i]]])
+                           colores_estado = colores_por_car[[caracteres[i]]],
+                           car = caracteres[i])
         points(rep(x_columnas[i], n_tips), yy_tip,
                pch = pch_fig, bg = col_tips, col = "black", cex = tam_fig)
       }
@@ -1294,16 +1384,12 @@ plot_superimposed_characters <- function(filogenia, config,
   tipo_arbol      <- config$tipo_arbol
   grosor1         <- config$grosor %||% 2
 
-  resolver_color <- function(valor, colores_estado) {
-    valor <- as.character(valor)
-    if (is.na(valor) || valor == "") return("gray70")
-    if (valor %in% names(colores_estado)) return(colores_estado[[valor]])
-    return("gray70")
-  }
+  resolver_color <- function(valor, colores_estado, car)
+    .ancestral_tip_color(valor, colores_estado, config, car)
 
   lista_ec <- lapply(caracteres, function(car) {
     col_e      <- colores_por_car[[car]]
-    tip_colors <- sapply(datos_ord[[car]], resolver_color, colores_estado = col_e)
+    tip_colors <- sapply(datos_ord[[car]], resolver_color, colores_estado = col_e, car = car)
     ec         <- init_edge_colors(filogenia)
     ec         <- apply_ancestral_algorithm(filogenia, tip_colors, ec, config)
     ec
@@ -1324,6 +1410,8 @@ plot_superimposed_characters <- function(filogenia, config,
       }
     }
   }
+  # Majority: per-character missing / inapplicable colors (when chosen)
+  ley_data <- .add_missing_to_legend_data(ley_data, config)
 
   if (exportar) {
     cat("    \u2192 Exporting to:", paste0(fn_export, ".", config$export_format %||% "png"), "\n")

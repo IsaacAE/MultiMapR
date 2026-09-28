@@ -173,6 +173,7 @@ include_state|Incluir el estado %s|Include state %s
 state_color|Color del estado %s|Color of state %s
 state_missing|faltante|missing
 state_inapp|inaplicable|inapplicable
+missing_fitch_note|En Fitch, ? y - se dibujan con el color de ambigüedad (paso A).|In Fitch, ? and - are drawn with the ambiguity color (step A).
 no_states|El carácter %s no tiene estados seleccionados.|Character %s has no state selected.
 step_tree|Árbol|Tree
 topology|Topología|Topology
@@ -299,8 +300,8 @@ help_poly|Polimorfismos y símbolos especiales|Polymorphisms and special symbols
 help_poly_slash|Polimorfismo separado por barra: el taxón presenta ambos estados.|Slash-separated polymorphism: the taxon shows both states.
 help_poly_comma|Polimorfismo de estados nominales separados por coma (requiere un separador CSV distinto de la coma).|Polymorphism of named states separated by a comma (needs a CSV separator other than the comma).
 help_poly_concat|Estados numéricos concatenados: 0 y 1 a la vez (en TNT/NEXUS, [01] o {01}).|Concatenated numeric states: 0 and 1 at once ([01] or {01} in TNT/NEXUS).
-help_missing|Dato faltante. Siempre gris, no editable, fuera de la leyenda.|Missing data. Always gray, not editable, left out of the legend.
-help_inapp|Inaplicable. Siempre gris; se distingue del faltante en las estadísticas.|Inapplicable. Always gray; kept apart from missing data in the statistics.
+help_missing|Dato faltante. Gris en el mapeo simple; en la reconstrucción por mayoría puede tener su propio color por carácter (y entra en la leyenda); en Fitch toma el color de ambigüedad.|Missing data. Gray in simple mapping; in the majority reconstruction it can have its own color per character (and enters the legend); in Fitch it takes the ambiguity color.
+help_inapp|Inaplicable. Igual que el faltante, pero con un color propio en la reconstrucción por mayoría; se distingue del faltante en las estadísticas.|Inapplicable. Like missing data, but with its own color in the majority reconstruction; kept apart from missing data in the statistics.
 help_modes|Modos de mapeo y optimizaciones|Mapping modes and optimizations
 help_simple|No infiere nada: dibuja los estados observados en las terminales sobre un árbol gris. Es la figura correcta cuando quieres mostrar datos, no hipótesis.|Infers nothing: draws the observed states at the tips on a gray tree. The right figure when you want to show data, not hypotheses.
 help_ancestral|Infiere el estado de los nodos internos y colorea las ramas. Es una hipótesis dependiente del criterio elegido: dilo en el pie de figura.|Infers the state of internal nodes and colors the branches. It is a hypothesis that depends on the chosen criterion: say so in the figure caption.
