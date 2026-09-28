@@ -183,7 +183,8 @@
 
     shiny::observeEvent(lang(), {
       tr <- trr()
-      for (id in c("tree_format", "matrix_format", "csv_header", "ladderize", "stats_sort"))
+      for (id in c("tree_format", "matrix_format", "csv_header", "ladderize", "stats_sort",
+                   "tip_end"))
         shiny::updateSelectInput(session, id, choices = .gui_select_choices(tr, id),
                                  selected = isolate(input[[id]]))
     }, ignoreInit = TRUE)
@@ -851,7 +852,8 @@
                        use_edge_length  = uses_lengths(),
                        ladderize        = ladder,
                        terminal_stretch = if (mt == 2L && !uses_lengths())
-                                            input$tip_mult %||% 1 else 1))
+                                            input$tip_mult %||% 1 else 1,
+                       tip_end          = input$tip_end %||% "round"))
   })
   spec_d <- shiny::debounce(spec, 400)
 

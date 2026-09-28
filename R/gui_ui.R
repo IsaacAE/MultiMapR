@@ -93,6 +93,8 @@
                                     c(tr("auto"), tr("yes"), tr("no"))),
     ladderize     = stats::setNames(c("TRUE", "right", "FALSE"),
                                     c(tr("ladder_bottom"), tr("ladder_top"), tr("ladder_none"))),
+    tip_end       = stats::setNames(c("round", "butt", "square"),
+                                    c(tr("tip_end_round"), tr("tip_end_butt"), tr("tip_end_square"))),
     stats_sort    = stats::setNames(c("none", "pct_missing", "pct_inapplicable", "character"),
                                     c(tr("sort_none"), tr("sort_missing"), tr("sort_inapp"),
                                       tr("sort_name"))),
@@ -458,6 +460,9 @@
     shiny::sliderInput("branch_width", t("branch_width"), min = 0.5, max = 8,
                        value = 2, step = 0.5, ticks = FALSE),
     tags$div(class = "mm-scale mb-3", t("thin_1"), t("normal_2"), t("thick_4"), tags$span("8")),
+    shiny::conditionalPanel("input.topology == 'cladogram'",
+      shiny::selectInput("tip_end", t("tip_end"), .gui_select_choices(tr, "tip_end"),
+                         selectize = FALSE)),
     shiny::sliderInput("tip_mult", t("terminal_stretch"), min = 1, max = 4,
                        value = 1, step = 0.25, pre = "\u00D7", ticks = FALSE),
     shiny::uiOutput("tip_note")

@@ -192,6 +192,10 @@ thin_1|fino 1|thin 1
 normal_2|normal 2|normal 2
 thick_4|grueso 4|thick 4
 terminal_stretch|Alargar ramas terminales|Stretch terminal branches
+tip_end|Puntas de las ramas|Branch tips
+tip_end_round|Redondeadas|Rounded
+tip_end_butt|Planas|Flat
+tip_end_square|Cuadradas|Square
 tip_bl|Sin efecto: se están usando longitudes de rama reales.|No effect: real branch lengths are being used.
 tip_simple|Sin efecto en el mapeo simple; solo aplica a la reconstrucción ancestral.|No effect in simple mapping; it only applies to ancestral reconstruction.
 step_view|Leyenda y vista|Legend and view

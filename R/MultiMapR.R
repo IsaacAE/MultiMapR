@@ -89,7 +89,7 @@
 #'
 #' @param phylogeny        Untouched \code{phylo} object.
 #' @param config           Configuration list (see \code{setup_mapping_config()}).
-#' @param branch_width,use_edge_length,ladderize,terminal_stretch
+#' @param branch_width,use_edge_length,ladderize,terminal_stretch,tip_end
 #'                         See \code{\link{execute_phylogeny}}.
 #' @return Invisibly, the updated \code{config}.
 #' @keywords internal
@@ -97,8 +97,12 @@
                                        branch_width     = 2,
                                        use_edge_length  = NULL,
                                        ladderize        = TRUE,
-                                       terminal_stretch = 1) {
+                                       terminal_stretch = 1,
+                                       tip_end          = "round") {
   config$terminal_stretch <- terminal_stretch
+  if (!tip_end %in% c("round", "butt", "square"))
+    stop("`tip_end` must be one of \"round\", \"butt\" or \"square\".")
+  config$tip_end <- tip_end
 
   # -- Branch width (parameter overrides menu default of 2) ------------------
   if (!is.numeric(branch_width) || length(branch_width) != 1L || branch_width <= 0)
@@ -219,6 +223,10 @@
 #'                           stay at length 1 so the topology is preserved;
 #'                           only tip labels/colors get more visual space.
 #'                           Default \code{1} (no change).
+#' @param tip_end            Cladogram only: style of the branch tips,
+#'                           \code{"round"} (default), \code{"butt"} (flat) or
+#'                           \code{"square"}. Sibling branches always converge
+#'                           on a single rounded point at each node.
 #' @return Invisible NULL.
 #' @export
 execute_phylogeny <- function(phylogeny, character_data,
@@ -234,7 +242,8 @@ execute_phylogeny <- function(phylogeny, character_data,
                               use_palettes         = FALSE,
                               palette              = NULL,
                               ambiguity_color      = NULL,
-                              terminal_stretch     = 1) {
+                              terminal_stretch     = 1,
+                              tip_end              = "round") {
   tryCatch({
 
     # POLYMORPHISM: If file paths (character) are passed, load data automatically
@@ -296,7 +305,8 @@ execute_phylogeny <- function(phylogeny, character_data,
                                            branch_width     = branch_width,
                                            use_edge_length  = use_edge_length,
                                            ladderize        = ladderize,
-                                           terminal_stretch = terminal_stretch)
+                                           terminal_stretch = terminal_stretch,
+                                           tip_end          = tip_end)
 
       # -- What next? ----------------------------------------------------------
       next_action <- prompt_post_run_menu(allow_algorithm_change = (config$mapping_type == 2))

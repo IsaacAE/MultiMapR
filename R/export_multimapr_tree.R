@@ -440,15 +440,47 @@
 # ------------------------------------------------------------------------------
 # CLADOGRAM
 # Direct geometry: diagonals parent -> child. Offset at both endpoints.
+#
+# Node junctions: with square/butt line ends, diagonals leaving the same parent
+# at different angles leave corners sticking out of each other. After drawing
+# the edges, a round "joint" (a tiny round-capped stroke of the node's incoming
+# color) is stamped on every internal node so all children converge on a single
+# point, whatever `tip_end` is.
+# `tip_end` controls the free ends of the branches: "round" | "butt" | "square".
 # ------------------------------------------------------------------------------
 
-.emtree_render_cladogram <- function(pp, tree, color_list, lwd, offsets) {
+.emtree_lend_code <- function(tip_end) {
+  switch(tip_end %||% "round", "round" = 0L, "butt" = 1L, "square" = 2L,
+         stop("`tip_end` must be one of \"round\", \"butt\" or \"square\"."))
+}
+
+.emtree_render_cladogram <- function(pp, tree, color_list, lwd, offsets,
+                                     tip_end = "round") {
   xx <- pp$xx
   yy <- pp$yy
 
   edges      <- tree$edge
   parent_idx <- edges[, 1L]
   child_idx  <- edges[, 2L]
+  n_tips     <- Ntip(tree)
+  lend_code  <- .emtree_lend_code(tip_end)
+
+  # Internal nodes, their incoming edge (NA = root) and a reference neighbor
+  # (parent, or first child for the root) that sets the joint's direction.
+  internal_nodes <- unique(parent_idx[parent_idx > n_tips])
+  entry_idx      <- match(internal_nodes, child_idx)
+  neighbor       <- ifelse(is.na(entry_idx),
+                           child_idx[match(internal_nodes, parent_idx)],
+                           parent_idx[entry_idx])
+  ux <- xx[neighbor] - xx[internal_nodes]
+  uy <- yy[neighbor] - yy[internal_nodes]
+  len <- sqrt(ux^2 + uy^2)
+  len[len == 0] <- 1
+  # Joint stroke length: negligible in data units but non-zero, so every
+  # device draws its round caps (zero-length strokes are device-dependent).
+  eps <- 1e-4 * max(diff(range(xx)), diff(range(yy)), 1e-8)
+  jx  <- ux / len * eps
+  jy  <- uy / len * eps
 
   N <- length(color_list)
 
@@ -466,7 +498,20 @@
              y1   = yy[child_idx]  + dy,
              col  = ec,
              lwd  = lwd_i,
-             lend = 1L)
+             lend = lend_code)
+
+    # Round joints: all edges leaving a node meet on one point.
+    rc        <- attr(ec, "root_color")
+    joint_col <- ifelse(is.na(entry_idx),
+                        if (!is.null(rc)) rc else ec[match(internal_nodes, parent_idx)],
+                        ec[entry_idx])
+    segments(x0   = xx[internal_nodes] + dx,
+             y0   = yy[internal_nodes] + dy,
+             x1   = xx[internal_nodes] + dx + jx,
+             y1   = yy[internal_nodes] + dy + jy,
+             col  = joint_col,
+             lwd  = lwd_i,
+             lend = 0L)
   }
 }
 
@@ -674,6 +719,10 @@
 #'                       when the tree has no real edge lengths, so tip labels and
 #'                       colors get more visual space. Internal branches stay at
 #'                       length 1 and the topology is preserved. Default \code{1}.
+#' @param tip_end        Cladogram only: style of the free branch ends,
+#'                       \code{"round"} (default), \code{"butt"} or \code{"square"}.
+#'                       Internal nodes always get a round joint so sibling
+#'                       branches converge on a single point.
 #' @param legend_title   Single legend block title string (legacy mode). \code{NULL} = no title.
 #' @param overlay_fn     Optional function called after the legend, inside the open device,
 #'                       with \code{par("usr")} already set. Receives \code{pp}, \code{cex_aj},
@@ -726,6 +775,9 @@ export_multimapr_tree <- function(tree,
                                   # -- this only gives tip labels/colors more visual room.
                                   # 1 = no change (default, backward compatible).
                                   terminal_stretch = 1,
+                                  # tip_end: cladogram branch-end style,
+                                  # "round" (default) | "butt" | "square".
+                                  tip_end       = "round",
                                   mar           = c(1, 1, 1, 4),
                                   # -- CUSTOM DIMENSION PARAMETERS -----------------------
                                   # NULL -> automatic dimensions are used, calculated
@@ -763,6 +815,7 @@ export_multimapr_tree <- function(tree,
   # -- 0. Argument validation ------------------------------------------------
   .emtree_validate_tree(tree)
   .emtree_validate_color_list(color_list, nrow(tree$edge))
+  .emtree_lend_code(tip_end)   # validates tip_end
   .emtree_validate_filename(filename)
   .emtree_validate_type_format(type, format)
 
@@ -992,7 +1045,8 @@ export_multimapr_tree <- function(tree,
       .emtree_render_phylogram(pp, tree, color_list, lwd_vec, offsets)
 
     } else if (type == "cladogram") {
-      .emtree_render_cladogram(pp, tree, color_list, lwd_vec, offsets)
+      .emtree_render_cladogram(pp, tree, color_list, lwd_vec, offsets,
+                               tip_end = tip_end)
 
     } else {
       .emtree_render_fan(pp, tree, color_list, lwd_vec, offsets)
@@ -1182,6 +1236,8 @@ if (FALSE) {
 #' @param terminal_stretch Multiplier applied only to the terminal (tip) branches
 #'                        when the tree has no real edge lengths. Internal
 #'                        branches stay at length 1. Default \code{1}.
+#' @param tip_end         Cladogram only: \code{"round"} (default), \code{"butt"}
+#'                        or \code{"square"} branch ends.
 #' @param legend_title    Single legend block title (legacy mode).
 #' @param overlay_fn      Optional function called after the legend, inside the
 #'                        active device with \code{par("usr")} already set.
@@ -1197,6 +1253,7 @@ plot_multimapr_screen <- function(tree,
                                   use_edge_length = TRUE,
                                   ladderize       = FALSE,
                                   terminal_stretch = 1,
+                                  tip_end        = "round",
                                   legend_by_char = NULL,
                                   legend_labels  = NULL,
                                   legend_colors  = NULL,
@@ -1215,6 +1272,7 @@ plot_multimapr_screen <- function(tree,
 
   .emtree_validate_tree(tree)
   .emtree_validate_color_list(color_list, nrow(tree$edge))
+  .emtree_lend_code(tip_end)   # validates tip_end
 
   # Apply ladderize / edge length before rendering (mirrors export behavior)
   if (identical(ladderize, TRUE)) {
@@ -1287,7 +1345,8 @@ plot_multimapr_screen <- function(tree,
     .emtree_render_phylogram(pp, tree, color_list, lwd_vec, offsets)
 
   } else if (type == "cladogram") {
-    .emtree_render_cladogram(pp, tree, color_list, lwd_vec, offsets)
+    .emtree_render_cladogram(pp, tree, color_list, lwd_vec, offsets,
+                               tip_end = tip_end)
 
   } else if (type == "fan") {
     .emtree_render_fan(pp, tree, color_list, lwd_vec, offsets)

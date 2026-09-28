@@ -335,6 +335,7 @@ plot_simple_mapping <- function(filogenia, config) {
     } else {
 
       par(mar = c(1, 1, 2, 1), xpd = TRUE)
+      if (tipo_arbol == "cladogram") par(lend = config$tip_end %||% "round")
 
       if (simple_mode == "tip_color") {
         # ── MODE: colored terminal branches — one character only ───────────────
@@ -791,6 +792,7 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
       height        = config$height,
        ladderize     = config$ladderize %||% FALSE,
        terminal_stretch = config$terminal_stretch %||% 1,
+       tip_end          = config$tip_end %||% "round",
        legend_labels = ley_data$labels,
        legend_colors = ley_data$colors,
        legend_corner = config$legend_corner %||% "bottomleft",
@@ -806,6 +808,7 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
     lwd            = config$grosor,
     ladderize      = config$ladderize %||% FALSE,
       terminal_stretch = config$terminal_stretch %||% 1,
+      tip_end          = config$tip_end %||% "round",
     legend_labels  = if (!is.null(colores_estado)) names(colores_estado) else NULL,
     legend_colors  = if (!is.null(colores_estado)) unname(colores_estado) else NULL,
     legend_corner  = config$legend_corner %||% "bottomleft",
@@ -1095,6 +1098,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       width           = config$width,
       height          = config$height,
       offset_range    = config$rango_desfase %||% 0.1,
+      tip_end         = config$tip_end %||% "round",
       legend_by_char  = ley_data$by_char,
       legend_corner   = config$legend_corner %||% "bottomleft",
       # For fan, hide engine labels and redraw them in the overlay,
@@ -1121,6 +1125,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
     type            = tipo_arbol,
     lwd             = config$grosor,
     offset_range    = config$rango_desfase %||% 0.1,
+    tip_end         = config$tip_end %||% "round",
     legend_by_char  = ley_data$by_char,
     legend_corner   = config$legend_corner %||% "bottomleft",
     hide_fan_labels = (tipo_arbol == "fan"),
@@ -1309,6 +1314,7 @@ plot_superimposed_characters <- function(filogenia, config,
       use_edge_length = isTRUE(config$use_edge_length),
        ladderize       = config$ladderize %||% FALSE,
        terminal_stretch = config$terminal_stretch %||% 1,
+       tip_end          = config$tip_end %||% "round",
        legend_by_char  = ley_data$by_char,
        legend_corner   = config$legend_corner %||% "bottomleft"
      )
@@ -1324,6 +1330,7 @@ plot_superimposed_characters <- function(filogenia, config,
     use_edge_length = isTRUE(config$use_edge_length),
     ladderize       = config$ladderize %||% FALSE,
       terminal_stretch = config$terminal_stretch %||% 1,
+      tip_end          = config$tip_end %||% "round",
     legend_by_char  = ley_data$by_char,
     legend_corner   = config$legend_corner %||% "bottomleft"
   )
