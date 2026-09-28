@@ -184,7 +184,7 @@
     shiny::observeEvent(lang(), {
       tr <- trr()
       for (id in c("tree_format", "matrix_format", "csv_header", "ladderize", "stats_sort",
-                   "tip_end"))
+                   "tip_end", "legend_layout"))
         shiny::updateSelectInput(session, id, choices = .gui_select_choices(tr, id),
                                  selected = isolate(input[[id]]))
     }, ignoreInit = TRUE)
@@ -884,7 +884,8 @@
                        show_labels      = isTRUE(input$show_labels %||% TRUE),
                        label_size       = input$label_size %||% 1,
                        label_color      = input$label_color %||% "#000000",
-                       show_legend      = isTRUE(input$show_legend %||% TRUE)))
+                       show_legend      = isTRUE(input$show_legend %||% TRUE),
+                       legend_layout    = input$legend_layout %||% "vertical"))
   })
   spec_d <- shiny::debounce(spec, 400)
 

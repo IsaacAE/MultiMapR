@@ -201,6 +201,9 @@ clado_stretch|Estirar el árbol a todo el ancho|Stretch the tree to the full wid
 branch_angle|Ángulo de las ramas|Branch angle
 branch_angle_hint|45° = uniones en ángulo recto. Con ángulos menores el árbol es más ancho y las capas de color convergen menos en los nodos. Solo en reconstrucción ancestral.|45° = right-angle joints. Smaller angles make the tree wider and the colour lanes converge less on the nodes. Ancestral reconstruction only.
 show_legend|Mostrar leyenda|Show legend
+legend_layout|Caracteres en la leyenda|Characters in the legend
+legend_vertical|Uno debajo de otro|Stacked vertically
+legend_horizontal|Uno junto a otro|Side by side
 show_labels|Mostrar nombres de las terminales|Show tip labels
 label_size|Tamaño de los nombres|Label size
 label_color|Color de los nombres|Label color

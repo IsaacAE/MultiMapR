@@ -142,8 +142,8 @@ than hidden.
 | **B · Characters** | Searchable list with the number of states and % missing per character. Selection order is drawing order; ancestral reconstruction keeps the first 3 and says so. |
 | **C · States and colours** | A global palette plus one card per character: every observed state can be recoloured or unticked (unticked states are drawn in grey). `?` (missing) and `-` (inapplicable) get their own colour per character in the depth-weighted majority reconstruction (and then appear in the legend); they stay grey in simple mapping and take the ambiguity colour under Fitch. |
 | **D · Tree** | Phylogram / cladogram / fan, branch lengths, ladderisation, branch width and terminal-branch stretch; for cladograms, the shape of the branch tips (round / flat / square) and the branch angle (30–60°, or stretched to the full width). |
-| **E · Legend and view** | Legend on / off and its corner; species names on / off, with their size and colour; preview height. |
-| **F · Export** | PNG (300 dpi) or vector PDF, file name, automatic or custom dimensions in inches, “Download” and “Save to Exports/”., and an “Export preview” at the chosen size. |
+| **E · Legend and view** | Legend on / off, its corner and whether the characters are stacked or side by side; species names on / off, with their size and colour; preview height. |
+| **F · Export** | PNG (300 dpi) or vector PDF, file name, automatic or custom dimensions in inches, “Download”, “Save to Exports/” and an “Export preview” at the chosen size. |
 
 The preview regenerates whenever an option changes, with the same
 proportions as the exported file (12 in wide, height growing with the
@@ -364,7 +364,8 @@ execute_phylogeny("arbol_aves.tre", "matriz_aves.csv",
                   show_labels  = TRUE,
                   label_size   = 1.2,      # multiplier of the automatic size
                   label_color  = "grey20",
-                  show_legend  = FALSE)
+                  show_legend  = TRUE,
+                  legend_layout = "horizontal")
 ```
 
 | Argument | Default | Effect |
@@ -375,6 +376,7 @@ execute_phylogeny("arbol_aves.tre", "matriz_aves.csv",
 | `label_size` | `1` | Multiplier of the automatic label size (which already depends on the number of terminals). |
 | `label_color` | `"black"` | Colour of the species names (R colour name or hex code). |
 | `show_legend` | `TRUE` | Draw the legend of character states; when `FALSE` no space is reserved for it. |
+| `legend_layout` | `"vertical"` | One legend block per character, stacked (`"vertical"`) or side by side (`"horizontal"`). Symbols, state names and titles are aligned across blocks, and the space the legend needs is reserved beside or below the tree. |
 
 **Cladograms with several characters.** When two or three characters are
 superimposed, each character is drawn as a lane parallel to the branch and the

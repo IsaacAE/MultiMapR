@@ -11,7 +11,8 @@
   legend_colors = NULL,
   legend_title = NULL,
   pch = 15,
-  cex_ley = 0.8
+  cex_ley = 0.8,
+  legend_layout = "vertical"
 )
 }
 \arguments{
@@ -29,6 +30,8 @@ NULL takes precedence over \code{legend_labels}.}
 \item{pch}{Legend symbol (default 15 = filled square).}
 
 \item{cex_ley}{Font size for the legend.}
+
+\item{legend_layout}{"vertical" (blocks stacked) or "horizontal" (side by side).}
 }
 \description{
 Supports two modes:

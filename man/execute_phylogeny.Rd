@@ -26,6 +26,7 @@ execute_phylogeny(
   label_size = 1,
   label_color = "black",
   show_legend = TRUE,
+  legend_layout = "vertical",
   missing_colors = NULL
 )
 }
@@ -128,6 +129,11 @@ again as large).}
 \item{show_legend}{Logical. Draw the legend of character states
 (default \code{TRUE}). When \code{FALSE} no space
 is reserved for it.}
+
+\item{legend_layout}{Arrangement of the per-character legend blocks:
+\code{"vertical"} (default, stacked) or
+\code{"horizontal"} (side by side). Symbols, state
+names and titles are aligned in both.}
 
 \item{missing_colors}{Colors for missing (\code{"?"}) and inapplicable
 (\code{"-"}) tips in the ancestral reconstruction

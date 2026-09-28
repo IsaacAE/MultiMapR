@@ -17,6 +17,7 @@
   label_size = 1,
   label_color = "black",
   show_legend = TRUE,
+  legend_layout = "vertical",
   missing_colors = NULL
 )
 }
@@ -25,7 +26,7 @@
 
 \item{config}{Configuration list (see \code{setup_mapping_config()}).}
 
-\item{branch_width, use_edge_length, ladderize, terminal_stretch, tip_end, branch_angle, show_labels, label_size, label_color, show_legend, missing_colors}{See \code{\link{execute_phylogeny}}.}
+\item{branch_width, use_edge_length, ladderize, terminal_stretch, tip_end, branch_angle, show_labels, label_size, label_color, show_legend, legend_layout, missing_colors}{See \code{\link{execute_phylogeny}}.}
 }
 \value{
 Invisibly, the updated \code{config}.

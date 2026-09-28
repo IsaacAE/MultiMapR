@@ -24,6 +24,7 @@ plot_multimapr_screen(
   legend_colors = NULL,
   legend_corner = "bottomleft",
   legend_title = NULL,
+  legend_layout = "vertical",
   overlay_fn = NULL,
   hide_fan_labels = FALSE,
   header_labels = NULL
@@ -83,6 +84,9 @@ grouped legend. If not NULL takes precedence over
 \code{"bottomleft"} (default) or \code{"bottomright"}.}
 
 \item{legend_title}{Single legend block title (legacy mode).}
+
+\item{legend_layout}{Grouped legend: \code{"vertical"} (default) or
+\code{"horizontal"} blocks.}
 
 \item{overlay_fn}{Optional function called after the legend, inside the
 active device with \code{par("usr")} already set.}

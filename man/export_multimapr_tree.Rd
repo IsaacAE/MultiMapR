@@ -29,6 +29,7 @@ export_multimapr_tree(
   legend_colors = NULL,
   legend_corner = "bottomleft",
   legend_title = NULL,
+  legend_layout = "vertical",
   overlay_fn = NULL,
   hide_fan_labels = FALSE,
   header_labels = NULL
@@ -115,6 +116,10 @@ When not \code{NULL}, takes precedence over \code{legend_labels} /
 \code{"bottomleft"} (default), or \code{"bottomright"}.}
 
 \item{legend_title}{Single legend block title string (legacy mode). \code{NULL} = no title.}
+
+\item{legend_layout}{Grouped legend: \code{"vertical"} (default) stacks one block
+per character; \code{"horizontal"} places them side by side.
+Symbols, state names and titles are aligned in both.}
 
 \item{overlay_fn}{Optional function called after the legend, inside the open device,
 with \code{par("usr")} already set. Receives \code{pp}, \code{cex_aj},

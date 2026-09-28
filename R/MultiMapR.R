@@ -89,7 +89,7 @@
 #'
 #' @param phylogeny        Untouched \code{phylo} object.
 #' @param config           Configuration list (see \code{setup_mapping_config()}).
-#' @param branch_width,use_edge_length,ladderize,terminal_stretch,tip_end,branch_angle,show_labels,label_size,label_color,show_legend,missing_colors
+#' @param branch_width,use_edge_length,ladderize,terminal_stretch,tip_end,branch_angle,show_labels,label_size,label_color,show_legend,legend_layout,missing_colors
 #'                         See \code{\link{execute_phylogeny}}.
 #' @return Invisibly, the updated \code{config}.
 #' @keywords internal
@@ -104,6 +104,7 @@
                                        label_size       = 1,
                                        label_color      = "black",
                                        show_legend      = TRUE,
+                                       legend_layout    = "vertical",
                                        missing_colors   = NULL) {
   config$terminal_stretch <- terminal_stretch
   if (!tip_end %in% c("round", "butt", "square"))
@@ -116,6 +117,7 @@
   config$label_size  <- label_size
   config$label_color <- label_color
   config$show_legend <- isTRUE(show_legend)
+  config$legend_layout <- match.arg(legend_layout, c("vertical", "horizontal"))
   # NULL keeps what the config already carries (e.g. set by the interface)
   if (!is.null(missing_colors))
     config$missing_colors <- .normalize_missing_colors(missing_colors, config$caracteres)
@@ -261,6 +263,10 @@
 #' @param show_legend        Logical. Draw the legend of character states
 #'                           (default \code{TRUE}). When \code{FALSE} no space
 #'                           is reserved for it.
+#' @param legend_layout      Arrangement of the per-character legend blocks:
+#'                           \code{"vertical"} (default, stacked) or
+#'                           \code{"horizontal"} (side by side). Symbols, state
+#'                           names and titles are aligned in both.
 #' @param missing_colors     Colors for missing (\code{"?"}) and inapplicable
 #'                           (\code{"-"}) tips in the ancestral reconstruction
 #'                           with the default (depth-weighted majority)
@@ -295,6 +301,7 @@ execute_phylogeny <- function(phylogeny, character_data,
                               label_size           = 1,
                               label_color          = "black",
                               show_legend          = TRUE,
+                              legend_layout        = "vertical",
                               missing_colors       = NULL) {
   tryCatch({
 
@@ -364,6 +371,7 @@ execute_phylogeny <- function(phylogeny, character_data,
                                            label_size       = label_size,
                                            label_color      = label_color,
                                            show_legend      = show_legend,
+                                           legend_layout    = legend_layout,
                                            missing_colors   = missing_colors)
 
       # -- What next? ----------------------------------------------------------

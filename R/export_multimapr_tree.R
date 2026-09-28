@@ -197,6 +197,133 @@
   list(mar = mar, corner = corner)
 }
 
+#' Horizontal gap between a legend symbol and its label, in character widths
+#' (\code{legend(x.intersp = )}; R's default of 1 leaves the text too close).
+#' Used for drawing and measuring every legend so reserved space matches.
+#' @keywords internal
+.LEGEND_X_INTERSP <- 1.6
+
+#' Legend spacing that grows with the symbol size
+#'
+#' \code{legend()} spaces rows and places the label from the TEXT size, so a
+#' symbol much larger than the text (\code{pt.cex >> cex}, e.g. big terminal
+#' figures) overlaps the next row and its own label. Both spacings are scaled
+#' by the symbol/text ratio and never drop below the defaults.
+#'
+#' @param cex    Legend text size.
+#' @param pt_cex Legend symbol size.
+#' @return List with \code{x} (\code{x.intersp}) and \code{y} (\code{y.intersp}).
+#' @keywords internal
+.legend_intersp <- function(cex, pt_cex) {
+  r <- max(1, pt_cex / cex)
+  list(x = max(.LEGEND_X_INTERSP, 0.3 * r + 1.1),
+       y = max(1, 0.5 * r))
+}
+
+#' Positions of the per-character legend blocks
+#'
+#' Measures every block with \code{legend(..., plot = FALSE)} and lays them out
+#' together, so symbols, state names and titles line up across characters:
+#' \itemize{
+#'   \item \code{"vertical"}: blocks stacked in character order (first on top),
+#'     all starting at the same x.
+#'   \item \code{"horizontal"}: blocks side by side in character order, all
+#'     starting at the same top y.
+#' }
+#' The whole group is anchored to \code{corner} of the plot region. Blocks are
+#' then drawn with \code{xjust = 0, yjust = 1} at the returned coordinates.
+#'
+#' @param blocks  List of \code{list(title, labels)}.
+#' @param corner  "topleft" | "topright" | "bottomleft" | "bottomright".
+#' @param layout  "vertical" or "horizontal".
+#' @param cex,pt_cex,pch Text size, symbol size and symbol used by the legend.
+#' @return List: \code{x}, \code{y} (top-left of every block, data units) and
+#'   \code{w}, \code{h} (size of the whole group).
+#' @keywords internal
+.legend_layout <- function(blocks, corner, layout = "vertical",
+                           cex = 0.8, pt_cex = cex * 1.2, pch = 15) {
+  layout <- match.arg(layout, c("vertical", "horizontal"))
+  usr <- par("usr")
+  n   <- length(blocks)
+  if (n == 0L) return(list(x = numeric(0), y = numeric(0), w = 0, h = 0))
+  sp <- .legend_intersp(cex, pt_cex)
+  # Titles are drawn apart from legend() (see .legend_draw_blocks()): with a
+  # built-in title wider than its entries, legend() centres the entries under
+  # it and the symbols of different blocks would no longer line up.
+  rects <- lapply(blocks, function(b)
+    legend(x = usr[1L], y = usr[4L], legend = b$labels, pch = pch,
+           x.intersp = sp$x, y.intersp = sp$y,
+           bty = "n", cex = cex, pt.cex = pt_cex,
+           xjust = 0, yjust = 1, plot = FALSE)$rect)
+  title_h <- .legend_title_height(cex)
+  title_w <- vapply(blocks, function(b)
+    if (is.null(b$title)) 0 else strwidth(b$title, cex = cex) + .legend_title_pad(cex), numeric(1))
+  w <- pmax(vapply(rects, function(r) r$w, numeric(1)), title_w)
+  h <- vapply(rects, function(r) r$h, numeric(1)) + title_h
+  gap_y <- strheight("M", cex = cex) * 1.4
+  gap_x <- strwidth("MM", cex = cex)
+  if (layout == "horizontal") {
+    W <- sum(w) + gap_x * (n - 1L); H <- max(h)
+    x <- c(0, cumsum(w + gap_x))[seq_len(n)]
+    y <- rep(0, n)
+  } else {
+    W <- max(w); H <- sum(h) + gap_y * (n - 1L)
+    x <- rep(0, n)
+    y <- -c(0, cumsum(h + gap_y))[seq_len(n)]
+  }
+  x_left <- if (grepl("right", corner)) usr[2L] - W else usr[1L]
+  y_top  <- if (grepl("top",   corner)) usr[4L]     else usr[3L] + H
+  list(x = x_left + x, y = y_top + y, w = W, h = H)
+}
+
+#' Height reserved for a legend block title (data units, current device)
+#' @param cex Legend text size.
+#' @keywords internal
+.legend_title_height <- function(cex) strheight("M", cex = cex) * 1.6
+
+#' Left offset of a legend block title, so it starts where the symbols do
+#' @param cex Legend text size.
+#' @keywords internal
+.legend_title_pad <- function(cex) strwidth("m", cex = cex) * 0.5
+
+#' Draws legend blocks at the positions computed by \code{.legend_layout()}
+#'
+#' Each block is its title (left-aligned, drawn with \code{text()}) above a
+#' title-less \code{legend()}, so symbols, state names and titles line up
+#' across blocks.
+#'
+#' @param lay     Output of \code{.legend_layout()}.
+#' @param blocks  List of \code{list(title, labels, colors)}.
+#' @param cex,pt_cex,pch Text size, symbol size and symbol.
+#' @param filled  \code{TRUE} for fillable symbols (21-25): colors go to
+#'   \code{pt.bg} with a black border; otherwise to \code{col}.
+#' @keywords internal
+.legend_draw_blocks <- function(lay, blocks, cex, pt_cex, pch, filled = FALSE) {
+  title_h <- .legend_title_height(cex)
+  pad     <- .legend_title_pad(cex)
+  sp      <- .legend_intersp(cex, pt_cex)
+  for (k in seq_along(blocks)) {
+    b <- blocks[[k]]
+    if (!is.null(b$title))
+      text(lay$x[k] + pad, lay$y[k], labels = b$title, adj = c(0, 1), cex = cex)
+    args <- list(x = lay$x[k], y = lay$y[k] - title_h, legend = b$labels, pch = pch,
+                 x.intersp = sp$x, y.intersp = sp$y, bty = "n", cex = cex, pt.cex = pt_cex,
+                 horiz = FALSE, xjust = 0, yjust = 1)
+    if (filled) { args$pt.bg <- b$colors; args$col <- "black" } else args$col <- b$colors
+    do.call(legend, args)
+  }
+  invisible(NULL)
+}
+
+#' Blocks of a grouped legend in the form expected by \code{.legend_layout()}
+#' @param legend_by_char Named list character -> list(labels, colors).
+#' @keywords internal
+.legend_blocks <- function(legend_by_char) {
+  keep <- vapply(legend_by_char, function(b) length(b$labels) > 0L, logical(1))
+  Map(function(nm, b) list(title = nm, labels = b$labels, colors = b$colors),
+      names(legend_by_char)[keep], legend_by_char[keep])
+}
+
 #' Measures the space occupied by the legend in data coordinates using
 #' `legend(..., plot = FALSE)`, which calculates the rect without rendering.
 #'
@@ -210,13 +337,15 @@
 #' @param legend_labels  Flat label vector (legacy mode).
 #' @param legend_title   Block title (legacy mode).
 #' @param cex_ley        Legend font size.
+#' @param legend_layout  "vertical" or "horizontal" (grouped legend only).
 #' @return List: `dx` (extra X units), `dy` (extra Y units),
 #'         `going_down` (bool), `on_right` (bool).
 .emtree_measure_legend <- function(corner,
                                    legend_by_char = NULL,
                                    legend_labels  = NULL,
                                    legend_title   = NULL,
-                                   cex_ley        = 0.8) {
+                                   cex_ley        = 0.8,
+                                   legend_layout  = "vertical") {
 
   going_down <- grepl("top",   corner)
   on_right   <- grepl("right", corner)
@@ -224,7 +353,8 @@
 
   # -- Internal function: measures a legend block with plot=FALSE -------------
   measure_block <- function(labels, title_txt, x_ref, y_ref) {
-    lg <- legend(x      = x_ref,
+    lg <- legend(x.intersp = .LEGEND_X_INTERSP,
+                 x      = x_ref,
                  y      = y_ref,
                  legend = labels,
                  pch    = 15,
@@ -249,15 +379,10 @@
   line_h  <- strheight("M", cex = cex_ley) * 1.4
 
   if (!is.null(legend_by_char) && length(legend_by_char) > 0L) {
-    y_cursor <- y_ref
-    for (nm in names(legend_by_char)) {
-      blk  <- legend_by_char[[nm]]
-      rect <- measure_block(blk$labels, nm, x_ref, y_cursor)
-      total_w  <- max(total_w, rect$w)
-      total_h  <- total_h + rect$h + line_h
-      y_cursor <- if (going_down) y_cursor - rect$h - line_h
-      else            y_cursor + rect$h + line_h
-    }
+    lay     <- .legend_layout(.legend_blocks(legend_by_char), corner, legend_layout,
+                              cex = cex_ley, pt_cex = cex_ley * 1.2, pch = 15)
+    total_w <- lay$w
+    total_h <- lay$h
   } else if (!is.null(legend_labels) && length(legend_labels) > 0L) {
     rect    <- measure_block(legend_labels, legend_title, x_ref, y_ref)
     total_w <- rect$w
@@ -293,68 +418,28 @@
 #' @param legend_title   Single block title (legacy mode, string or NULL).
 #' @param pch            Legend symbol (default 15 = filled square).
 #' @param cex_ley        Font size for the legend.
+#' @param legend_layout  "vertical" (blocks stacked) or "horizontal" (side by side).
 .emtree_draw_legend <- function(corner,
                                 legend_by_char = NULL,
                                 legend_labels  = NULL,
                                 legend_colors  = NULL,
                                 legend_title   = NULL,
                                 pch            = 15,
-                                cex_ley        = 0.8) {
+                                cex_ley        = 0.8,
+                                legend_layout  = "vertical") {
 
   old_xpd <- par("xpd")
   par(xpd = NA)
   on.exit(par(xpd = old_xpd))
 
   # -- Grouped mode: one block per character with header ---------------------
+  # All blocks are laid out together (.legend_layout) and drawn left-justified
+  # with left-aligned titles, so symbols and state names line up.
   if (!is.null(legend_by_char) && length(legend_by_char) > 0L) {
-
-    # Determine starting position based on the chosen corner.
-    # `legend()` is used cumulatively: each block returns its `rect`
-    # and the next one is positioned just below (or above, depending on corner).
-    usr <- par("usr")   # c(x1, x2, y1, y2)
-
-    # Vertical spacing between blocks (in data units)
-    line_h <- strheight("M", cex = cex_ley) * 1.4
-
-    # Starting position based on corner
-    going_down <- grepl("top", corner)
-    x_start <- if (grepl("left",  corner)) usr[1L] else usr[2L]
-    y_start <- if (going_down)             usr[4L] else usr[3L]
-
-    y_cursor <- y_start
-
-    for (nm in names(legend_by_char)) {
-      block <- legend_by_char[[nm]]
-      lbl   <- block$labels
-      col   <- block$colors
-
-      if (length(lbl) == 0L) next
-
-      # Character header (drawn as block title)
-      lg <- legend(
-        x      = x_start,
-        y      = y_cursor,
-        legend = lbl,
-        col    = col,
-        pch    = pch,
-        title  = nm,          # character name as header
-        bty    = "n",
-        cex    = cex_ley,
-        horiz  = FALSE,
-        pt.cex = cex_ley * 1.2,
-        xjust  = if (grepl("right", corner)) 1 else 0,
-        yjust  = if (going_down) 1 else 0
-      )
-
-      # Advance cursor: block height + extra spacing between blocks
-      block_h <- lg$rect$h
-      if (going_down) {
-        y_cursor <- y_cursor - block_h - line_h
-      } else {
-        y_cursor <- y_cursor + block_h + line_h
-      }
-    }
-
+    blocks <- .legend_blocks(legend_by_char)
+    lay    <- .legend_layout(blocks, corner, legend_layout,
+                             cex = cex_ley, pt_cex = cex_ley * 1.2, pch = pch)
+    .legend_draw_blocks(lay, blocks, cex = cex_ley, pt_cex = cex_ley * 1.2, pch = pch)
     return(invisible(NULL))
   }
 
@@ -362,7 +447,7 @@
   if (is.null(legend_labels) || length(legend_labels) == 0L)
     return(invisible(NULL))
 
-  legend(corner,
+  legend(corner, x.intersp = .LEGEND_X_INTERSP,
          legend = legend_labels,
          col    = legend_colors,
          pch    = pch,
@@ -938,6 +1023,9 @@
 #' @param label_size     Multiplier of the automatic tip-label size (default \code{1}).
 #' @param label_color    Color of the tip labels (default \code{"black"}).
 #' @param legend_title   Single legend block title string (legacy mode). \code{NULL} = no title.
+#' @param legend_layout  Grouped legend: \code{"vertical"} (default) stacks one block
+#'                       per character; \code{"horizontal"} places them side by side.
+#'                       Symbols, state names and titles are aligned in both.
 #' @param overlay_fn     Optional function called after the legend, inside the open device,
 #'                       with \code{par("usr")} already set. Receives \code{pp}, \code{cex_aj},
 #'                       \code{label_offset_aj}, \code{R_tips}, and \code{gap_u}.
@@ -1028,6 +1116,9 @@ export_multimapr_tree <- function(tree,
                                   legend_colors  = NULL,
                                   legend_corner  = "bottomleft",
                                   legend_title   = NULL,
+                                  # legend_layout: per-character blocks stacked
+                                  # ("vertical") or side by side ("horizontal").
+                                  legend_layout  = "vertical",
                                   # -- OVERLAY CALLBACK ----------------------------------
                                   # Optional function executed AFTER the legend,
                                   # inside the same open device and with par("usr")
@@ -1049,6 +1140,7 @@ export_multimapr_tree <- function(tree,
   .emtree_lend_code(tip_end)   # validates tip_end
   branch_angle <- .emtree_branch_angle(branch_angle)
   .emtree_validate_labels(show_labels, label_size, label_color)
+  legend_layout <- match.arg(legend_layout, c("vertical", "horizontal"))
   .emtree_validate_filename(filename)
   .emtree_validate_type_format(type, format)
 
@@ -1212,7 +1304,8 @@ export_multimapr_tree <- function(tree,
           legend_by_char = if (has_grouped_legend) legend_by_char else NULL,
           legend_labels  = if (!has_grouped_legend) legend_labels else NULL,
           legend_title   = if (!has_grouped_legend) legend_title  else NULL,
-          cex_ley        = cex_ley
+          cex_ley        = cex_ley,
+          legend_layout  = legend_layout
         )
       } else {
         med <- list(dx = 0, dy = 0, on_right = FALSE, going_down = FALSE)
@@ -1334,7 +1427,8 @@ export_multimapr_tree <- function(tree,
         legend_labels  = legend_labels,
         legend_colors  = legend_colors,
         legend_title   = legend_title,
-        cex_ley        = cex_ley
+        cex_ley        = cex_ley,
+        legend_layout  = legend_layout
       )
     }
 
@@ -1491,6 +1585,8 @@ if (FALSE) {
 #' @param label_size      Multiplier of the automatic tip-label size (default \code{1}).
 #' @param label_color     Color of the tip labels (default \code{"black"}).
 #' @param legend_title    Single legend block title (legacy mode).
+#' @param legend_layout   Grouped legend: \code{"vertical"} (default) or
+#'                        \code{"horizontal"} blocks.
 #' @param overlay_fn      Optional function called after the legend, inside the
 #'                        active device with \code{par("usr")} already set.
 #' @param hide_fan_labels When \code{TRUE}, omits radial tip labels in fan topology,
@@ -1517,6 +1613,7 @@ plot_multimapr_screen <- function(tree,
                                   legend_colors  = NULL,
                                   legend_corner  = "bottomleft",
                                   legend_title   = NULL,
+                                  legend_layout  = "vertical",
                                   # -- OVERLAY CALLBACK ----------------------------------
                                   # Optional function executed AFTER the legend,
                                   # inside the same open device and with par("usr")
@@ -1534,6 +1631,7 @@ plot_multimapr_screen <- function(tree,
   .emtree_lend_code(tip_end)   # validates tip_end
   branch_angle <- .emtree_branch_angle(branch_angle)
   .emtree_validate_labels(show_labels, label_size, label_color)
+  legend_layout <- match.arg(legend_layout, c("vertical", "horizontal"))
 
   # Apply ladderize / edge length before rendering (mirrors export behavior)
   if (identical(ladderize, TRUE)) {
@@ -1656,7 +1754,8 @@ plot_multimapr_screen <- function(tree,
       legend_labels  = legend_labels,
       legend_colors  = legend_colors,
       legend_title   = legend_title,
-      cex_ley        = cex_ley
+      cex_ley        = cex_ley,
+      legend_layout  = legend_layout
     )
   }
 

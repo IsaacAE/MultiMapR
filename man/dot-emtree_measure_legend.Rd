@@ -10,7 +10,8 @@
   legend_by_char = NULL,
   legend_labels = NULL,
   legend_title = NULL,
-  cex_ley = 0.8
+  cex_ley = 0.8,
+  legend_layout = "vertical"
 )
 }
 \arguments{
@@ -23,6 +24,8 @@
 \item{legend_title}{Block title (legacy mode).}
 
 \item{cex_ley}{Legend font size.}
+
+\item{legend_layout}{"vertical" or "horizontal" (grouped legend only).}
 }
 \value{
 List: \code{dx} (extra X units), \code{dy} (extra Y units),

@@ -8,6 +8,23 @@
 # BLOCK 2 — SIMPLE MAPPING
 # ==============================================================================
 
+#' Horizontal distance between the columns of terminal figures
+#'
+#' At least the historical 2.5 "M" widths, and never less than the figure's
+#' own diameter plus a margin, so large figures (\code{tam_figura}) do not
+#' touch the next column. Figures with \code{pch} 21-25 have a diameter of
+#' about \code{0.375 * pt.cex} character heights.
+#'
+#' @param cex_txt  Text size used for the table.
+#' @param tam_fig  Figure size (\code{pt.cex}).
+#' @return Separation in x data units of the current plot.
+#' @keywords internal
+.figure_col_sep <- function(cex_txt, tam_fig) {
+  x_per_in <- diff(par("usr")[1:2]) / par("pin")[1L]
+  diam_in  <- 0.375 * tam_fig * par("cin")[2L]
+  max(strwidth("M", cex = cex_txt) * 2.5, diam_in * 1.35 * x_per_in)
+}
+
 #' Resolves the tip figure color given its state value
 #'
 #' @param value          Character state value.
@@ -86,70 +103,30 @@ plot_simple_mapping <- function(filogenia, config) {
   # ── Helper: draws the legend in blocks (same as plot_superimposed_characters) ──
   .draw_simple_legend <- function(pos_ley) {
     if (!show_leg) return(invisible(NULL))
-    usr        <- par("usr")
-    going_down <- grepl("top",  pos_ley)
-    x_start    <- if (grepl("left", pos_ley)) usr[1L] else usr[2L]
-    y_start    <- if (going_down)              usr[4L] else usr[3L]
-    line_h     <- strheight("M", cex = cex_aj) * 1.4
-    y_cursor   <- y_start
+    blocks <- .simple_legend_blocks()
+    lay    <- .legend_layout(blocks, pos_ley, config$legend_layout %||% "vertical",
+                             cex = cex_aj, pt_cex = tam_fig, pch = pch_fig)
     old_xpd <- par("xpd"); par(xpd = TRUE)
-    for (i in seq_along(caracteres)) {
-      car   <- caracteres[i]
-      col_e <- colores_por_car[[car]]
-      titulo_ley <- if (tipo_arbol == "fan") paste0("C", i, " (", car, ")") else car
-      lg <- legend(
-        x      = x_start,
-        y      = y_cursor,
-        legend = names(col_e),
-        pt.bg  = unname(col_e),
-        col    = "black",
-        pch    = pch_fig,
-        title  = titulo_ley,
-        bty    = "n",
-        cex    = cex_aj,
-        horiz  = FALSE,
-        pt.cex = tam_fig,
-        xjust  = if (grepl("right", pos_ley)) 1 else 0,
-        yjust  = if (going_down) 1 else 0
-      )
-      bloque_h <- lg$rect$h
-      y_cursor <- if (going_down) y_cursor - bloque_h - line_h
-      else            y_cursor + bloque_h + line_h
-    }
+    .legend_draw_blocks(lay, blocks, cex = cex_aj, pt_cex = tam_fig, pch = pch_fig,
+                        filled = pch_fig %in% 21:25)
     par(xpd = old_xpd)
     invisible(NULL)
   }
 
-  # ── Helper: measures the total legend width (plot=FALSE) ────────────────────
-  .measure_legend_width <- function(pos_ley) {
-    usr      <- par("usr")
-    on_right <- grepl("right", pos_ley)
-    x_ref    <- if (on_right) usr[2L] else usr[1L]
-    y_ref    <- if (grepl("top", pos_ley)) usr[4L] else usr[3L]
-    max_width <- 0
-    for (i in seq_along(caracteres)) {
-      car    <- caracteres[i]
-      col_e  <- colores_por_car[[car]]
-      titulo <- if (tipo_arbol == "fan") paste0("C", i, " (", car, ")") else car
-      lg <- legend(x = x_ref, y = y_ref,
-                   legend = names(col_e),
-                   pch    = pch_fig,
-                   col    = rep("black", length(col_e)),
-                   title  = titulo,
-                   bty    = "n", cex = cex_aj, horiz = FALSE,
-                   pt.cex = tam_fig,
-                   xjust  = if (on_right) 1 else 0,
-                   yjust  = 1,
-                   plot   = FALSE)
-      max_width <- max(max_width, lg$rect$w)
-    }
-    max_width
+  # ── Helper: one legend block per character (fan titles carry the ring id) ────
+  .simple_legend_blocks <- function() {
+    lapply(seq_along(caracteres), function(i) {
+      car   <- caracteres[i]
+      col_e <- colores_por_car[[car]]
+      list(title  = if (tipo_arbol == "fan") paste0("C", i, " (", car, ")") else car,
+           labels = names(col_e), colors = unname(col_e))
+    })
   }
 
   # ── Main render function ─────────────────────────────────────────────────────
   # xlim_extra: if not NULL, passed as x.lim to plot() to expand the viewport
   # to the right to accommodate table + legend.
-  .render_simple_mapping <- function(xlim_extra = NULL) {
+  .render_simple_mapping <- function(xlim_extra = NULL, ylim_extra = NULL) {
 
     op <- par(no.readonly = TRUE)
     on.exit(par(op))
@@ -366,7 +343,8 @@ plot_simple_mapping <- function(filogenia, config) {
              tip.color      = col_lbl,
              show.tip.label = show_lbl,
              font           = 3L,
-             x.lim          = xlim_extra)
+             x.lim          = xlim_extra,
+             y.lim          = ylim_extra)
 
         .draw_simple_legend(pos_leyenda)
 
@@ -380,7 +358,8 @@ plot_simple_mapping <- function(filogenia, config) {
              tip.color      = col_lbl,
              show.tip.label = show_lbl,
              font           = 3L,
-             x.lim          = xlim_extra)   # NULL on screen; expanded on export
+             x.lim          = xlim_extra,   # expanded for the table (+ legend)
+             y.lim          = ylim_extra)   # expanded for a horizontal legend
 
         obj    <- get("last_plot.phylo", envir = .PlotPhyloEnv)
         xx_tip <- obj$xx[seq_len(n_tips)]
@@ -388,7 +367,7 @@ plot_simple_mapping <- function(filogenia, config) {
         usr    <- par("usr")
         pin    <- par("pin")
 
-        sep_col    <- strwidth("M", cex = cex_aj) * 2.5
+        sep_col    <- .figure_col_sep(cex_aj, tam_fig)
         max_tip_x  <- max(xx_tip)
         max_lbl_w  <- if (show_lbl) max(strwidth(filogenia$tip.label, cex = cex_lbl)) else 0
         start_x    <- max_tip_x + config$label_offset + max_lbl_w + max_tip_x * 0.02
@@ -425,7 +404,7 @@ plot_simple_mapping <- function(filogenia, config) {
 
   # ── PHASE 1: off-screen probe ───────────────────────────────────────────────
   .fan_coords_explorador <- NULL
-  computed_xlim <- NULL
+  computed_lim <- list(x = NULL, y = NULL)
 
   if (tipo_arbol == "fan") {
     prev_dev <- dev.cur()
@@ -450,10 +429,15 @@ plot_simple_mapping <- function(filogenia, config) {
     default_width <- 12
     height_in_tmp   <- if (!is.null(config$height)) config$height else default_height
     width_in_tmp  <- if (!is.null(config$width))  config$width  else default_width
+    # On screen, probe with the size of the device that will be drawn on
+    if (!exportar && dev.cur() > 1L) {
+      din <- dev.size("in")
+      width_in_tmp <- din[1L]; height_in_tmp <- din[2L]
+    }
 
     prev_dev <- dev.cur()
     pdf(NULL, width = width_in_tmp, height = height_in_tmp)
-    computed_xlim <- tryCatch({
+    computed_lim <- tryCatch({
 
       par(mar = c(1, 1, 2, 1), xpd = FALSE)
       plot(filogenia,
@@ -471,7 +455,7 @@ plot_simple_mapping <- function(filogenia, config) {
       usr_s  <- par("usr")
       pin_s  <- par("pin")
 
-      sep_col_s  <- strwidth("M", cex = cex_aj) * 2.5
+      sep_col_s  <- .figure_col_sep(cex_aj, tam_fig)
       max_tip_s  <- max(xx_s)
       max_lbl_s  <- if (show_lbl) max(strwidth(filogenia$tip.label, cex = cex_lbl)) else 0
       start_x_s  <- max_tip_s + config$label_offset + max_lbl_s + max_tip_s * 0.02
@@ -484,32 +468,24 @@ plot_simple_mapping <- function(filogenia, config) {
       pos_ley_s  <- if (!is.null(config$legend_corner)) config$legend_corner else "topright"
       on_right_s <- grepl("right", pos_ley_s)
 
-      legend_width <- 0
-      y_ref_s   <- if (grepl("top", pos_ley_s)) usr_s[4L] else usr_s[3L]
-      for (i in seq_along(caracteres)[show_leg]) {
-        car_i   <- caracteres[i]
-        col_e_i <- colores_por_car[[car_i]]
-        lg_i <- legend(x      = x_max_tabla,
-                       y      = y_ref_s,
-                       legend = names(col_e_i),
-                       pch    = pch_fig,
-                       col    = rep("black", length(col_e_i)),
-                       title  = car_i,
-                       bty    = "n", cex = cex_aj, horiz = FALSE,
-                       pt.cex = tam_fig, xjust = 0, yjust = 1,
-                       plot   = FALSE)
-        legend_width <- max(legend_width, lg_i$rect$w)
+      # Vertical legend: reserve its width beside the table. Horizontal legend:
+      # reserve its height above / below the tree (it spans the bottom or top).
+      horiz <- identical(config$legend_layout, "horizontal")
+      lay   <- if (show_leg)
+        .legend_layout(.simple_legend_blocks(), pos_ley_s,
+                       config$legend_layout %||% "vertical",
+                       cex = cex_aj, pt_cex = tam_fig, pch = pch_fig) else list(w = 0, h = 0)
+
+      x_max_total <- x_max_tabla + if (horiz) 0 else lay$w * 1.1
+      ylim <- if (horiz && lay$h > 0) {
+        if (grepl("top", pos_ley_s)) c(usr_s[3L], usr_s[4L] + lay$h * 1.1)
+        else                         c(usr_s[3L] - lay$h * 1.1, usr_s[4L])
       }
 
-      x_max_total <- x_max_tabla + legend_width * 1.1
+      list(x = if (x_max_total > usr_s[2L]) c(usr_s[1L], x_max_total),
+           y = ylim)
 
-      if (x_max_total > usr_s[2L]) {
-        c(usr_s[1L], x_max_total)
-      } else {
-        NULL
-      }
-
-    }, error = function(e) NULL,
+    }, error = function(e) list(x = NULL, y = NULL),
     finally = .close_device_restore(prev_dev))
   }
 
@@ -518,12 +494,13 @@ plot_simple_mapping <- function(filogenia, config) {
     .export_device(fn_export, config$export_format %||% "png",
                    filogenia, tipo_arbol,
                    {
-                     .render_simple_mapping(xlim_extra = computed_xlim)
+                     .render_simple_mapping(xlim_extra = computed_lim$x,
+                                            ylim_extra = computed_lim$y)
                    },
                    width  = config$width,
                    height = config$height)
   } else {
-    .render_simple_mapping()
+    .render_simple_mapping(xlim_extra = computed_lim$x, ylim_extra = computed_lim$y)
   }
 }
 
@@ -905,6 +882,7 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
        legend_labels = if (config$show_legend %||% TRUE) ley_data$labels,
        legend_colors = ley_data$colors,
        legend_corner = config$legend_corner %||% "bottomleft",
+       legend_layout = config$legend_layout %||% "vertical",
        legend_title  = titulo_leyenda
     )
   }
@@ -925,6 +903,7 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
     legend_labels  = if (!is.null(colores_estado) && config$show_legend %||% TRUE) names(colores_estado),
     legend_colors  = if (!is.null(colores_estado)) unname(colores_estado) else NULL,
     legend_corner  = config$legend_corner %||% "bottomleft",
+    legend_layout  = config$legend_layout %||% "vertical",
     legend_title   = titulo_leyenda
   )
 
@@ -1155,7 +1134,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       max_lbl_w  <- if (config$show_labels %||% TRUE)
                       max(strwidth(filogenia$tip.label,
                                    cex = cex_aj * (config$label_size %||% 1))) else 0
-      sep_col    <- strwidth("M", cex = cex_aj) * 2.5
+      sep_col    <- .figure_col_sep(cex_aj, tam_fig)
       start_x    <- max_tip_x + lbl_off + max_lbl_w + max_tip_x * 0.02
       x_columnas <- start_x + seq(0, length(caracteres) - 1L) * sep_col
 
@@ -1211,6 +1190,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       label_color     = config$label_color %||% "black",
       legend_by_char  = if (config$show_legend %||% TRUE) ley_data$by_char,
       legend_corner   = config$legend_corner %||% "bottomleft",
+      legend_layout   = config$legend_layout %||% "vertical",
       # For fan, hide engine labels and redraw them in the overlay,
       # further out, after all figures.
       hide_fan_labels = (tipo_arbol == "fan"),
@@ -1243,6 +1223,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
     label_color     = config$label_color %||% "black",
     legend_by_char  = if (config$show_legend %||% TRUE) ley_data$by_char,
     legend_corner   = config$legend_corner %||% "bottomleft",
+    legend_layout   = config$legend_layout %||% "vertical",
     hide_fan_labels = (tipo_arbol == "fan"),
     header_labels   = caracteres,
     overlay_fn      = function(pp, cex_aj, label_offset_aj,
@@ -1434,7 +1415,8 @@ plot_superimposed_characters <- function(filogenia, config,
        label_size       = config$label_size %||% 1,
        label_color      = config$label_color %||% "black",
        legend_by_char  = if (config$show_legend %||% TRUE) ley_data$by_char,
-       legend_corner   = config$legend_corner %||% "bottomleft"
+       legend_corner   = config$legend_corner %||% "bottomleft",
+       legend_layout   = config$legend_layout %||% "vertical"
      )
    }
 
@@ -1454,7 +1436,8 @@ plot_superimposed_characters <- function(filogenia, config,
       label_size       = config$label_size %||% 1,
       label_color      = config$label_color %||% "black",
     legend_by_char  = if (config$show_legend %||% TRUE) ley_data$by_char,
-    legend_corner   = config$legend_corner %||% "bottomleft"
+    legend_corner   = config$legend_corner %||% "bottomleft",
+    legend_layout   = config$legend_layout %||% "vertical"
   )
 
   invisible(NULL)
