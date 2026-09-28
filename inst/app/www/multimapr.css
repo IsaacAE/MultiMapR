@@ -500,6 +500,12 @@ input.mm-color::-moz-color-swatch { border: 0; border-radius: 2px; }
 /* export */
 .mm-exp-actions { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .mm-exp-actions .btn { width: 100%; padding: 8px 10px; }
+.mm-exp-preview { width: 100%; margin-top: 10px; padding: 8px 10px; }
+.mm-pv-controls { display:flex; flex-wrap: wrap; align-items:flex-end; gap: 12px; }
+.mm-pv-controls .form-group { margin: 0; width: 130px; }
+.mm-pv-info { font-family: var(--mm-mono); font-size: 12px; color: var(--mm-ink2); padding-bottom: 8px; }
+.mm-pv-frame { border: 1px solid var(--mm-border); border-radius: var(--r1); background: #fff; padding: 6px; max-height: 70vh; overflow: auto; }
+.mm-pv-footer { display:flex; gap: 8px; }
 .mm-path { font-family: var(--mm-mono); font-size: 10.5px; color: var(--mm-ink3); word-break: break-all; margin-top: 6px; }
 .mm-okbox { background: var(--mm-ok-bg); color: var(--mm-ink); border-radius: var(--r1); padding: 7px 10px; font-size: 12px; margin-top: 8px; font-family: var(--mm-mono); word-break: break-all; }
 .mm-okbox b { color: var(--mm-ok); font-family: var(--mm-sans); }
@@ -517,7 +523,7 @@ input.mm-color::-moz-color-swatch { border: 0; border-radius: 2px; }
 .mm-topbar .shiny-panel-conditional { display: contents; }
 
 .mm-canvas-card { background: #ffffff !important; border:1px solid var(--mm-border); border-radius: var(--r2); box-shadow: var(--sh1); position: relative; margin-bottom: var(--sp4); overflow: hidden; }
-.mm-canvas { background: #ffffff; overflow: auto; height: 640px; padding: 14px 14px 28px; position: relative; color: #1b1c1a; }
+.mm-canvas { background: #ffffff; overflow: auto; scrollbar-gutter: stable; height: 640px; padding: 14px 14px 28px; position: relative; color: #1b1c1a; }
 .mm-canvas .shiny-image-output { display:flex; justify-content:center; align-items:flex-start; }
 .mm-canvas img { max-width: none; }
 .mm-canvas-foot { position:absolute; left: 12px; bottom: 7px; font-family: var(--mm-mono); font-size: 10px; color: #9a9a92; pointer-events:none; background: rgba(255,255,255,.85); padding: 0 4px; }

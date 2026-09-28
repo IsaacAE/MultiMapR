@@ -853,7 +853,13 @@
                        ladderize        = ladder,
                        terminal_stretch = if (mt == 2L && !uses_lengths())
                                             input$tip_mult %||% 1 else 1,
-                       tip_end          = input$tip_end %||% "round"))
+                       tip_end          = input$tip_end %||% "round",
+                       branch_angle     = if (isTRUE(input$clado_stretch)) NULL
+                                          else input$branch_angle %||% 45,
+                       show_labels      = isTRUE(input$show_labels %||% TRUE),
+                       label_size       = input$label_size %||% 1,
+                       label_color      = input$label_color %||% "#000000",
+                       show_legend      = isTRUE(input$show_legend %||% TRUE)))
   })
   spec_d <- shiny::debounce(spec, 400)
 
@@ -925,19 +931,40 @@
 
   output$session_stamp <- shiny::renderText(trr()("session_at", session_start))
 
+  # Fixed-angle cladograms are drawn by the engine only (ancestral modes); the simple
+  # mapping uses ape's own layout, so its automatic width stays at 12 in.
+  # Both return the branch angle in degrees, or NULL for the stretched layout.
+  spec_angles  <- function(s) if (isTRUE(s$config$mapping_type == 2L)) s$render$branch_angle
+  input_angles <- shiny::reactive({
+    if (mode_num() == 2L && !isTRUE(input$clado_stretch)) input$branch_angle %||% 45
+  })
+
   # ---- Preview ---------------------------------------------------------------------------
+  # Container width with hysteresis. The canvas has a fixed height and scrolls:
+  # when the image is just taller than the canvas, a vertical scrollbar appears,
+  # the container loses ~15 px, the image is re-rendered shorter, the scrollbar
+  # disappears and the width comes back -- an endless re-render loop (seen with
+  # 30-degree cladograms). Width changes under 24 px are therefore ignored; the
+  # CSS also reserves the scrollbar gutter (`scrollbar-gutter: stable`).
+  preview_w <- shiny::reactiveVal(NULL)
+  shiny::observe({
+    w <- session$clientData$output_preview_img_width
+    if (!is.numeric(w) || length(w) != 1L || w < 240) return()
+    cur <- isolate(preview_w())
+    if (is.null(cur) || abs(w - cur) > 24) preview_w(w)
+  })
+
   last_png <- NULL
   preview <- shiny::reactive({
     input$recalc
     input$recalc_err
     s <- spec_d()
     if (!identical(s$status, "ok")) return(s)
-    wcss <- session$clientData$output_preview_img_width %||% 0
-    if (!is.numeric(wcss) || wcss < 240) wcss <- 900
+    wcss <- preview_w() %||% 900
     wcss <- wcss - 4
     ratio <- min(max(session$clientData$pixelratio %||% 1, 1), 2)
     cd <- isolate(custom_dims())
-    dims <- .gui_figure_dims(Ntip(s$tree), s$config$tipo_arbol, cd$w, cd$h)
+    dims <- .gui_figure_dims(Ntip(s$tree), s$config$tipo_arbol, cd$w, cd$h, spec_angles(s))
     file <- tempfile("mmr_preview_", fileext = ".png")
     res <- tryCatch(.gui_render_png(s, file, wcss * ratio, dims), error = function(e) e)
     if (!is.null(last_png) && file.exists(last_png)) unlink(last_png)
@@ -1029,7 +1056,7 @@
       s <- spec_d()
       shiny::req(identical(s$status, "ok"), isTRUE(s$config$algoritmo == 2L))
       s$config$fitch_mode <- m
-      dims <- .gui_figure_dims(Ntip(s$tree), s$config$tipo_arbol)
+      dims <- .gui_figure_dims(Ntip(s$tree), s$config$tipo_arbol, branch_angle = spec_angles(s))
       file <- tempfile(paste0("mmr_cmp_", m, "_"), fileext = ".png")
       .gui_render_png(s, file, 900, dims)
       list(src = file, contentType = "image/png", alt = paste("Fitch", toupper(m)))
@@ -1085,13 +1112,13 @@
     tr <- trr()
     d <- dat()
     n <- if (is.null(d)) 0L else Ntip(d$tree)
-    dims <- .gui_figure_dims(n, input$topology)
+    dims <- .gui_figure_dims(n, input$topology, branch_angle = input_angles())
     if (identical(input$topology, "fan")) tr("dims_note_fan", dims$width, dims$height)
-    else tr("dims_note", n, dims$height)
+    else tr("dims_note", dims$width, n, dims$height)
   })
-  shiny::observeEvent(list(dat(), input$topology), {
+  shiny::observeEvent(list(dat(), input$topology, input_angles()), {
     d <- dat(); if (is.null(d)) return()
-    dims <- .gui_figure_dims(Ntip(d$tree), input$topology)
+    dims <- .gui_figure_dims(Ntip(d$tree), input$topology, branch_angle = input_angles())
     shiny::updateNumericInput(session, "exp_w", value = dims$width)
     shiny::updateNumericInput(session, "exp_h", value = round(dims$height * 2) / 2)
   })
@@ -1158,7 +1185,79 @@
              trr()("saved_to", rel))
   })
 
+  # ---- Export preview ------------------------------------------------------------------------
+  # Renders with the real export engine (same code path as Download / Save) at the
+  # chosen size, so proportions and relative text size match the final file. The
+  # size can be changed inside the dialog and then applied to the export settings.
+  shiny::observeEvent(input$exp_preview, {
+    tr <- trr()
+    if (!identical(spec()$status, "ok")) {
+      push_log(map_log, list(.gui_log_entry("error", "export_nothing")))
+      return()
+    }
+    cd <- custom_dims()
+    dm <- .gui_figure_dims(Ntip(dat()$tree), input$topology, cd$w, cd$h, input_angles())
+    shiny::showModal(shiny::modalDialog(
+      title = tr("exp_preview_title"), size = "xl", easyClose = TRUE,
+      tags$div(class = "mm-pv-controls",
+               shiny::numericInput("pv_w", tr("width_in"), value = round(dm$width, 2),
+                                   min = 1, max = 60, step = 0.5),
+               shiny::numericInput("pv_h", tr("height_in"), value = round(dm$height, 2),
+                                   min = 1, max = 60, step = 0.5),
+               tags$span(class = "mm-pv-info", shiny::textOutput("pv_info", inline = TRUE))),
+      tags$div(class = "mm-help mb-2", tr("pv_hint")),
+      tags$div(class = "mm-pv-frame", shiny::imageOutput("pv_img", width = "100%", height = "auto")),
+      footer = tags$div(class = "mm-pv-footer",
+                        shiny::modalButton(tr("close")),
+                        shiny::actionButton("pv_apply", tr("pv_apply"), class = "btn-mm-primary"))))
+  })
+
+  pv_valid <- function(x) is.numeric(x) && length(x) == 1 && !is.na(x) && x >= 1 && x <= 60
+  pv_size <- shiny::debounce(shiny::reactive(list(w = input$pv_w, h = input$pv_h)), 500)
+
+  last_pv_dir <- NULL
+  pv_render <- shiny::reactive({
+    sz <- pv_size()
+    shiny::req(input$exp_preview, pv_valid(sz$w), pv_valid(sz$h))
+    s <- spec()
+    shiny::req(identical(s$status, "ok"))
+    tmp <- tempfile("mmr_pv_")
+    dir.create(tmp)
+    res <- tryCatch(.gui_export_mapping(s, "png", "preview", sz$w, sz$h, out_dir = tmp),
+                    error = function(e) e)
+    if (!is.null(last_pv_dir)) unlink(last_pv_dir, recursive = TRUE)
+    last_pv_dir <<- tmp
+    if (inherits(res, "error")) {
+      push_log(map_log, list(.gui_log_entry("error", "log_export_error", conditionMessage(res))))
+      return(NULL)
+    }
+    list(path = res$path, w = sz$w, h = sz$h)
+  })
+
+  output$pv_img <- shiny::renderImage({
+    r <- pv_render()
+    shiny::req(r)
+    list(src = r$path, contentType = "image/png", style = "width:100%;height:auto;",
+         alt = isolate(trr())("exp_preview_title"))
+  }, deleteFile = FALSE)
+
+  output$pv_info <- shiny::renderText({
+    sz <- pv_size()
+    shiny::req(pv_valid(sz$w), pv_valid(sz$h))
+    trr()("pv_info", format(sz$w), format(sz$h), round(sz$w * 300), round(sz$h * 300))
+  })
+
+  shiny::observeEvent(input$pv_apply, {
+    w <- input$pv_w; h <- input$pv_h
+    if (!pv_valid(w) || !pv_valid(h)) return()
+    shiny::updateRadioButtons(session, "dims", selected = "custom")
+    shiny::updateNumericInput(session, "exp_w", value = w)
+    shiny::updateNumericInput(session, "exp_h", value = h)
+    push_log(map_log, list(.gui_log_entry("ok", "log_pv_applied", format(w), format(h))))
+    shiny::removeModal()
+  })
+
   # Returned for tests (shiny::testServer)
   list(preview = preview, spec = spec, chars_used = chars_used, map_log = map_log,
-       export_args = export_args)
+       export_args = export_args, pv_render = pv_render)
 }

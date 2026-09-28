@@ -14,13 +14,19 @@ plot_multimapr_screen(
   use_edge_length = TRUE,
   ladderize = FALSE,
   terminal_stretch = 1,
+  tip_end = "round",
+  branch_angle = 45,
+  show_labels = TRUE,
+  label_size = 1,
+  label_color = "black",
   legend_by_char = NULL,
   legend_labels = NULL,
   legend_colors = NULL,
   legend_corner = "bottomleft",
   legend_title = NULL,
   overlay_fn = NULL,
-  hide_fan_labels = FALSE
+  hide_fan_labels = FALSE,
+  header_labels = NULL
 )
 }
 \arguments{
@@ -53,6 +59,18 @@ calls \code{ape::ladderize(right = TRUE)}.}
 when the tree has no real edge lengths. Internal
 branches stay at length 1. Default \code{1}.}
 
+\item{tip_end}{Cladogram only: \code{"round"} (default), \code{"butt"}
+or \code{"square"} branch ends.}
+
+\item{branch_angle}{Cladogram only: branch angle in degrees (10-80, default
+\code{45}); \code{NULL} stretches to the full width.}
+
+\item{show_labels}{Logical. Draw the species names at the tips (default \code{TRUE}).}
+
+\item{label_size}{Multiplier of the automatic tip-label size (default \code{1}).}
+
+\item{label_color}{Color of the tip labels (default \code{"black"}).}
+
 \item{legend_by_char}{Named list character -> list(labels, colors) for
 grouped legend. If not NULL takes precedence over
 \code{legend_labels} / \code{legend_colors}.}
@@ -71,6 +89,9 @@ active device with \code{par("usr")} already set.}
 
 \item{hide_fan_labels}{When \code{TRUE}, omits radial tip labels in fan topology,
 delegating their drawing to \code{overlay_fn}.}
+
+\item{header_labels}{Optional column headers drawn by \code{overlay_fn} above
+the top tip; space is reserved for them.}
 }
 \value{
 Invisible NULL. Draws on the active graphics device.

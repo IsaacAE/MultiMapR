@@ -10,7 +10,13 @@
   branch_width = 2,
   use_edge_length = NULL,
   ladderize = TRUE,
-  terminal_stretch = 1
+  terminal_stretch = 1,
+  tip_end = "round",
+  branch_angle = 45,
+  show_labels = TRUE,
+  label_size = 1,
+  label_color = "black",
+  show_legend = TRUE
 )
 }
 \arguments{
@@ -18,7 +24,7 @@
 
 \item{config}{Configuration list (see \code{setup_mapping_config()}).}
 
-\item{branch_width, use_edge_length, ladderize, terminal_stretch}{See \code{\link{execute_phylogeny}}.}
+\item{branch_width, use_edge_length, ladderize, terminal_stretch, tip_end, branch_angle, show_labels, label_size, label_color, show_legend}{See \code{\link{execute_phylogeny}}.}
 }
 \value{
 Invisibly, the updated \code{config}.

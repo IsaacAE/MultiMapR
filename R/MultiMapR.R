@@ -89,7 +89,7 @@
 #'
 #' @param phylogeny        Untouched \code{phylo} object.
 #' @param config           Configuration list (see \code{setup_mapping_config()}).
-#' @param branch_width,use_edge_length,ladderize,terminal_stretch,tip_end
+#' @param branch_width,use_edge_length,ladderize,terminal_stretch,tip_end,branch_angle,show_labels,label_size,label_color,show_legend
 #'                         See \code{\link{execute_phylogeny}}.
 #' @return Invisibly, the updated \code{config}.
 #' @keywords internal
@@ -98,11 +98,23 @@
                                        use_edge_length  = NULL,
                                        ladderize        = TRUE,
                                        terminal_stretch = 1,
-                                       tip_end          = "round") {
+                                       tip_end          = "round",
+                                       branch_angle     = 45,
+                                       show_labels      = TRUE,
+                                       label_size       = 1,
+                                       label_color      = "black",
+                                       show_legend      = TRUE) {
   config$terminal_stretch <- terminal_stretch
   if (!tip_end %in% c("round", "butt", "square"))
     stop("`tip_end` must be one of \"round\", \"butt\" or \"square\".")
   config$tip_end <- tip_end
+  # NA (not NULL) marks the stretched layout, so `%||% 45` downstream keeps it
+  config$branch_angle <- .emtree_branch_angle(branch_angle) %||% NA_real_
+  .emtree_validate_labels(show_labels, label_size, label_color)
+  config$show_labels <- show_labels
+  config$label_size  <- label_size
+  config$label_color <- label_color
+  config$show_legend <- isTRUE(show_legend)
 
   # -- Branch width (parameter overrides menu default of 2) ------------------
   if (!is.numeric(branch_width) || length(branch_width) != 1L || branch_width <= 0)
@@ -225,8 +237,26 @@
 #'                           Default \code{1} (no change).
 #' @param tip_end            Cladogram only: style of the branch tips,
 #'                           \code{"round"} (default), \code{"butt"} (flat) or
-#'                           \code{"square"}. Sibling branches always converge
-#'                           on a single rounded point at each node.
+#'                           \code{"square"}. Only the tips are affected: at
+#'                           internal nodes the colour bands always meet in
+#'                           closed miter joins.
+#' @param branch_angle       Cladogram only (ancestral reconstruction modes).
+#'                           Angle of every branch from the horizontal, in
+#'                           degrees (10-80). The default \code{45} makes sibling
+#'                           branches meet at right angles; 30-60 is the
+#'                           recommended range, since smaller angles move the
+#'                           colour lanes' corners away from the nodes.
+#'                           \code{NULL} stretches the tree to the full width of
+#'                           the figure.
+#' @param show_labels        Logical. Draw the species names at the tips
+#'                           (default \code{TRUE}).
+#' @param label_size         Multiplier of the automatic tip-label size
+#'                           (default \code{1}; e.g. \code{1.5} draws them half
+#'                           again as large).
+#' @param label_color        Color of the tip labels (default \code{"black"}).
+#' @param show_legend        Logical. Draw the legend of character states
+#'                           (default \code{TRUE}). When \code{FALSE} no space
+#'                           is reserved for it.
 #' @return Invisible NULL.
 #' @export
 execute_phylogeny <- function(phylogeny, character_data,
@@ -243,7 +273,12 @@ execute_phylogeny <- function(phylogeny, character_data,
                               palette              = NULL,
                               ambiguity_color      = NULL,
                               terminal_stretch     = 1,
-                              tip_end              = "round") {
+                              tip_end              = "round",
+                              branch_angle         = 45,
+                              show_labels          = TRUE,
+                              label_size           = 1,
+                              label_color          = "black",
+                              show_legend          = TRUE) {
   tryCatch({
 
     # POLYMORPHISM: If file paths (character) are passed, load data automatically
@@ -306,7 +341,12 @@ execute_phylogeny <- function(phylogeny, character_data,
                                            use_edge_length  = use_edge_length,
                                            ladderize        = ladderize,
                                            terminal_stretch = terminal_stretch,
-                                           tip_end          = tip_end)
+                                           tip_end          = tip_end,
+                                           branch_angle     = branch_angle,
+                                           show_labels      = show_labels,
+                                           label_size       = label_size,
+                                           label_color      = label_color,
+                                           show_legend      = show_legend)
 
       # -- What next? ----------------------------------------------------------
       next_action <- prompt_post_run_menu(allow_algorithm_change = (config$mapping_type == 2))

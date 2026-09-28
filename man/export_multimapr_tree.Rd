@@ -16,6 +16,11 @@ export_multimapr_tree(
   use_edge_length = TRUE,
   ladderize = FALSE,
   terminal_stretch = 1,
+  tip_end = "round",
+  branch_angle = 45,
+  show_labels = TRUE,
+  label_size = 1,
+  label_color = "black",
   mar = c(1, 1, 1, 4),
   width = NULL,
   height = NULL,
@@ -25,7 +30,8 @@ export_multimapr_tree(
   legend_corner = "bottomleft",
   legend_title = NULL,
   overlay_fn = NULL,
-  hide_fan_labels = FALSE
+  hide_fan_labels = FALSE,
+  header_labels = NULL
 )
 }
 \arguments{
@@ -73,6 +79,23 @@ when the tree has no real edge lengths, so tip labels and
 colors get more visual space. Internal branches stay at
 length 1 and the topology is preserved. Default \code{1}.}
 
+\item{tip_end}{Cladogram only: style of the free branch ends,
+\code{"round"} (default), \code{"butt"} or \code{"square"}.
+Only the tips are affected: at internal nodes the
+colour bands always meet in closed miter joins.}
+
+\item{branch_angle}{Cladogram only. Angle of every branch from the horizontal,
+in degrees (10-80; default \code{45}, so siblings meet at
+right angles). 30-60 is recommended: smaller angles move
+the lane corners away from the nodes. \code{NULL}
+stretches the tree to the full canvas width.}
+
+\item{show_labels}{Logical. Draw the species names at the tips (default \code{TRUE}).}
+
+\item{label_size}{Multiplier of the automatic tip-label size (default \code{1}).}
+
+\item{label_color}{Color of the tip labels (default \code{"black"}).}
+
 \item{mar}{Plot margins as vector \code{c(b, l, t, r)}
 in lines (default: \code{c(1, 1, 1, 4)}).}
 
@@ -99,6 +122,11 @@ with \code{par("usr")} already set. Receives \code{pp}, \code{cex_aj},
 
 \item{hide_fan_labels}{When \code{TRUE}, omits radial tip labels in fan topology,
 delegating their drawing to \code{overlay_fn}.}
+
+\item{header_labels}{Optional character vector of column headers that
+\code{overlay_fn} draws above the top tip (rotated 45
+degrees, phylogram / cladogram). Space is reserved at
+the top so they are not clipped.}
 }
 \value{
 Invisible: full path of the generated file (string).

@@ -64,6 +64,21 @@
     stop(sprintf("`format` must be one of: %s.", paste(valid_formats, collapse = ", ")))
 }
 
+#' Checks the tip-label options shared by the export and screen engines
+#'
+#' @param show_labels  Logical scalar.
+#' @param label_size   Positive multiplier of the automatic label size.
+#' @param label_color  Single valid R color.
+#' @keywords internal
+.emtree_validate_labels <- function(show_labels, label_size, label_color) {
+  if (!is.logical(show_labels) || length(show_labels) != 1L || is.na(show_labels))
+    stop("`show_labels` must be TRUE or FALSE.")
+  if (!is.numeric(label_size) || length(label_size) != 1L || is.na(label_size) || label_size <= 0)
+    stop("`label_size` must be a positive number.")
+  if (!is.character(label_color) || length(label_color) != 1L || !is_valid_color(label_color))
+    stop("`label_color` must be a single valid R color name or hex code.")
+}
+
 #' Checks that `filename` is a non-empty string (no extension required)
 #'
 #' @param filename  Output filename without extension; must be a non-empty string.
@@ -439,79 +454,270 @@
 
 # ------------------------------------------------------------------------------
 # CLADOGRAM
-# Direct geometry: diagonals parent -> child. Offset at both endpoints.
+# Diagonals parent -> child, one parallel "lane" per history.
 #
-# Node junctions: with square/butt line ends, diagonals leaving the same parent
-# at different angles leave corners sticking out of each other. After drawing
-# the edges, a round "joint" (a tiny round-capped stroke of the node's incoming
-# color) is stamped on every internal node so all children converge on a single
-# point, whatever `tip_end` is.
-# `tip_end` controls the free ends of the branches: "round" | "butt" | "square".
+# Lanes: each history is a filled band parallel to the branch (not a thick
+# line). Bands are offset PERPENDICULAR to every branch, measured in inches, so
+# the ribbon looks the same on rising and falling branches and for any canvas
+# proportion. A global dx/dy shift would run almost parallel to rising branches
+# and collapse their lanes.
+#   · Band edges are lines offset along the branch's left normal (the "upper"
+#     side for both slopes, so lane order is stable). Neighbouring bands share
+#     an edge, so there is never a gap between lanes.
+#   · Miter joins: each edge of a child band starts where it crosses the same
+#     edge of the parent's band (at the root: of a sibling's band), so corners
+#     close without notches.
+#   · Guard: the parent band ends on the join cut (the bisector between the
+#     incoming branch and each child); beyond the node it only runs under the
+#     band of the collinear child, which is drawn later and hides it. It never
+#     spills onto a sibling clade. Edges are drawn root-to-tips so children
+#     always sit on top of their parent at the joins, and among siblings the
+#     straight continuation is drawn last, covering the outer miter corner of
+#     the side branch.
+#   · At the tips every lane centre ends on the tip's vertical (lanes stay
+#     aligned) and the band is cut perpendicular to the branch; only there
+#     does `tip_end` ("round" | "butt" | "square") apply.
+#
+# Branch angle (`branch_angle`, degrees from the horizontal, default 45): the
+# tree is compressed horizontally toward the tips so every branch runs at
+# +/-branch_angle on the device; sibling branches meet at twice that angle
+# (90 degrees at the default). Tips (and therefore labels) do not move. If the
+# canvas is too narrow for the requested angle, the closest angle that fits is
+# used. `branch_angle = NULL` (or NA) stretches the tree to the full width.
+# Lane corners sit about d / tan(angle) from the node, so angles below ~30
+# degrees push them away from it; 30-60 degrees is the recommended range.
+#
 # ------------------------------------------------------------------------------
+
+#' Extra room (data units) above the plot for rotated column headers
+#'
+#' The terminal-figure overlay draws one header per character above the top
+#' tip, rotated 45 degrees (see \code{plot_ancestral_with_terminals()}). The
+#' canvas must reserve that height or the headers are clipped. Measured on the
+#' active device right after the canvas is drawn; accounts for the fact that
+#' enlarging the y range also enlarges each inch in data units.
+#' @param labels  Header strings.
+#' @param cex     Header text size.
+#' @param yy_tips Tip y coordinates.
+#' @return Non-negative amount to add to the upper y limit.
+#' @keywords internal
+.emtree_header_space <- function(labels, cex, yy_tips) {
+  if (length(labels) == 0L) return(0)
+  usr   <- par("usr")
+  pin_h <- par("pin")[2L]
+  rng   <- usr[4L] - usr[3L]
+  w_in  <- max(strwidth(labels, units = "inches", cex = cex, font = 2L))
+  h_in  <- max(strheight(labels, units = "inches", cex = cex, font = 2L))
+  a_in  <- w_in * sin(pi / 4) + h_in               # rotated text height + padding
+  base  <- max(yy_tips) + diff(range(yy_tips)) * 0.04
+  if (a_in >= pin_h) return(0)                     # cannot fit anyway
+  max(0, (base + a_in * rng / pin_h - usr[4L]) / (1 - a_in / pin_h))
+}
+
+#' Normalizes and validates a cladogram branch angle
+#'
+#' @param branch_angle Degrees from the horizontal (10-80), or \code{NULL} /
+#'   \code{NA} to stretch the tree to the full width.
+#' @return The angle as a number, or \code{NULL} for the stretched layout.
+#' @keywords internal
+.emtree_branch_angle <- function(branch_angle) {
+  if (is.null(branch_angle) || (length(branch_angle) == 1L && is.na(branch_angle)))
+    return(NULL)
+  if (!is.numeric(branch_angle) || length(branch_angle) != 1L ||
+      branch_angle < 10 || branch_angle > 80)
+    stop("`branch_angle` must be a number of degrees between 10 and 80, or NULL.")
+  branch_angle
+}
+
+#' Automatic figure width in inches
+#'
+#' A cladogram drawn at a fixed branch angle is narrower than it is tall (about
+#' half as wide at 45 degrees), so a fixed 12 in canvas would leave most of the
+#' figure empty; its width follows the height and the angle instead (tree +
+#' labels). Other topologies, and the stretched cladogram, keep 12 in.
+#' @param type         Tree topology.
+#' @param height       Figure height in inches.
+#' @param branch_angle Cladogram branch angle in degrees, or \code{NULL}.
+#' @keywords internal
+.emtree_auto_width <- function(type, height, branch_angle = 45) {
+  branch_angle <- .emtree_branch_angle(branch_angle)
+  if (!identical(type, "cladogram") || is.null(branch_angle)) return(12)
+  max(6, 0.55 * height / tan(branch_angle * pi / 180) + 4)
+}
 
 .emtree_lend_code <- function(tip_end) {
   switch(tip_end %||% "round", "round" = 0L, "butt" = 1L, "square" = 2L,
          stop("`tip_end` must be one of \"round\", \"butt\" or \"square\"."))
 }
 
-.emtree_render_cladogram <- function(pp, tree, color_list, lwd, offsets,
-                                     tip_end = "round") {
-  xx <- pp$xx
-  yy <- pp$yy
+#' Geometry of a cladogram line offset by `d` inches (a band edge or lane center)
+#'
+#' @param X,Y   Node coordinates in inches.
+#' @param edges Edge matrix of the tree.
+#' @param n_tips Number of tips.
+#' @param d     Signed perpendicular distance in inches.
+#' @return list(x0, y0, x1, y1) in inches, one element per edge.
+#' @keywords internal
+.emtree_clado_lanes <- function(X, Y, edges, n_tips, d) {
+  par_i <- edges[, 1L]
+  chi_i <- edges[, 2L]
+  E     <- nrow(edges)
 
+  ux  <- X[chi_i] - X[par_i]
+  uy  <- Y[chi_i] - Y[par_i]
+  len <- sqrt(ux^2 + uy^2)
+  len[len == 0] <- 1
+  ux <- ux / len; uy <- uy / len
+  # Lane anchor: parent shifted along the left normal (-uy, ux)
+  ax <- X[par_i] - d * uy
+  ay <- Y[par_i] + d * ux
+
+  # Parameter t along lane `e` where it crosses lane `f` (NA if parallel)
+  cross_t <- function(e, f) {
+    cr <- ux[e] * uy[f] - uy[e] * ux[f]
+    if (abs(cr) < 1e-9) return(NA_real_)
+    ((ax[f] - ax[e]) * uy[f] - (ay[f] - ay[e]) * ux[f]) / cr
+  }
+
+  entry  <- match(par_i, chi_i)            # incoming edge of each edge's parent
+  t0 <- numeric(E)
+  for (e in seq_len(E)) {
+    f <- entry[e]
+    if (is.na(f)) {                        # root: pair with a sibling lane
+      sib <- which(par_i == par_i[e] & seq_len(E) != e)
+      f   <- if (length(sib)) sib[1L] else NA_integer_
+    }
+    t0[e] <- if (is.na(f)) 0 else cross_t(e, f)
+    # Miter limit: nearly collinear lanes cross far away -> bevel instead
+    if (is.na(t0[e]) || abs(t0[e]) > 4 * abs(d)) t0[e] <- 0
+  }
+
+  t1 <- len                                # default: shifted child node
+  for (e in seq_len(E)) {
+    ch <- chi_i[e]
+    if (ch <= n_tips) {
+      # Cut on the tip vertical so every lane ends at the same x
+      if (abs(ux[e]) > 1e-9) t1[e] <- (X[ch] - ax[e]) / ux[e]
+    } else {
+      kids <- which(par_i == ch)
+      # Children start on this lane (t0 of kid measured on the kid's lane);
+      # map those points back onto this lane and extend to the farthest one.
+      tk <- vapply(kids, function(k) {
+        (ax[k] + t0[k] * ux[k] - ax[e]) * ux[e] + (ay[k] + t0[k] * uy[k] - ay[e]) * uy[e]
+      }, numeric(1))
+      t1[e] <- max(c(len[e], tk))
+    }
+  }
+
+  list(x0 = ax + t0 * ux, y0 = ay + t0 * uy,
+       x1 = ax + t1 * ux, y1 = ay + t1 * uy)
+}
+
+.emtree_render_cladogram <- function(pp, tree, color_list, lwd, offsets,
+                                     tip_end = "round", branch_angle = 45) {
   edges      <- tree$edge
   parent_idx <- edges[, 1L]
   child_idx  <- edges[, 2L]
   n_tips     <- Ntip(tree)
   lend_code  <- .emtree_lend_code(tip_end)
 
-  # Internal nodes, their incoming edge (NA = root) and a reference neighbor
-  # (parent, or first child for the root) that sets the joint's direction.
-  internal_nodes <- unique(parent_idx[parent_idx > n_tips])
-  entry_idx      <- match(internal_nodes, child_idx)
-  neighbor       <- ifelse(is.na(entry_idx),
-                           child_idx[match(internal_nodes, parent_idx)],
-                           parent_idx[entry_idx])
-  ux <- xx[neighbor] - xx[internal_nodes]
-  uy <- yy[neighbor] - yy[internal_nodes]
-  len <- sqrt(ux^2 + uy^2)
-  len[len == 0] <- 1
-  # Joint stroke length: negligible in data units but non-zero, so every
-  # device draws its round caps (zero-length strokes are device-dependent).
-  eps <- 1e-4 * max(diff(range(xx)), diff(range(yy)), 1e-8)
-  jx  <- ux / len * eps
-  jy  <- uy / len * eps
+  # Work in inches so perpendicular distances are isotropic on the device
+  usr <- par("usr"); pin <- par("pin")
+  sx  <- (usr[2L] - usr[1L]) / pin[1L]
+  sy  <- (usr[4L] - usr[3L]) / pin[2L]
+  xx  <- pp$xx
+  branch_angle <- .emtree_branch_angle(branch_angle)
+  if (!is.null(branch_angle)) {
+    dxe   <- xx[child_idx] - xx[parent_idx]
+    slope <- stats::median(abs((pp$yy[child_idx] - pp$yy[parent_idx])[dxe != 0] / dxe[dxe != 0]))
+    x_tip <- max(xx)
+    span  <- x_tip - min(xx)
+    if (is.finite(slope) && slope > 0 && span > 0) {
+      # device slope = tan(branch_angle)
+      k     <- slope * sx / sy / tan(branch_angle * pi / 180)
+      k_max <- (x_tip - usr[1L]) / span            # keep the root inside the plot
+      xx    <- x_tip - (x_tip - xx) * min(k, k_max)
+    }
+  }
+  X   <- xx / sx
+  Y   <- pp$yy / sy
 
   N <- length(color_list)
 
-  for (i in seq_len(N)) {
-    ec    <- color_list[[i]]
-    lwd_i <- lwd[min(i, length(lwd))]
-    dy    <- offsets$dy[min(i, length(offsets$dy))]
-    dx    <- offsets$dx[min(i, length(offsets$dx))]
+  # Band edges: lane widths are the line widths (lwd 1 = 1/96 in), stacked
+  # without gaps and centered on the branch. A hair of overlap between
+  # neighbouring bands hides anti-aliasing seams.
+  w_in   <- lwd[pmin(seq_len(N), length(lwd))] / 96
+  bounds <- c(0, cumsum(w_in)) - sum(w_in) / 2
+  seam   <- 0.004                                  # inches (~1 px at 300 dpi)
+  geo    <- lapply(bounds, function(o) .emtree_clado_lanes(X, Y, edges, n_tips, o))
+  centre <- lapply(seq_len(N), function(i) .emtree_clado_lanes(
+    X, Y, edges, n_tips, (bounds[i] + bounds[i + 1L]) / 2))
 
-    # Diagonal segments parent->child (fully vectorized).
-    # dx / dy is added to BOTH endpoints to shift the entire segment.
-    segments(x0   = xx[parent_idx] + dx,
-             y0   = yy[parent_idx] + dy,
-             x1   = xx[child_idx]  + dx,
-             y1   = yy[child_idx]  + dy,
-             col  = ec,
-             lwd  = lwd_i,
-             lend = lend_code)
+  # Unit direction and left normal of every edge (inches)
+  ux <- X[child_idx] - X[parent_idx]; uy <- Y[child_idx] - Y[parent_idx]
+  ul <- sqrt(ux^2 + uy^2); ul[ul == 0] <- 1
+  ux <- ux / ul; uy <- uy / ul
+  nx <- -uy; ny <- ux
 
-    # Round joints: all edges leaving a node meet on one point.
-    rc        <- attr(ec, "root_color")
-    joint_col <- ifelse(is.na(entry_idx),
-                        if (!is.null(rc)) rc else ec[match(internal_nodes, parent_idx)],
-                        ec[entry_idx])
-    segments(x0   = xx[internal_nodes] + dx,
-             y0   = yy[internal_nodes] + dy,
-             x1   = xx[internal_nodes] + dx + jx,
-             y1   = yy[internal_nodes] + dy + jy,
-             col  = joint_col,
-             lwd  = lwd_i,
-             lend = 0L)
+  # Drawing order: root to tips, so a child band always covers its parent's
+  # join. Among siblings, the child that continues the incoming branch in a
+  # straight line is drawn last (guard): the outer miter corner of a side
+  # branch lies past the node, inside the continuation's band, and must not
+  # show on top of that sibling clade.
+  depth     <- ape::node.depth.edgelength(ape::compute.brlen(tree, 1))
+  entry     <- match(parent_idx, child_idx)
+  collinear <- !is.na(entry) &
+    (ux * ux[entry] + uy * uy[entry]) > cos(2 * pi / 180)
+  collinear[is.na(collinear)] <- FALSE
+  draw  <- order(depth[parent_idx], collinear)
+  is_tip_edge <- child_idx <= n_tips
+  continues   <- child_idx %in% parent_idx[collinear]   # edge has a straight continuation
+
+  for (e in draw) {
+    for (i in seq_len(N)) {
+      lo <- geo[[i]]; hi <- geo[[i + 1L]]
+      # widen by `seam` along the band normal so adjacent bands overlap slightly
+      sx_e <- nx[e] * seam; sy_e <- ny[e] * seam
+      if (is_tip_edge[e]) {
+        # Tip: cut perpendicular to the branch through the lane centre, which
+        # sits on the tip vertical, so caps are clean and lanes stay aligned.
+        cx <- centre[[i]]$x1[e]; cy <- centre[[i]]$y1[e]
+        hw <- w_in[i] / 2
+        end_lo <- c(cx - nx[e] * hw, cy - ny[e] * hw)
+        end_hi <- c(cx + nx[e] * hw, cy + ny[e] * hw)
+      } else if (continues[e]) {
+        # Guard: a straight continuation covers everything past the node, so
+        # the band stops on the node's perpendicular cut and never shows next
+        # to it (the side branch's outer corner lies under the continuation).
+        cn <- child_idx[e]
+        end_lo <- c(X[cn] + nx[e] * bounds[i],      Y[cn] + ny[e] * bounds[i])
+        end_hi <- c(X[cn] + nx[e] * bounds[i + 1L], Y[cn] + ny[e] * bounds[i + 1L])
+      } else {
+        end_lo <- c(lo$x1[e], lo$y1[e])
+        end_hi <- c(hi$x1[e], hi$y1[e])
+      }
+      px <- c(lo$x0[e] - sx_e, end_lo[1L] - sx_e, end_hi[1L] + sx_e, hi$x0[e] + sx_e)
+      py <- c(lo$y0[e] - sy_e, end_lo[2L] - sy_e, end_hi[2L] + sy_e, hi$y0[e] + sy_e)
+      polygon(px * sx, py * sy, col = color_list[[i]][e], border = NA)
+    }
+  }
+
+  # Tip ends: "butt" keeps the flat perpendicular cut; "round" / "square" add a cap.
+  if (lend_code != 1L) {
+    eps <- 1e-4 * max(diff(range(X)), diff(range(Y)), 1e-8)
+    for (i in seq_len(N)) {
+      ct <- centre[[i]]
+      vx <- ct$x1 - ct$x0; vy <- ct$y1 - ct$y0
+      vl <- sqrt(vx^2 + vy^2); vl[vl == 0] <- 1
+      e  <- which(is_tip_edge)
+      segments(x0   = (ct$x1[e] - vx[e] / vl[e] * eps) * sx,
+               y0   = (ct$y1[e] - vy[e] / vl[e] * eps) * sy,
+               x1   = ct$x1[e] * sx, y1 = ct$y1[e] * sy,
+               col  = color_list[[i]][e],
+               lwd  = lwd[min(i, length(lwd))],
+               lend = lend_code)
+    }
   }
 }
 
@@ -721,14 +927,26 @@
 #'                       length 1 and the topology is preserved. Default \code{1}.
 #' @param tip_end        Cladogram only: style of the free branch ends,
 #'                       \code{"round"} (default), \code{"butt"} or \code{"square"}.
-#'                       Internal nodes always get a round joint so sibling
-#'                       branches converge on a single point.
+#'                       Only the tips are affected: at internal nodes the
+#'                       colour bands always meet in closed miter joins.
+#' @param branch_angle   Cladogram only. Angle of every branch from the horizontal,
+#'                       in degrees (10-80; default \code{45}, so siblings meet at
+#'                       right angles). 30-60 is recommended: smaller angles move
+#'                       the lane corners away from the nodes. \code{NULL}
+#'                       stretches the tree to the full canvas width.
+#' @param show_labels    Logical. Draw the species names at the tips (default \code{TRUE}).
+#' @param label_size     Multiplier of the automatic tip-label size (default \code{1}).
+#' @param label_color    Color of the tip labels (default \code{"black"}).
 #' @param legend_title   Single legend block title string (legacy mode). \code{NULL} = no title.
 #' @param overlay_fn     Optional function called after the legend, inside the open device,
 #'                       with \code{par("usr")} already set. Receives \code{pp}, \code{cex_aj},
 #'                       \code{label_offset_aj}, \code{R_tips}, and \code{gap_u}.
 #' @param hide_fan_labels When \code{TRUE}, omits radial tip labels in fan topology,
 #'                        delegating their drawing to \code{overlay_fn}.
+#' @param header_labels  Optional character vector of column headers that
+#'                        \code{overlay_fn} draws above the top tip (rotated 45
+#'                        degrees, phylogram / cladogram). Space is reserved at
+#'                        the top so they are not clipped.
 #'
 #' @return Invisible: full path of the generated file (string).
 #'
@@ -778,6 +996,16 @@ export_multimapr_tree <- function(tree,
                                   # tip_end: cladogram branch-end style,
                                   # "round" (default) | "butt" | "square".
                                   tip_end       = "round",
+                                  # branch_angle: cladogram branch angle in degrees
+                                  # (45 = right-angle joints); NULL stretches to the canvas.
+                                  branch_angle  = 45,
+                                  # -- TIP LABELS ----------------------------------------
+                                  # show_labels: draw species names at the tips.
+                                  # label_size : multiplier of the automatic label size.
+                                  # label_color: color of the species names.
+                                  show_labels   = TRUE,
+                                  label_size    = 1,
+                                  label_color   = "black",
                                   mar           = c(1, 1, 1, 4),
                                   # -- CUSTOM DIMENSION PARAMETERS -----------------------
                                   # NULL -> automatic dimensions are used, calculated
@@ -810,12 +1038,17 @@ export_multimapr_tree <- function(tree,
                                   # hide_fan_labels: when TRUE omits step 5b
                                   # (radial fan labels), delegating their drawing
                                   # to overlay_fn which repositions them further out.
-                                  hide_fan_labels = FALSE) {
+                                  hide_fan_labels = FALSE,
+                                  # header_labels: column headers the overlay draws above
+                                  # the top tip (rotated 45 deg); room is reserved for them.
+                                  header_labels   = NULL) {
 
   # -- 0. Argument validation ------------------------------------------------
   .emtree_validate_tree(tree)
   .emtree_validate_color_list(color_list, nrow(tree$edge))
   .emtree_lend_code(tip_end)   # validates tip_end
+  branch_angle <- .emtree_branch_angle(branch_angle)
+  .emtree_validate_labels(show_labels, label_size, label_color)
   .emtree_validate_filename(filename)
   .emtree_validate_type_format(type, format)
 
@@ -888,7 +1121,7 @@ export_multimapr_tree <- function(tree,
 
   # Default dimensions (original behavior)
   height_default <- n_tips * 0.25 + 2   # 0.25 inches per tip + base margin
-  width_default  <- 12
+  width_default  <- .emtree_auto_width(type, height_default, branch_angle)
 
   # Fan -> square canvas to avoid polar distortions + 1.5 in extra
   # for more breathing room for labels and legend in radial mode.
@@ -914,6 +1147,7 @@ export_multimapr_tree <- function(tree,
   # in the off-screen probing device (Phase 1).
   cex_base <- max(1 / (1 + n_tips / 50), 0.2)
   cex_aj   <- cex_base * scale_h
+  cex_lbl  <- cex_aj * label_size   # tip labels only
 
   # Offset proportional to the actual geometric scale of the data (2.5%)
   phy_tmp <- tree
@@ -942,12 +1176,12 @@ export_multimapr_tree <- function(tree,
     plot(tree,
          type           = type,
          edge.color     = "transparent",
-         tip.color      = if (type == "fan") "transparent" else "black",
+         tip.color      = if (type == "fan") "transparent" else label_color,
          edge.width     = lwd,
-         cex            = cex_aj,
+         cex            = cex_lbl,
          label.offset   = label_offset_aj,
          no.margin      = if (type == "fan") FALSE else TRUE,
-         show.tip.label = TRUE,
+         show.tip.label = show_labels,
          font           = 3L,    # <--- Italic enabled
          x.lim          = xlim_extra,
          y.lim          = ylim_extra)
@@ -963,7 +1197,10 @@ export_multimapr_tree <- function(tree,
   xlim_final <- NULL
   ylim_final <- NULL
 
-  if (has_legend || (type == "fan" && hide_fan_labels && !is.null(overlay_fn))) {
+  has_headers <- type != "fan" && length(header_labels) > 0L
+
+  if (has_legend || has_headers ||
+      (type == "fan" && hide_fan_labels && !is.null(overlay_fn))) {
     prev_dev <- dev.cur()
     pdf(NULL, width = width_in, height = height_in)   # off-screen, no file
     tryCatch({
@@ -1003,7 +1240,7 @@ export_multimapr_tree <- function(tree,
           n_char_ov     <- length(color_list)   # number of characters = number of histories
           name_radius   <- R_max_ov * (1.06 + 0.10 * n_char_ov)
           max_nc        <- max(nchar(tree$tip.label))
-          lbl_est       <- max_nc * R_max_ov * 0.018 * cex_aj
+          lbl_est       <- if (show_labels) max_nc * R_max_ov * 0.018 * cex_lbl else 0
           total_radius  <- name_radius + lbl_est + R_max_ov * 0.05
           # The fan canvas is symmetric; we want total_radius to fit
           expansion_ov  <- max(0, total_radius - usr[2L])
@@ -1021,10 +1258,19 @@ export_multimapr_tree <- function(tree,
           else              xlim_final[1L] <- xlim_final[1L] - med$dx
         }
       } else {
-        xlim_final <- if (med$on_right) c(usr[1L], usr[2L] + med$dx)
-        else              c(usr[1L] - med$dx, usr[2L])
-        ylim_final <- if (med$going_down) c(usr[3L], usr[4L] + med$dy)
-        else               c(usr[3L] - med$dy, usr[4L])
+        if (has_legend) {
+          xlim_final <- if (med$on_right) c(usr[1L], usr[2L] + med$dx)
+          else              c(usr[1L] - med$dx, usr[2L])
+          ylim_final <- if (med$going_down) c(usr[3L], usr[4L] + med$dy)
+          else               c(usr[3L] - med$dy, usr[4L])
+        }
+        if (has_headers) {
+          pp_h <- get("last_plot.phylo", envir = .emtree_get_PlotPhyloEnv())
+          extra <- .emtree_header_space(header_labels, cex_aj * 0.9,
+                                        pp_h$yy[seq_len(n_tips)])
+          if (is.null(ylim_final)) ylim_final <- usr[3:4]
+          ylim_final[2L] <- ylim_final[2L] + extra
+        }
       }
     }, finally = .close_device_restore(prev_dev))   # always close; leaves no file on disk
   }
@@ -1046,7 +1292,7 @@ export_multimapr_tree <- function(tree,
 
     } else if (type == "cladogram") {
       .emtree_render_cladogram(pp, tree, color_list, lwd_vec, offsets,
-                               tip_end = tip_end)
+                               tip_end = tip_end, branch_angle = branch_angle)
 
     } else {
       .emtree_render_fan(pp, tree, color_list, lwd_vec, offsets)
@@ -1058,7 +1304,7 @@ export_multimapr_tree <- function(tree,
       R_tips  <- sqrt(xx_tips^2 + yy_tips^2)
       gap_u   <- strwidth("m", cex = cex_aj) * 1.5
 
-      if (!hide_fan_labels) {
+      if (!hide_fan_labels && show_labels) {
         old_xpd <- par("xpd")
         par(xpd = NA)
         for (j in seq_len(n_tips)) {
@@ -1071,7 +1317,8 @@ export_multimapr_tree <- function(tree,
                R_j * sin(ang_j),
                labels = tree$tip.label[j],
                adj    = adj_j,
-               cex    = cex_aj,
+               cex    = cex_lbl,
+               col    = label_color,
                font   = 3L,        # <--- Italic enabled
                srt    = srt_j)
         }
@@ -1238,11 +1485,18 @@ if (FALSE) {
 #'                        branches stay at length 1. Default \code{1}.
 #' @param tip_end         Cladogram only: \code{"round"} (default), \code{"butt"}
 #'                        or \code{"square"} branch ends.
+#' @param branch_angle    Cladogram only: branch angle in degrees (10-80, default
+#'                        \code{45}); \code{NULL} stretches to the full width.
+#' @param show_labels     Logical. Draw the species names at the tips (default \code{TRUE}).
+#' @param label_size      Multiplier of the automatic tip-label size (default \code{1}).
+#' @param label_color     Color of the tip labels (default \code{"black"}).
 #' @param legend_title    Single legend block title (legacy mode).
 #' @param overlay_fn      Optional function called after the legend, inside the
 #'                        active device with \code{par("usr")} already set.
 #' @param hide_fan_labels When \code{TRUE}, omits radial tip labels in fan topology,
 #'                        delegating their drawing to \code{overlay_fn}.
+#' @param header_labels   Optional column headers drawn by \code{overlay_fn} above
+#'                        the top tip; space is reserved for them.
 #' @return Invisible NULL. Draws on the active graphics device.
 plot_multimapr_screen <- function(tree,
                                   color_list,
@@ -1254,6 +1508,10 @@ plot_multimapr_screen <- function(tree,
                                   ladderize       = FALSE,
                                   terminal_stretch = 1,
                                   tip_end        = "round",
+                                  branch_angle   = 45,
+                                  show_labels    = TRUE,
+                                  label_size     = 1,
+                                  label_color    = "black",
                                   legend_by_char = NULL,
                                   legend_labels  = NULL,
                                   legend_colors  = NULL,
@@ -1268,11 +1526,14 @@ plot_multimapr_screen <- function(tree,
                                   overlay_fn      = NULL,
                                   # hide_fan_labels: when TRUE omits the radial fan
                                   # labels, delegating their drawing to overlay_fn.
-                                  hide_fan_labels = FALSE) {
+                                  hide_fan_labels = FALSE,
+                                  header_labels   = NULL) {
 
   .emtree_validate_tree(tree)
   .emtree_validate_color_list(color_list, nrow(tree$edge))
   .emtree_lend_code(tip_end)   # validates tip_end
+  branch_angle <- .emtree_branch_angle(branch_angle)
+  .emtree_validate_labels(show_labels, label_size, label_color)
 
   # Apply ladderize / edge length before rendering (mirrors export behavior)
   if (identical(ladderize, TRUE)) {
@@ -1305,6 +1566,7 @@ plot_multimapr_screen <- function(tree,
 
   cex_base <- max(1 / (1 + n_tips / 50), 0.2)
   cex_aj   <- cex_base * scale_h
+  cex_lbl  <- cex_aj * label_size   # tip labels only
 
   # Offset proportional to actual tree scale (2.5%)
   phy_tmp <- tree
@@ -1319,18 +1581,19 @@ plot_multimapr_screen <- function(tree,
   mar_base <- c(1, 1, 1, 4)
 
   # Internal function: Blank Canvas to populate .PlotPhyloEnv
-  .render_canvas_screen <- function() {
+  .render_canvas_screen <- function(ylim_extra = NULL) {
     if (type == "fan") par(mar = rep(2L, 4L)) else par(mar = mar_base)
     plot(tree,
          type           = type,
          edge.color     = "transparent",
-         tip.color      = if (type == "fan") "transparent" else "black",
+         tip.color      = if (type == "fan") "transparent" else label_color,
          edge.width     = lwd,
-         cex            = cex_aj,
+         cex            = cex_lbl,
          label.offset   = label_offset_aj,
          no.margin      = if (type == "fan") FALSE else TRUE,
-         show.tip.label = TRUE,
-         font           = 3L)
+         show.tip.label = show_labels,
+         font           = 3L,
+         y.lim          = ylim_extra)
     pp <- get("last_plot.phylo", envir = get(".PlotPhyloEnv", envir = asNamespace("ape")))
     return(pp)
   }
@@ -1338,6 +1601,14 @@ plot_multimapr_screen <- function(tree,
   # Clear window and render invisible canvas
   plot.new()
   pp      <- .render_canvas_screen()
+  if (type != "fan" && length(header_labels) > 0L) {
+    extra <- .emtree_header_space(header_labels, cex_aj * 0.9, pp$yy[seq_len(n_tips)])
+    if (extra > 0) {
+      usr <- par("usr")
+      plot.new()
+      pp <- .render_canvas_screen(ylim_extra = c(usr[3L], usr[4L] + extra))
+    }
+  }
   offsets <- .emtree_calc_offsets(N, adjusted_offset_range)
 
   # Dispatch to topology-specific geometric renderer
@@ -1346,7 +1617,7 @@ plot_multimapr_screen <- function(tree,
 
   } else if (type == "cladogram") {
     .emtree_render_cladogram(pp, tree, color_list, lwd_vec, offsets,
-                               tip_end = tip_end)
+                               tip_end = tip_end, branch_angle = branch_angle)
 
   } else if (type == "fan") {
     .emtree_render_fan(pp, tree, color_list, lwd_vec, offsets)
@@ -1358,7 +1629,7 @@ plot_multimapr_screen <- function(tree,
     R_tips  <- sqrt(xx_tips^2 + yy_tips^2)
     gap_u   <- strwidth("m", cex = cex_aj) * 1.5
 
-    if (!hide_fan_labels) {
+    if (!hide_fan_labels && show_labels) {
       old_xpd <- par("xpd"); par(xpd = NA)
       for (j in seq_len(n_tips)) {
         ang_j      <- angles[j]
@@ -1367,7 +1638,8 @@ plot_multimapr_screen <- function(tree,
         srt_j      <- ang_j * 180 / pi
         adj_j      <- if (right_side) c(0, 0.5) else { srt_j <- srt_j + 180; c(1, 0.5) }
         text(R_j * cos(ang_j), R_j * sin(ang_j),
-             labels = tree$tip.label[j], adj = adj_j, cex = cex_aj, font = 3L, srt = srt_j)
+             labels = tree$tip.label[j], adj = adj_j, cex = cex_lbl,
+             col = label_color, font = 3L, srt = srt_j)
       }
       par(xpd = old_xpd)
     }

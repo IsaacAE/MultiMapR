@@ -64,6 +64,10 @@ plot_simple_mapping <- function(filogenia, config) {
   cex_aj          <- adjust_cex(filogenia, config = config)
   n_tips          <- Ntip(filogenia)
   n_car           <- length(caracteres)
+  show_lbl        <- config$show_labels %||% TRUE
+  cex_lbl         <- cex_aj * (config$label_size %||% 1)
+  col_lbl         <- config$label_color %||% "black"
+  show_leg        <- config$show_legend %||% TRUE
 
   asignar_color <- function(valor, colores_estado) {
     valor <- as.character(valor)
@@ -81,6 +85,7 @@ plot_simple_mapping <- function(filogenia, config) {
 
   # ── Helper: draws the legend in blocks (same as plot_superimposed_characters) ──
   .draw_simple_legend <- function(pos_ley) {
+    if (!show_leg) return(invisible(NULL))
     usr        <- par("usr")
     going_down <- grepl("top",  pos_ley)
     x_start    <- if (grepl("left", pos_ley)) usr[1L] else usr[2L]
@@ -231,14 +236,14 @@ plot_simple_mapping <- function(filogenia, config) {
 
         # Draw italic tip labels radially
         old_xpd <- par("xpd"); par(xpd = TRUE)
-        for (j in seq_len(n_tips)) {
+        for (j in seq_len(n_tips)[show_lbl]) {
           ang_j  <- angulos2[j]; deg_j <- ang_j * 180 / pi
           lado_d <- cos(ang_j) >= 0
           srt_j  <- if (lado_d) deg_j else deg_j + 180
           adj_j  <- if (lado_d) c(0, 0.5) else c(1, 0.5)
           text(radio_nombres2 * cos(ang_j), radio_nombres2 * sin(ang_j),
-               labels = filogenia$tip.label[j], adj = adj_j, cex = cex_aj,
-               srt = srt_j, font = 3L)
+               labels = filogenia$tip.label[j], adj = adj_j, cex = cex_lbl,
+               col = col_lbl, srt = srt_j, font = 3L)
         }
         par(xpd = old_xpd)
 
@@ -314,14 +319,14 @@ plot_simple_mapping <- function(filogenia, config) {
 
         # ── Tip labels — parallel to radius ────────────────────────────────────
         old_xpd <- par("xpd"); par(xpd = TRUE)
-        for (j in seq_len(n_tips)) {
+        for (j in seq_len(n_tips)[show_lbl]) {
           ang_j  <- angulos[j]; deg_j <- ang_j * 180 / pi
           lado_d <- cos(ang_j) >= 0
           srt_j  <- if (lado_d) deg_j else deg_j + 180
           adj_j  <- if (lado_d) c(0, 0.5) else c(1, 0.5)
           text(radio_nombres * cos(ang_j), radio_nombres * sin(ang_j),
-               labels = filogenia$tip.label[j], adj = adj_j, cex = cex_aj, srt = srt_j,
-               font   = 3L)
+               labels = filogenia$tip.label[j], adj = adj_j, cex = cex_lbl, srt = srt_j,
+               col    = col_lbl, font   = 3L)
         }
         par(xpd = old_xpd)
 
@@ -354,12 +359,12 @@ plot_simple_mapping <- function(filogenia, config) {
 
         plot(filogenia,
              type           = tipo_arbol,
-             cex            = cex_aj,
+             cex            = cex_lbl,
              label.offset   = config$label_offset,
              edge.width     = config$grosor,
              edge.color     = edge_col,
-             tip.color      = "black",
-             show.tip.label = TRUE,
+             tip.color      = col_lbl,
+             show.tip.label = show_lbl,
              font           = 3L,
              x.lim          = xlim_extra)
 
@@ -369,11 +374,11 @@ plot_simple_mapping <- function(filogenia, config) {
         # ── MODE: figures (default) ────────────────────────────────────────────
         plot(filogenia,
              type           = tipo_arbol,
-             cex            = cex_aj,
+             cex            = cex_lbl,
              label.offset   = config$label_offset,
              edge.width     = config$grosor,
-             tip.color      = "black",
-             show.tip.label = TRUE,
+             tip.color      = col_lbl,
+             show.tip.label = show_lbl,
              font           = 3L,
              x.lim          = xlim_extra)   # NULL on screen; expanded on export
 
@@ -385,7 +390,7 @@ plot_simple_mapping <- function(filogenia, config) {
 
         sep_col    <- strwidth("M", cex = cex_aj) * 2.5
         max_tip_x  <- max(xx_tip)
-        max_lbl_w  <- max(strwidth(filogenia$tip.label, cex = cex_aj))
+        max_lbl_w  <- if (show_lbl) max(strwidth(filogenia$tip.label, cex = cex_lbl)) else 0
         start_x    <- max_tip_x + config$label_offset + max_lbl_w + max_tip_x * 0.02
         x_columnas <- start_x + seq(0, n_car - 1L) * sep_col
 
@@ -453,11 +458,11 @@ plot_simple_mapping <- function(filogenia, config) {
       par(mar = c(1, 1, 2, 1), xpd = FALSE)
       plot(filogenia,
            type           = tipo_arbol,
-           cex            = cex_aj,
+           cex            = cex_lbl,
            label.offset   = config$label_offset,
            edge.width     = config$grosor,
-           tip.color      = "black",
-           show.tip.label = TRUE,
+           tip.color      = col_lbl,
+           show.tip.label = show_lbl,
            font           = 3L)
 
       obj_s  <- get("last_plot.phylo", envir = .PlotPhyloEnv)
@@ -468,7 +473,7 @@ plot_simple_mapping <- function(filogenia, config) {
 
       sep_col_s  <- strwidth("M", cex = cex_aj) * 2.5
       max_tip_s  <- max(xx_s)
-      max_lbl_s  <- max(strwidth(filogenia$tip.label, cex = cex_aj))
+      max_lbl_s  <- if (show_lbl) max(strwidth(filogenia$tip.label, cex = cex_lbl)) else 0
       start_x_s  <- max_tip_s + config$label_offset + max_lbl_s + max_tip_s * 0.02
       x_cols_s   <- start_x_s + seq(0, n_car - 1L) * sep_col_s
 
@@ -481,7 +486,7 @@ plot_simple_mapping <- function(filogenia, config) {
 
       legend_width <- 0
       y_ref_s   <- if (grepl("top", pos_ley_s)) usr_s[4L] else usr_s[3L]
-      for (i in seq_along(caracteres)) {
+      for (i in seq_along(caracteres)[show_leg]) {
         car_i   <- caracteres[i]
         col_e_i <- colores_por_car[[car_i]]
         lg_i <- legend(x      = x_max_tabla,
@@ -793,7 +798,11 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
        ladderize     = config$ladderize %||% FALSE,
        terminal_stretch = config$terminal_stretch %||% 1,
        tip_end          = config$tip_end %||% "round",
-       legend_labels = ley_data$labels,
+       branch_angle     = config$branch_angle %||% 45,
+       show_labels      = config$show_labels %||% TRUE,
+       label_size       = config$label_size %||% 1,
+       label_color      = config$label_color %||% "black",
+       legend_labels = if (config$show_legend %||% TRUE) ley_data$labels,
        legend_colors = ley_data$colors,
        legend_corner = config$legend_corner %||% "bottomleft",
        legend_title  = titulo_leyenda
@@ -809,7 +818,11 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
     ladderize      = config$ladderize %||% FALSE,
       terminal_stretch = config$terminal_stretch %||% 1,
       tip_end          = config$tip_end %||% "round",
-    legend_labels  = if (!is.null(colores_estado)) names(colores_estado) else NULL,
+      branch_angle     = config$branch_angle %||% 45,
+      show_labels      = config$show_labels %||% TRUE,
+      label_size       = config$label_size %||% 1,
+      label_color      = config$label_color %||% "black",
+    legend_labels  = if (!is.null(colores_estado) && config$show_legend %||% TRUE) names(colores_estado),
     legend_colors  = if (!is.null(colores_estado)) unname(colores_estado) else NULL,
     legend_corner  = config$legend_corner %||% "bottomleft",
     legend_title   = titulo_leyenda
@@ -1027,7 +1040,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       }
 
       # ── Species labels (parallel to radius, beyond the last ring)
-      for (j in seq_len(n_tips)) {
+      for (j in seq_len(n_tips)[config$show_labels %||% TRUE]) {
         ang_j  <- angulos[j]
         deg_j  <- ang_j * 180 / pi
         lado_d <- cos(ang_j) >= 0
@@ -1037,7 +1050,8 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
              radio_nombres * sin(ang_j),
              labels = filogenia$tip.label[j],
              adj    = adj_j,
-             cex    = cex_aj,
+             cex    = cex_aj * (config$label_size %||% 1),
+             col    = config$label_color %||% "black",
              srt    = srt_j,
              font   = 3L)
       }
@@ -1049,7 +1063,9 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       if (is.null(lbl_off))
         lbl_off <- config$label_offset %||% (max_tip_x * 0.025)
 
-      max_lbl_w  <- max(strwidth(filogenia$tip.label, cex = cex_aj))
+      max_lbl_w  <- if (config$show_labels %||% TRUE)
+                      max(strwidth(filogenia$tip.label,
+                                   cex = cex_aj * (config$label_size %||% 1))) else 0
       sep_col    <- strwidth("M", cex = cex_aj) * 2.5
       start_x    <- max_tip_x + lbl_off + max_lbl_w + max_tip_x * 0.02
       x_columnas <- start_x + seq(0, length(caracteres) - 1L) * sep_col
@@ -1099,11 +1115,16 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       height          = config$height,
       offset_range    = config$rango_desfase %||% 0.1,
       tip_end         = config$tip_end %||% "round",
-      legend_by_char  = ley_data$by_char,
+      branch_angle    = config$branch_angle %||% 45,
+      show_labels     = config$show_labels %||% TRUE,
+      label_size      = config$label_size %||% 1,
+      label_color     = config$label_color %||% "black",
+      legend_by_char  = if (config$show_legend %||% TRUE) ley_data$by_char,
       legend_corner   = config$legend_corner %||% "bottomleft",
       # For fan, hide engine labels and redraw them in the overlay,
       # further out, after all figures.
       hide_fan_labels = (tipo_arbol == "fan"),
+      header_labels   = caracteres,
       overlay_fn      = function(pp, cex_aj, label_offset_aj,
                                  R_tips = NULL, gap_u = NULL) {
         .superponer_figuras_terminales(pp      = pp,
@@ -1126,9 +1147,14 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
     lwd             = config$grosor,
     offset_range    = config$rango_desfase %||% 0.1,
     tip_end         = config$tip_end %||% "round",
-    legend_by_char  = ley_data$by_char,
+    branch_angle    = config$branch_angle %||% 45,
+    show_labels     = config$show_labels %||% TRUE,
+    label_size      = config$label_size %||% 1,
+    label_color     = config$label_color %||% "black",
+    legend_by_char  = if (config$show_legend %||% TRUE) ley_data$by_char,
     legend_corner   = config$legend_corner %||% "bottomleft",
     hide_fan_labels = (tipo_arbol == "fan"),
+    header_labels   = caracteres,
     overlay_fn      = function(pp, cex_aj, label_offset_aj,
                                R_tips = NULL, gap_u = NULL) {
       .superponer_figuras_terminales(pp      = pp,
@@ -1315,7 +1341,11 @@ plot_superimposed_characters <- function(filogenia, config,
        ladderize       = config$ladderize %||% FALSE,
        terminal_stretch = config$terminal_stretch %||% 1,
        tip_end          = config$tip_end %||% "round",
-       legend_by_char  = ley_data$by_char,
+       branch_angle     = config$branch_angle %||% 45,
+       show_labels      = config$show_labels %||% TRUE,
+       label_size       = config$label_size %||% 1,
+       label_color      = config$label_color %||% "black",
+       legend_by_char  = if (config$show_legend %||% TRUE) ley_data$by_char,
        legend_corner   = config$legend_corner %||% "bottomleft"
      )
    }
@@ -1331,7 +1361,11 @@ plot_superimposed_characters <- function(filogenia, config,
     ladderize       = config$ladderize %||% FALSE,
       terminal_stretch = config$terminal_stretch %||% 1,
       tip_end          = config$tip_end %||% "round",
-    legend_by_char  = ley_data$by_char,
+      branch_angle     = config$branch_angle %||% 45,
+      show_labels      = config$show_labels %||% TRUE,
+      label_size       = config$label_size %||% 1,
+      label_color      = config$label_color %||% "black",
+    legend_by_char  = if (config$show_legend %||% TRUE) ley_data$by_char,
     legend_corner   = config$legend_corner %||% "bottomleft"
   )
 

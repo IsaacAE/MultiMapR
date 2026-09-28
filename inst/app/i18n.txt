@@ -196,6 +196,13 @@ tip_end|Puntas de las ramas|Branch tips
 tip_end_round|Redondeadas|Rounded
 tip_end_butt|Planas|Flat
 tip_end_square|Cuadradas|Square
+clado_stretch|Estirar el árbol a todo el ancho|Stretch the tree to the full width
+branch_angle|Ángulo de las ramas|Branch angle
+branch_angle_hint|45° = uniones en ángulo recto. Con ángulos menores el árbol es más ancho y las capas de color convergen menos en los nodos. Solo en reconstrucción ancestral.|45° = right-angle joints. Smaller angles make the tree wider and the colour lanes converge less on the nodes. Ancestral reconstruction only.
+show_legend|Mostrar leyenda|Show legend
+show_labels|Mostrar nombres de las terminales|Show tip labels
+label_size|Tamaño de los nombres|Label size
+label_color|Color de los nombres|Label color
 tip_bl|Sin efecto: se están usando longitudes de rama reales.|No effect: real branch lengths are being used.
 tip_simple|Sin efecto en el mapeo simple; solo aplica a la reconstrucción ancestral.|No effect in simple mapping; it only applies to ancestral reconstruction.
 step_view|Leyenda y vista|Legend and view
@@ -215,12 +222,18 @@ filename|Nombre de archivo (sin extensión)|File name (no extension)
 dims|Dimensiones|Dimensions
 dims_auto|Automáticas|Automatic
 dims_custom|Personalizadas|Custom
-dims_note|ancho 12 in · alto %d × 0.25 + 2 = %.2f in|width 12 in · height %d × 0.25 + 2 = %.2f in
+dims_note|ancho %.2f in · alto %d × 0.25 + 2 = %.2f in|width %.2f in · height %d × 0.25 + 2 = %.2f in
 dims_note_fan|abanico cuadrado · %.2f × %.2f in|square fan · %.2f × %.2f in
 width_in|Ancho (in)|Width (in)
 height_in|Alto (in)|Height (in)
 download|Descargar|Download
 save_exports|Guardar en Exports/|Save to Exports/
+exp_preview|Vista previa del export|Export preview
+exp_preview_title|Vista previa a tamaño de exportación|Preview at export size
+pv_hint|Cambia el ancho y el alto para ver cómo quedará el archivo. La imagen se escala para caber en la ventana, pero las proporciones y el tamaño relativo del texto son los del archivo final.|Change width and height to see how the file will look. The image is scaled to fit the window, but proportions and relative text size are those of the final file.
+pv_info|%s × %s in · %d × %d px (PNG, 300 dpi)|%s × %s in · %d × %d px (PNG, 300 dpi)
+pv_apply|Usar estas medidas|Use these dimensions
+log_pv_applied|Dimensiones de exportación: %s × %s in.|Export dimensions: %s × %s in.
 saved_to|Archivo guardado: %s|File saved: %s
 export_nothing|No hay figura que exportar: revisa los caracteres y estados seleccionados.|Nothing to export: check the selected characters and states.
 log_export_error|Falló la exportación: %s|Export failed: %s

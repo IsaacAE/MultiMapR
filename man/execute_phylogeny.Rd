@@ -19,7 +19,13 @@ execute_phylogeny(
   use_palettes = FALSE,
   palette = NULL,
   ambiguity_color = NULL,
-  terminal_stretch = 1
+  terminal_stretch = 1,
+  tip_end = "round",
+  branch_angle = 45,
+  show_labels = TRUE,
+  label_size = 1,
+  label_color = "black",
+  show_legend = TRUE
 )
 }
 \arguments{
@@ -93,6 +99,34 @@ character-mapping cladograms). Internal branches
 stay at length 1 so the topology is preserved;
 only tip labels/colors get more visual space.
 Default \code{1} (no change).}
+
+\item{tip_end}{Cladogram only: style of the branch tips,
+\code{"round"} (default), \code{"butt"} (flat) or
+\code{"square"}. Only the tips are affected: at
+internal nodes the colour bands always meet in
+closed miter joins.}
+
+\item{branch_angle}{Cladogram only (ancestral reconstruction modes).
+Angle of every branch from the horizontal, in
+degrees (10-80). The default \code{45} makes sibling
+branches meet at right angles; 30-60 is the
+recommended range, since smaller angles move the
+colour lanes' corners away from the nodes.
+\code{NULL} stretches the tree to the full width of
+the figure.}
+
+\item{show_labels}{Logical. Draw the species names at the tips
+(default \code{TRUE}).}
+
+\item{label_size}{Multiplier of the automatic tip-label size
+(default \code{1}; e.g. \code{1.5} draws them half
+again as large).}
+
+\item{label_color}{Color of the tip labels (default \code{"black"}).}
+
+\item{show_legend}{Logical. Draw the legend of character states
+(default \code{TRUE}). When \code{FALSE} no space
+is reserved for it.}
 }
 \value{
 Invisible NULL.

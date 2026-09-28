@@ -141,17 +141,23 @@ than hidden.
 | **A · Mapping type** | Simple mapping (display as figures or as coloured labels / terminal branches, with figure shape and size) or ancestral reconstruction (branch superimposition or coloured tree + tip figures; depth-weighted majority or Fitch with ACCTRAN / DELTRAN / Unambiguous and the colour of ambiguous branches). |
 | **B · Characters** | Searchable list with the number of states and % missing per character. Selection order is drawing order; ancestral reconstruction keeps the first 3 and says so. |
 | **C · States and colours** | A global palette plus one card per character: every observed state can be recoloured or unticked (unticked states are drawn in grey), and `?` / `-` always stay grey and out of the legend. |
-| **D · Tree** | Phylogram / cladogram / fan, branch lengths, ladderisation, branch width and terminal-branch stretch. |
-| **E · Legend and view** | Legend corner and preview height. |
-| **F · Export** | PNG (300 dpi) or vector PDF, file name, automatic or custom dimensions in inches, “Download” and “Save to Exports/”. |
+| **D · Tree** | Phylogram / cladogram / fan, branch lengths, ladderisation, branch width and terminal-branch stretch; for cladograms, the shape of the branch tips (round / flat / square) and the branch angle (30–60°, or stretched to the full width). |
+| **E · Legend and view** | Legend on / off and its corner; species names on / off, with their size and colour; preview height. |
+| **F · Export** | PNG (300 dpi) or vector PDF, file name, automatic or custom dimensions in inches, “Download” and “Save to Exports/”., and an “Export preview” at the chosen size. |
 
 The preview regenerates whenever an option changes, with the same
 proportions as the exported file (12 in wide, height growing with the
-number of terminals; square for fan trees), so what you see is what you
+number of terminals; square for fan trees; for cladograms at a fixed
+branch angle the width follows the height), so what you see is what you
 export. It is always drawn on white in both themes. A mapping log
 records the active characters, the number of branches left unresolved by
 Fitch, and any warning (for example, that a cladogram ignores branch
 lengths).
+
+**Export preview.** The “Export preview” button (step F) opens a dialog
+that renders the figure with the export engine at the width and height you
+type, so text size, legend placement and proportions are exactly those of the
+file. “Use these dimensions” copies them to the export settings.
 
 **Comparing optimisations.** With Fitch, the “Compare ACCTRAN / DELTRAN”
 button opens a two-column panel that draws both optimisations of the
@@ -326,6 +332,50 @@ data.
       1: PNG (recommended for screen / presentations)
       2: PDF (vector, ideal for publications)
 
+## Figure appearance
+
+The same drawing options are available in `execute_phylogeny()`, in the
+graphical interface (steps D and E) and in `export_multimapr_tree()` /
+`plot_multimapr_screen()`:
+
+``` r
+execute_phylogeny("arbol_aves.tre", "matriz_aves.csv",
+                  branch_width = 3,
+                  tip_end      = "round",  # "round", "butt" (flat) or "square"
+                  branch_angle = 45,       # cladogram branch angle; NULL = full width
+                  show_labels  = TRUE,
+                  label_size   = 1.2,      # multiplier of the automatic size
+                  label_color  = "grey20",
+                  show_legend  = FALSE)
+```
+
+| Argument | Default | Effect |
+|---|---|---|
+| `tip_end` | `"round"` | Shape of the free branch ends (tips) in cladograms. At internal nodes the colour bands always meet in closed miter joins. |
+| `branch_angle` | `45` | Cladogram branch angle in degrees from the horizontal (10–80; 30–60 recommended). At 45° sibling branches meet at right angles. `NULL` stretches the tree to the full figure width. Ancestral reconstruction modes only; the simple mapping keeps the stretched layout. |
+| `show_labels` | `TRUE` | Draw the species names. Hidden labels free their space for the tree and the terminal figures. |
+| `label_size` | `1` | Multiplier of the automatic label size (which already depends on the number of terminals). |
+| `label_color` | `"black"` | Colour of the species names (R colour name or hex code). |
+| `show_legend` | `TRUE` | Draw the legend of character states; when `FALSE` no space is reserved for it. |
+
+**Cladograms with several characters.** When two or three characters are
+superimposed, each character is drawn as a lane parallel to the branch and the
+lanes touch each other, so every branch reads as a single multicoloured
+ribbon. Lanes are offset perpendicular to each branch: they keep the same order
+and spacing on rising and falling branches, and at each node every lane of a
+child branch starts from the same lane of its parent. Lanes are filled bands
+that share their edges, so there are no gaps between them, and a parent band
+stops at the join: where one child continues the branch in a straight line,
+the continuation is drawn on top, so the corner of the side branch never
+spills onto the sibling clade. Lanes converge best on
+the nodes at the default 45°; smaller angles make the tree wider but move the
+lane corners away from the nodes, which is why the interface limits the angle
+to 30–60°.
+
+The column headers of the terminal figures (coloured tree + tip figures) always
+get room at the top of the figure, with or without a legend.
+
+
 ## Export
 
 Exported files are saved to an `Exports/` folder in the current working
@@ -335,6 +385,8 @@ Default dimensions scale with tip count:
 
     height  = n_tips × 0.25 + 2  (inches)
     width   = 12                  (inches)
+            = max(6, 0.55 × height / tan(branch_angle) + 4)
+                                  (cladograms at a fixed branch angle)
     resolution = 300 dpi          (PNG only)
 
 Fan trees use equal width and height. When custom dimensions are

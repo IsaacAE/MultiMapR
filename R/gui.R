@@ -297,11 +297,14 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 #' @param n_tips    Number of terminals.
 #' @param tree_type "phylogram", "cladogram" or "fan".
 #' @param width,height Custom inches or NULL (automatic).
+#' @param branch_angle Cladogram branch angle in degrees when the engine draws
+#'   it at a fixed angle; NULL for the stretched layout.
 #' @return list(width, height, auto_height).
 #' @noRd
-.gui_figure_dims <- function(n_tips, tree_type, width = NULL, height = NULL) {
+.gui_figure_dims <- function(n_tips, tree_type, width = NULL, height = NULL,
+                             branch_angle = NULL) {
   h <- n_tips * 0.25 + 2
-  w <- 12
+  w <- .emtree_auto_width(tree_type, h, branch_angle)
   if (identical(tree_type, "fan")) {
     h <- max(h, w)
     w <- h
