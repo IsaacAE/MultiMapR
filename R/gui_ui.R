@@ -415,7 +415,26 @@
                        t("ambig_color", class = "mm-grow", id = "ambig_lbl"),
                        .gui_color_input("ambiguity_color", "#FF00FF", label = tr("ambig_color"),
                                         hex_target = "ambig_hex", class = "mm-color-lg"),
-                       tags$span(id = "ambig_hex", class = "mm-hex", "#FF00FF")))))))
+                       tags$span(id = "ambig_hex", class = "mm-hex", "#FF00FF")))))),
+      shiny::conditionalPanel(
+        "input.mode == 'ancestral'",
+        tags$div(
+          class = "mm-subblock",
+          shiny::checkboxInput("show_nodes", t("show_nodes"), FALSE),
+          t("show_nodes_hint", tag = tags$div, class = "mm-note mb-1"),
+          shiny::conditionalPanel(
+            "input.show_nodes",
+            .gui_label("node_figure", tr),
+            tags$div(class = "mm-btns mm-shapes",
+                     shiny::radioButtons("node_shape", NULL, inline = TRUE,
+                                         choiceNames = list(shape_choice("●", "circle"),
+                                                            shape_choice("■", "square"),
+                                                            shape_choice("◆", "diamond"),
+                                                            shape_choice("▲", "triangle"),
+                                                            shape_choice("▼", "triangle_down")),
+                                         choiceValues = c("21", "22", "23", "24", "25"))),
+            shiny::sliderInput("node_size", t("size"), min = 0.4, max = 3,
+                               value = 1, step = 0.1, pre = "×", ticks = FALSE)))))
   )
 
   # ---- Step B -- characters -------------------------------------------------
@@ -462,9 +481,9 @@
     shiny::sliderInput("branch_width", t("branch_width"), min = 0.5, max = 8,
                        value = 2, step = 0.5, ticks = FALSE),
     tags$div(class = "mm-scale mb-3", t("thin_1"), t("normal_2"), t("thick_4"), tags$span("8")),
+    shiny::selectInput("tip_end", t("tip_end"), .gui_select_choices(tr, "tip_end"),
+                       selectize = FALSE),
     shiny::conditionalPanel("input.topology == 'cladogram'",
-      shiny::selectInput("tip_end", t("tip_end"), .gui_select_choices(tr, "tip_end"),
-                         selectize = FALSE),
       shiny::checkboxInput("clado_stretch", t("clado_stretch"), FALSE),
       shiny::conditionalPanel("!input.clado_stretch",
         shiny::sliderInput("branch_angle", t("branch_angle"), min = 30, max = 60,

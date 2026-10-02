@@ -32,7 +32,10 @@ export_multimapr_tree(
   legend_layout = "vertical",
   overlay_fn = NULL,
   hide_fan_labels = FALSE,
-  header_labels = NULL
+  header_labels = NULL,
+  node_states = FALSE,
+  node_shape = "circle",
+  node_size = 1
 )
 }
 \arguments{
@@ -80,10 +83,11 @@ when the tree has no real edge lengths, so tip labels and
 colors get more visual space. Internal branches stay at
 length 1 and the topology is preserved. Default \code{1}.}
 
-\item{tip_end}{Cladogram only: style of the free branch ends,
+\item{tip_end}{Style of the free branch ends (any topology),
 \code{"round"} (default), \code{"butt"} or \code{"square"}.
 Only the tips are affected: at internal nodes the
-colour bands always meet in closed miter joins.}
+colour bands always meet in closed miter joins
+(cladogram) or a flush butt join (phylogram/fan).}
 
 \item{branch_angle}{Cladogram only. Angle of every branch from the horizontal,
 in degrees (10-80; default \code{45}, so siblings meet at
@@ -132,6 +136,18 @@ delegating their drawing to \code{overlay_fn}.}
 \code{overlay_fn} draws above the top tip (rotated 45
 degrees, phylogram / cladogram). Space is reserved at
 the top so they are not clipped.}
+
+\item{node_states}{Logical. Draw a figure on every internal node, filled
+with the color of its reconstructed state (or of the
+ambiguity / missing / inapplicable color assigned by the
+algorithm). With several characters one figure per
+character is drawn side by side. Default \code{FALSE}.}
+
+\item{node_shape}{Figure for the internal nodes: \code{"circle"} (default),
+\code{"square"}, \code{"diamond"}, \code{"triangle"},
+\code{"triangle_down"}, or a \code{pch} between 21 and 25.}
+
+\item{node_size}{Multiplier of the automatic node-figure size (default \code{1}).}
 }
 \value{
 Invisible: full path of the generated file (string).

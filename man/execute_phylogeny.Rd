@@ -27,7 +27,10 @@ execute_phylogeny(
   label_color = "black",
   show_legend = TRUE,
   legend_layout = "vertical",
-  missing_colors = NULL
+  missing_colors = NULL,
+  show_nodes = FALSE,
+  node_shape = "circle",
+  node_size = 1
 )
 }
 \arguments{
@@ -102,11 +105,11 @@ stay at length 1 so the topology is preserved;
 only tip labels/colors get more visual space.
 Default \code{1} (no change).}
 
-\item{tip_end}{Cladogram only: style of the branch tips,
+\item{tip_end}{Style of the free branch ends (any topology),
 \code{"round"} (default), \code{"butt"} (flat) or
 \code{"square"}. Only the tips are affected: at
-internal nodes the colour bands always meet in
-closed miter joins.}
+internal nodes the branches always meet in a
+closed joint.}
 
 \item{branch_angle}{Cladogram only (ancestral reconstruction modes).
 Angle of every branch from the horizontal, in
@@ -147,6 +150,23 @@ reconstruction and appear in the legend.
 \code{NULL} (default) keeps them gray. Fitch
 ignores it: there \code{"?"} and \code{"-"} always
 take \code{ambiguity_color}.}
+
+\item{show_nodes}{Logical. Ancestral reconstruction only: draw a
+figure on every internal node filled with the
+color of its reconstructed state -- or, depending
+on the algorithm, the ambiguity color (Fitch) or the
+missing / inapplicable color (depth-weighted
+majority). With several characters one figure per
+character is drawn side by side. Default
+\code{FALSE}. Applies to the plot and the export.}
+
+\item{node_shape}{Figure for the internal nodes: \code{"circle"}
+(default), \code{"square"}, \code{"diamond"},
+\code{"triangle"}, \code{"triangle_down"}, or a
+\code{pch} between 21 and 25.}
+
+\item{node_size}{Multiplier of the automatic node-figure size
+(default \code{1}).}
 }
 \value{
 Invisible NULL.

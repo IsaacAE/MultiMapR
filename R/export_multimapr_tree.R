@@ -470,9 +470,11 @@
 # Vectorized horizontals; verticals in a loop protected against degeneration.
 # ------------------------------------------------------------------------------
 
-.emtree_render_phylogram <- function(pp, tree, color_list, lwd, offsets) {
+.emtree_render_phylogram <- function(pp, tree, color_list, lwd, offsets,
+                                     tip_end = "round") {
   xx <- pp$xx
   yy <- pp$yy
+  lend_code <- .emtree_lend_code(tip_end)
 
   edges      <- tree$edge
   parent_idx <- edges[, 1L]
@@ -487,22 +489,36 @@
                            function(nd) edges[edges[, 1L] == nd, 2L])
 
   N <- length(color_list)
+  node_x_pos <- node_y_pos <- matrix(NA_real_, length(internal_nodes), N)
 
   for (i in seq_len(N)) {
     ec    <- color_list[[i]]
     lwd_i <- lwd[min(i, length(lwd))]
     dy    <- offsets$dy[min(i, length(offsets$dy))]
     dx    <- offsets$dx[min(i, length(offsets$dx))]
+    node_x_pos[, i] <- node_x + dx
+    node_y_pos[, i] <- yy[internal_nodes] + dy
 
     # -- Horizontals (vectorized, no loop) ------------------------------------
     # Each edge goes from x_parent to x_child, at the height y_child (ape convention).
-    segments(x0   = xx[parent_idx] + dx,
-             y0   = yy[child_idx]  + dy,
-             x1   = xx[child_idx]  + dx,
-             y1   = yy[child_idx]  + dy,
-             col  = ec,
+    # `tip_end` only styles the free end of terminal branches; branches ending
+    # in an internal node keep a butt cap so the elbow joint with the vertical
+    # connector stays flush.
+    is_tip <- child_idx <= n_tips
+    segments(x0   = (xx[parent_idx] + dx)[!is_tip],
+             y0   = (yy[child_idx]  + dy)[!is_tip],
+             x1   = (xx[child_idx]  + dx)[!is_tip],
+             y1   = (yy[child_idx]  + dy)[!is_tip],
+             col  = ec[!is_tip],
              lwd  = lwd_i,
              lend = 1L)
+    segments(x0   = (xx[parent_idx] + dx)[is_tip],
+             y0   = (yy[child_idx]  + dy)[is_tip],
+             x1   = (xx[child_idx]  + dx)[is_tip],
+             y1   = (yy[child_idx]  + dy)[is_tip],
+             col  = ec[is_tip],
+             lwd  = lwd_i,
+             lend = lend_code)
 
     # -- Verticals (loop over internal nodes) ---------------------------------
     # Connects children of a node at the node's X coordinate.
@@ -534,6 +550,8 @@
       }
     }
   }
+
+  invisible(list(nodes = internal_nodes, x = node_x_pos, y = node_y_pos))
 }
 
 
@@ -804,6 +822,19 @@
                lend = lend_code)
     }
   }
+
+  # Node positions per lane: the children's lanes start on the miter join with
+  # the parent's lane, so their mean is where the lane turns at the node.
+  internal_nodes <- unique(parent_idx)
+  kids_of <- lapply(internal_nodes, function(nd) which(parent_idx == nd))
+  lane_xy <- function(i, coord)
+    vapply(kids_of, function(k) mean(centre[[i]][[coord]][k]), numeric(1))
+  node_x_pos <- vapply(seq_len(N), function(i) lane_xy(i, "x0") * sx,
+                       numeric(length(internal_nodes)))
+  node_y_pos <- vapply(seq_len(N), function(i) lane_xy(i, "y0") * sy,
+                       numeric(length(internal_nodes)))
+  invisible(list(nodes = internal_nodes,
+                 x = matrix(node_x_pos, ncol = N), y = matrix(node_y_pos, ncol = N)))
 }
 
 
@@ -830,12 +861,14 @@
 #   crosses 0 deg and angles < pi are raised to the extended range [2pi, 4pi).
 # ------------------------------------------------------------------------------
 
-.emtree_render_fan <- function(pp, tree, color_list, lwd, offsets) {
+.emtree_render_fan <- function(pp, tree, color_list, lwd, offsets,
+                               tip_end = "round") {
   xx     <- pp$xx
   yy     <- pp$yy
   edges  <- tree$edge
   n_tips <- Ntip(tree)
   N      <- length(color_list)
+  lend_code <- .emtree_lend_code(tip_end)
 
   # Extract original angles for all nodes
   node_angles <- atan2(yy, xx)
@@ -868,6 +901,8 @@
     asin(ratio)
   }
 
+  node_x_pos <- node_y_pos <- matrix(NA_real_, length(internal_nodes), N)
+
   # -- History loop ----------------------------------------------------------
   for (i in seq_len(N)) {
     ec    <- color_list[[i]]
@@ -892,11 +927,14 @@
       theta_p_new <- node_angles[h] + dtheta_p
       theta_h_new <- node_angles[h] + dtheta_h
 
+      # `tip_end` only styles the free end of terminal branches; branches
+      # ending in an internal node keep a butt cap flush with their arc.
       segments(x0  = R_p_new * cos(theta_p_new),
                y0  = R_p_new * sin(theta_p_new),
                x1  = R_h_new * cos(theta_h_new),
                y1  = R_h_new * sin(theta_h_new),
-               col = ec[j], lwd = lwd_i, lend = 1L)
+               col = ec[j], lwd = lwd_i,
+               lend = if (h <= n_tips) lend_code else 1L)
     }
 
     # 2. Arcs
@@ -915,6 +953,9 @@
       R_new      <- R_nd + dr
 
       dtheta_nd <- calc_dtheta(R_nd, dr)
+      # Node on its arc, where the incoming radial segment arrives
+      node_x_pos[m, i] <- R_new * cos(node_angles[nd] + dtheta_nd)
+      node_y_pos[m, i] <- R_new * sin(node_angles[nd] + dtheta_nd)
 
       theta_adj_list <- numeric(length(children_m))
       for (k in seq_along(children_m)) {
@@ -939,6 +980,112 @@
             col = node_color, lwd = lwd_i, lend = 1L)
     }
   }
+
+  invisible(list(nodes = internal_nodes, x = node_x_pos, y = node_y_pos))
+}
+
+
+# ==============================================================================
+# INTERNAL NODE STATES
+# ==============================================================================
+
+#' Symbol (pch) for the internal-node figures
+#'
+#' @param shape A fillable \code{pch} (21-25) or one of \code{"circle"},
+#'   \code{"square"}, \code{"diamond"}, \code{"triangle"},
+#'   \code{"triangle_down"}.
+#' @return Integer pch.
+#' @keywords internal
+.emtree_node_pch <- function(shape) {
+  named <- c(circle = 21L, square = 22L, diamond = 23L, triangle = 24L, triangle_down = 25L)
+  if (is.character(shape) && length(shape) == 1L && shape %in% names(named))
+    return(named[[shape]])
+  pch <- suppressWarnings(as.integer(shape))
+  if (length(pch) != 1L || is.na(pch) || !pch %in% 21:25)
+    stop("`node_shape` must be one of \"circle\", \"square\", \"diamond\", ",
+         "\"triangle\", \"triangle_down\" or a pch between 21 and 25.")
+  pch
+}
+
+#' Checks the internal-node figure size multiplier
+#' @param node_size Positive number.
+#' @keywords internal
+.emtree_validate_node_size <- function(node_size) {
+  if (!is.numeric(node_size) || length(node_size) != 1L || is.na(node_size) || node_size <= 0)
+    stop("`node_size` must be a positive number.")
+}
+
+#' Size (cex) of the internal-node figures
+#'
+#' Follows the automatic text size so the figures scale with the tree, with a
+#' floor that keeps them visible on large trees.
+#' @param node_size Multiplier chosen by the user.
+#' @param cex_aj    Automatic text size of the render.
+#' @keywords internal
+.emtree_node_cex <- function(node_size, cex_aj) node_size * max(0.6, cex_aj * 1.6)
+
+#' Color of every internal node in one history
+#'
+#' Same rule the renderers use for the node's connector: the color of the
+#' edge entering the node (its reconstructed state, the ambiguity color or a
+#' missing / inapplicable color); at the root, the algorithm-supplied
+#' \code{root_color} attribute or, failing that, the first child edge.
+#' @param ec    Edge color vector of one history.
+#' @param edges Edge matrix.
+#' @param nodes Internal node indices.
+#' @keywords internal
+.emtree_node_colors <- function(ec, edges, nodes) {
+  entry <- match(nodes, edges[, 2L])
+  vapply(seq_along(nodes), function(m) {
+    if (!is.na(entry[m])) return(ec[[entry[m]]])
+    rc <- attr(ec, "root_color")
+    if (!is.null(rc)) rc else ec[[which(edges[, 1L] == nodes[m])[1L]]]
+  }, character(1))
+}
+
+#' Draws the reconstructed state of every internal node as a filled figure
+#'
+#' One figure per node and character, filled with the node's color. With
+#' several characters the figures sit side by side, in lane order, along the
+#' direction in which the lanes are offset at that node, spaced by their
+#' own diameter so none hides another.
+#' @param pos        Output of a topology renderer (\code{nodes}, \code{x}, \code{y}).
+#' @param tree       \code{phylo} object.
+#' @param color_list List of edge color vectors.
+#' @param pch        Fillable symbol (21-25).
+#' @param cex        Symbol size.
+#' @keywords internal
+.emtree_draw_node_states <- function(pos, tree, color_list, pch, cex) {
+  if (is.null(pos) || length(pos$nodes) == 0L) return(invisible(NULL))
+  N    <- length(color_list)
+  cols <- vapply(color_list, .emtree_node_colors, character(length(pos$nodes)),
+                 edges = tree$edge, nodes = pos$nodes)
+  cols <- matrix(cols, ncol = N)
+  px <- pos$x; py <- pos$y
+
+  if (N > 1L) {
+    # Work in inches: spread the figures along the lane-offset direction
+    usr <- par("usr"); pin <- par("pin")
+    sx  <- (usr[2L] - usr[1L]) / pin[1L]
+    sy  <- (usr[4L] - usr[3L]) / pin[2L]
+    step_in <- 0.375 * cex * par("cin")[2L] * 1.05   # figure diameter
+    k  <- seq_len(N) - (N + 1) / 2
+    for (m in seq_along(pos$nodes)) {
+      xi <- px[m, ] / sx; yi <- py[m, ] / sy
+      ux <- xi[N] - xi[1L]; uy <- yi[N] - yi[1L]
+      ul <- sqrt(ux^2 + uy^2)
+      if (!is.finite(ul) || ul < 1e-9) { ux <- 0; uy <- 1; ul <- 1 }
+      cx <- mean(xi); cy <- mean(yi)
+      px[m, ] <- (cx + k * step_in * ux / ul) * sx
+      py[m, ] <- (cy + k * step_in * uy / ul) * sy
+    }
+  }
+
+  old_xpd <- par("xpd"); par(xpd = NA)
+  points(as.vector(px), as.vector(py), pch = pch, bg = as.vector(cols),
+         col = "black", cex = cex, lwd = 0.6)
+  par(xpd = old_xpd)
+  invisible(NULL)
 }
 
 
@@ -1010,10 +1157,11 @@
 #'                       when the tree has no real edge lengths, so tip labels and
 #'                       colors get more visual space. Internal branches stay at
 #'                       length 1 and the topology is preserved. Default \code{1}.
-#' @param tip_end        Cladogram only: style of the free branch ends,
+#' @param tip_end        Style of the free branch ends (any topology),
 #'                       \code{"round"} (default), \code{"butt"} or \code{"square"}.
 #'                       Only the tips are affected: at internal nodes the
-#'                       colour bands always meet in closed miter joins.
+#'                       colour bands always meet in closed miter joins
+#'                       (cladogram) or a flush butt join (phylogram/fan).
 #' @param branch_angle   Cladogram only. Angle of every branch from the horizontal,
 #'                       in degrees (10-80; default \code{45}, so siblings meet at
 #'                       right angles). 30-60 is recommended: smaller angles move
@@ -1035,6 +1183,15 @@
 #'                        \code{overlay_fn} draws above the top tip (rotated 45
 #'                        degrees, phylogram / cladogram). Space is reserved at
 #'                        the top so they are not clipped.
+#' @param node_states    Logical. Draw a figure on every internal node, filled
+#'                       with the color of its reconstructed state (or of the
+#'                       ambiguity / missing / inapplicable color assigned by the
+#'                       algorithm). With several characters one figure per
+#'                       character is drawn side by side. Default \code{FALSE}.
+#' @param node_shape     Figure for the internal nodes: \code{"circle"} (default),
+#'                       \code{"square"}, \code{"diamond"}, \code{"triangle"},
+#'                       \code{"triangle_down"}, or a \code{pch} between 21 and 25.
+#' @param node_size      Multiplier of the automatic node-figure size (default \code{1}).
 #'
 #' @return Invisible: full path of the generated file (string).
 #'
@@ -1132,7 +1289,16 @@ export_multimapr_tree <- function(tree,
                                   hide_fan_labels = FALSE,
                                   # header_labels: column headers the overlay draws above
                                   # the top tip (rotated 45 deg); room is reserved for them.
-                                  header_labels   = NULL) {
+                                  header_labels   = NULL,
+                                  # -- INTERNAL NODE STATES ------------------------------
+                                  # node_states: draw a figure on every internal node
+                                  #   filled with its reconstructed state color.
+                                  # node_shape : "circle" | "square" | "diamond" |
+                                  #   "triangle" | "triangle_down" (or pch 21-25).
+                                  # node_size  : multiplier of the automatic figure size.
+                                  node_states     = FALSE,
+                                  node_shape      = "circle",
+                                  node_size       = 1) {
 
   # -- 0. Argument validation ------------------------------------------------
   .emtree_validate_tree(tree)
@@ -1141,6 +1307,8 @@ export_multimapr_tree <- function(tree,
   branch_angle <- .emtree_branch_angle(branch_angle)
   .emtree_validate_labels(show_labels, label_size, label_color)
   legend_layout <- match.arg(legend_layout, c("vertical", "horizontal"))
+  node_pch      <- .emtree_node_pch(node_shape)
+  .emtree_validate_node_size(node_size)
   .emtree_validate_filename(filename)
   .emtree_validate_type_format(type, format)
 
@@ -1380,16 +1548,19 @@ export_multimapr_tree <- function(tree,
     offsets <- .emtree_calc_offsets(N, adjusted_offset_range)
 
     # -- 5. Branch rendering by topology --------------------------------------
-    if (type == "phylogram") {
-      .emtree_render_phylogram(pp, tree, color_list, lwd_vec, offsets)
-
+    node_pos <- if (type == "phylogram") {
+      .emtree_render_phylogram(pp, tree, color_list, lwd_vec, offsets, tip_end = tip_end)
     } else if (type == "cladogram") {
       .emtree_render_cladogram(pp, tree, color_list, lwd_vec, offsets,
                                tip_end = tip_end, branch_angle = branch_angle)
-
     } else {
-      .emtree_render_fan(pp, tree, color_list, lwd_vec, offsets)
+      .emtree_render_fan(pp, tree, color_list, lwd_vec, offsets, tip_end = tip_end)
+    }
+    if (isTRUE(node_states))
+      .emtree_draw_node_states(node_pos, tree, color_list, node_pch,
+                               .emtree_node_cex(node_size, cex_aj))
 
+    if (type == "fan") {
       # -- 5b. Fan tip labels -- exact radius --------------------------------
       xx_tips <- pp$xx[seq_len(n_tips)]
       yy_tips <- pp$yy[seq_len(n_tips)]
@@ -1577,8 +1748,8 @@ if (FALSE) {
 #' @param terminal_stretch Multiplier applied only to the terminal (tip) branches
 #'                        when the tree has no real edge lengths. Internal
 #'                        branches stay at length 1. Default \code{1}.
-#' @param tip_end         Cladogram only: \code{"round"} (default), \code{"butt"}
-#'                        or \code{"square"} branch ends.
+#' @param tip_end         Style of the free branch ends (any topology):
+#'                        \code{"round"} (default), \code{"butt"} or \code{"square"}.
 #' @param branch_angle    Cladogram only: branch angle in degrees (10-80, default
 #'                        \code{45}); \code{NULL} stretches to the full width.
 #' @param show_labels     Logical. Draw the species names at the tips (default \code{TRUE}).
@@ -1593,6 +1764,8 @@ if (FALSE) {
 #'                        delegating their drawing to \code{overlay_fn}.
 #' @param header_labels   Optional column headers drawn by \code{overlay_fn} above
 #'                        the top tip; space is reserved for them.
+#' @param node_states,node_shape,node_size Figures on the internal nodes showing
+#'                        their reconstructed state; see \code{\link{export_multimapr_tree}}.
 #' @return Invisible NULL. Draws on the active graphics device.
 plot_multimapr_screen <- function(tree,
                                   color_list,
@@ -1624,7 +1797,10 @@ plot_multimapr_screen <- function(tree,
                                   # hide_fan_labels: when TRUE omits the radial fan
                                   # labels, delegating their drawing to overlay_fn.
                                   hide_fan_labels = FALSE,
-                                  header_labels   = NULL) {
+                                  header_labels   = NULL,
+                                  node_states     = FALSE,
+                                  node_shape      = "circle",
+                                  node_size       = 1) {
 
   .emtree_validate_tree(tree)
   .emtree_validate_color_list(color_list, nrow(tree$edge))
@@ -1632,6 +1808,8 @@ plot_multimapr_screen <- function(tree,
   branch_angle <- .emtree_branch_angle(branch_angle)
   .emtree_validate_labels(show_labels, label_size, label_color)
   legend_layout <- match.arg(legend_layout, c("vertical", "horizontal"))
+  node_pch      <- .emtree_node_pch(node_shape)
+  .emtree_validate_node_size(node_size)
 
   # Apply ladderize / edge length before rendering (mirrors export behavior)
   if (identical(ladderize, TRUE)) {
@@ -1710,16 +1888,19 @@ plot_multimapr_screen <- function(tree,
   offsets <- .emtree_calc_offsets(N, adjusted_offset_range)
 
   # Dispatch to topology-specific geometric renderer
-  if (type == "phylogram") {
-    .emtree_render_phylogram(pp, tree, color_list, lwd_vec, offsets)
-
+  node_pos <- if (type == "phylogram") {
+    .emtree_render_phylogram(pp, tree, color_list, lwd_vec, offsets, tip_end = tip_end)
   } else if (type == "cladogram") {
     .emtree_render_cladogram(pp, tree, color_list, lwd_vec, offsets,
-                               tip_end = tip_end, branch_angle = branch_angle)
+                             tip_end = tip_end, branch_angle = branch_angle)
+  } else {
+    .emtree_render_fan(pp, tree, color_list, lwd_vec, offsets, tip_end = tip_end)
+  }
+  if (isTRUE(node_states))
+    .emtree_draw_node_states(node_pos, tree, color_list, node_pch,
+                             .emtree_node_cex(node_size, cex_aj))
 
-  } else if (type == "fan") {
-    .emtree_render_fan(pp, tree, color_list, lwd_vec, offsets)
-
+  if (type == "fan") {
     # Manual italic radial labels in fan mode
     xx_tips <- pp$xx[seq_len(n_tips)]
     yy_tips <- pp$yy[seq_len(n_tips)]

@@ -131,6 +131,7 @@ circle|Círculo|Circle
 square|Cuadrado|Square
 triangle|Triángulo|Triangle
 diamond|Rombo|Diamond
+triangle_down|Triángulo invertido|Inverted triangle
 size|Tamaño|Size
 algorithm|Algoritmo|Algorithm
 algo_majority|Mayoría ponderada por profundidad|Depth-weighted majority
@@ -145,6 +146,9 @@ deltran_hint|Los cambios se retrasan hacia las terminales; los nodos profundos q
 unambiguous|Solo no ambiguos|Unambiguous only
 unambiguous_hint|Solo se colorean las ramas con un único estado posible; el resto queda en el color de ambigüedad.|Only branches with a single possible state are colored; the rest use the ambiguity color.
 ambig_color|Ramas ambiguas o faltantes|Ambiguous or missing branches
+show_nodes|Mostrar estados en los nodos internos|Show internal node states
+show_nodes_hint|Una figura por nodo con el color del estado reconstruido (o de ambigüedad, faltante o inaplicable según el algoritmo).|One figure per node colored by the reconstructed state (or the ambiguity, missing or inapplicable color, depending on the algorithm).
+node_figure|Figura de los nodos|Node figure
 step_chars|Caracteres|Characters
 chars_hint_simple|Uno o más caracteres: una columna de símbolos por carácter; en abanico, anillos concéntricos. El orden de selección es el orden de dibujo.|One or more characters: one column of symbols per character; concentric rings in a fan. Selection order is drawing order.
 chars_hint_anc|Hasta 3 caracteres superpuestos sobre las mismas ramas. El orden de selección es el orden de dibujo.|Up to 3 characters superimposed on the same branches. Selection order is drawing order.

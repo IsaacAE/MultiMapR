@@ -370,7 +370,7 @@ execute_phylogeny("arbol_aves.tre", "matriz_aves.csv",
 
 | Argument | Default | Effect |
 |---|---|---|
-| `tip_end` | `"round"` | Shape of the free branch ends (tips) in cladograms. At internal nodes the colour bands always meet in closed miter joins. |
+| `tip_end` | `"round"` | Shape of the free branch ends (tips), any topology. At internal nodes the branches always meet in a closed joint. |
 | `branch_angle` | `45` | Cladogram branch angle in degrees from the horizontal (10–80; 30–60 recommended). At 45° sibling branches meet at right angles. `NULL` stretches the tree to the full figure width. Ancestral reconstruction modes only; the simple mapping keeps the stretched layout. |
 | `show_labels` | `TRUE` | Draw the species names. Hidden labels free their space for the tree and the terminal figures. |
 | `label_size` | `1` | Multiplier of the automatic label size (which already depends on the number of terminals). |

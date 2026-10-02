@@ -27,7 +27,10 @@ plot_multimapr_screen(
   legend_layout = "vertical",
   overlay_fn = NULL,
   hide_fan_labels = FALSE,
-  header_labels = NULL
+  header_labels = NULL,
+  node_states = FALSE,
+  node_shape = "circle",
+  node_size = 1
 )
 }
 \arguments{
@@ -60,8 +63,8 @@ calls \code{ape::ladderize(right = TRUE)}.}
 when the tree has no real edge lengths. Internal
 branches stay at length 1. Default \code{1}.}
 
-\item{tip_end}{Cladogram only: \code{"round"} (default), \code{"butt"}
-or \code{"square"} branch ends.}
+\item{tip_end}{Style of the free branch ends (any topology):
+\code{"round"} (default), \code{"butt"} or \code{"square"}.}
 
 \item{branch_angle}{Cladogram only: branch angle in degrees (10-80, default
 \code{45}); \code{NULL} stretches to the full width.}
@@ -96,6 +99,9 @@ delegating their drawing to \code{overlay_fn}.}
 
 \item{header_labels}{Optional column headers drawn by \code{overlay_fn} above
 the top tip; space is reserved for them.}
+
+\item{node_states, node_shape, node_size}{Figures on the internal nodes showing
+their reconstructed state; see \code{\link{export_multimapr_tree}}.}
 }
 \value{
 Invisible NULL. Draws on the active graphics device.

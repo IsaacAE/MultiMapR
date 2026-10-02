@@ -89,7 +89,7 @@
 #'
 #' @param phylogeny        Untouched \code{phylo} object.
 #' @param config           Configuration list (see \code{setup_mapping_config()}).
-#' @param branch_width,use_edge_length,ladderize,terminal_stretch,tip_end,branch_angle,show_labels,label_size,label_color,show_legend,legend_layout,missing_colors
+#' @param branch_width,use_edge_length,ladderize,terminal_stretch,tip_end,branch_angle,show_labels,label_size,label_color,show_legend,legend_layout,missing_colors,show_nodes,node_shape,node_size
 #'                         See \code{\link{execute_phylogeny}}.
 #' @return Invisibly, the updated \code{config}.
 #' @keywords internal
@@ -105,7 +105,10 @@
                                        label_color      = "black",
                                        show_legend      = TRUE,
                                        legend_layout    = "vertical",
-                                       missing_colors   = NULL) {
+                                       missing_colors   = NULL,
+                                       show_nodes       = FALSE,
+                                       node_shape       = "circle",
+                                       node_size        = 1) {
   config$terminal_stretch <- terminal_stretch
   if (!tip_end %in% c("round", "butt", "square"))
     stop("`tip_end` must be one of \"round\", \"butt\" or \"square\".")
@@ -118,6 +121,11 @@
   config$label_color <- label_color
   config$show_legend <- isTRUE(show_legend)
   config$legend_layout <- match.arg(legend_layout, c("vertical", "horizontal"))
+  # Internal-node figures (ancestral reconstruction only)
+  config$show_nodes <- isTRUE(show_nodes)
+  config$node_shape <- .emtree_node_pch(node_shape)
+  .emtree_validate_node_size(node_size)
+  config$node_size  <- node_size
   # NULL keeps what the config already carries (e.g. set by the interface)
   if (!is.null(missing_colors))
     config$missing_colors <- .normalize_missing_colors(missing_colors, config$caracteres)
@@ -241,11 +249,11 @@
 #'                           stay at length 1 so the topology is preserved;
 #'                           only tip labels/colors get more visual space.
 #'                           Default \code{1} (no change).
-#' @param tip_end            Cladogram only: style of the branch tips,
+#' @param tip_end            Style of the free branch ends (any topology),
 #'                           \code{"round"} (default), \code{"butt"} (flat) or
 #'                           \code{"square"}. Only the tips are affected: at
-#'                           internal nodes the colour bands always meet in
-#'                           closed miter joins.
+#'                           internal nodes the branches always meet in a
+#'                           closed joint.
 #' @param branch_angle       Cladogram only (ancestral reconstruction modes).
 #'                           Angle of every branch from the horizontal, in
 #'                           degrees (10-80). The default \code{45} makes sibling
@@ -279,6 +287,20 @@
 #'                           \code{NULL} (default) keeps them gray. Fitch
 #'                           ignores it: there \code{"?"} and \code{"-"} always
 #'                           take \code{ambiguity_color}.
+#' @param show_nodes         Logical. Ancestral reconstruction only: draw a
+#'                           figure on every internal node filled with the
+#'                           color of its reconstructed state -- or, depending
+#'                           on the algorithm, the ambiguity color (Fitch) or the
+#'                           missing / inapplicable color (depth-weighted
+#'                           majority). With several characters one figure per
+#'                           character is drawn side by side. Default
+#'                           \code{FALSE}. Applies to the plot and the export.
+#' @param node_shape         Figure for the internal nodes: \code{"circle"}
+#'                           (default), \code{"square"}, \code{"diamond"},
+#'                           \code{"triangle"}, \code{"triangle_down"}, or a
+#'                           \code{pch} between 21 and 25.
+#' @param node_size          Multiplier of the automatic node-figure size
+#'                           (default \code{1}).
 #' @return Invisible NULL.
 #' @export
 execute_phylogeny <- function(phylogeny, character_data,
@@ -302,7 +324,10 @@ execute_phylogeny <- function(phylogeny, character_data,
                               label_color          = "black",
                               show_legend          = TRUE,
                               legend_layout        = "vertical",
-                              missing_colors       = NULL) {
+                              missing_colors       = NULL,
+                              show_nodes           = FALSE,
+                              node_shape           = "circle",
+                              node_size            = 1) {
   tryCatch({
 
     # POLYMORPHISM: If file paths (character) are passed, load data automatically
@@ -372,7 +397,10 @@ execute_phylogeny <- function(phylogeny, character_data,
                                            label_color      = label_color,
                                            show_legend      = show_legend,
                                            legend_layout    = legend_layout,
-                                           missing_colors   = missing_colors)
+                                           missing_colors   = missing_colors,
+                                           show_nodes       = show_nodes,
+                                           node_shape       = node_shape,
+                                           node_size        = node_size)
 
       # -- What next? ----------------------------------------------------------
       next_action <- prompt_post_run_menu(allow_algorithm_change = (config$mapping_type == 2))

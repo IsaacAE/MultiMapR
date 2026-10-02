@@ -885,7 +885,10 @@
                        label_size       = input$label_size %||% 1,
                        label_color      = input$label_color %||% "#000000",
                        show_legend      = isTRUE(input$show_legend %||% TRUE),
-                       legend_layout    = input$legend_layout %||% "vertical"))
+                       legend_layout    = input$legend_layout %||% "vertical",
+                       show_nodes       = mt == 2L && isTRUE(input$show_nodes),
+                       node_shape       = as.integer(input$node_shape %||% "21"),
+                       node_size        = input$node_size %||% 1))
   })
   spec_d <- shiny::debounce(spec, 400)
 
