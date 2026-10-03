@@ -128,11 +128,23 @@
 #' (par("usr") / par("pin")).
 #'
 #' @param N             Number of histories.
-#' @param offset_range  Amplitude of the Y range (default 0.1).
+#' @param offset_range  Step between layers in Y data units (default 0.1).
+#' @param step_in       Optional step between layers in INCHES. When given it
+#'                      replaces \code{offset_range}, so the lane separation
+#'                      follows the branch width on any canvas size and number
+#'                      of tips (a data-unit step shrinks as the tree grows).
 #' @return List with `dx` and `dy` (vectors of length N).
-.emtree_calc_offsets <- function(N, offset_range = 0.1) {
+.emtree_calc_offsets <- function(N, offset_range = 0.1, step_in = NULL) {
   if (N == 1L)
     return(list(dx = 0, dy = 0))
+
+  if (!is.null(step_in)) {
+    usr <- par("usr"); pin <- par("pin")
+    scale_x <- (usr[2L] - usr[1L]) / pin[1L]
+    scale_y <- (usr[4L] - usr[3L]) / pin[2L]
+    indices <- seq_len(N) - (N + 1L) / 2
+    return(list(dx = indices * step_in * scale_x, dy = indices * step_in * scale_y))
+  }
 
   # Fixed step = offset_range between consecutive layers, set centered at 0.
   # This ensures that for any N the visual separation between branches
@@ -1007,6 +1019,15 @@
   pch
 }
 
+#' Lane step (inches) that makes the layers of a phylogram touch
+#'
+#' Lines of width \code{lwd} are \code{lwd / 96} in thick, so centering the
+#' layers that far apart (plus a hairline of air) keeps the ribbon compact for
+#' any lwd, canvas size or number of tips.
+#' @param lwd_vec Line width of every layer.
+#' @keywords internal
+.emtree_lane_step_in <- function(lwd_vec) mean(lwd_vec) / 96 * 1.05
+
 #' Checks the internal-node figure size multiplier
 #' @param node_size Positive number.
 #' @keywords internal
@@ -1046,9 +1067,11 @@
 #' Draws the reconstructed state of every internal node as a filled figure
 #'
 #' One figure per node and character, filled with the node's color. With
-#' several characters the figures sit side by side, in lane order, along the
-#' direction in which the lanes are offset at that node, spaced by their
-#' own diameter so none hides another.
+#' several characters the figures form a grid centered on the node (filled
+#' row by row from the top-left, in lane order), spaced by their own diameter
+#' so none hides another. Telling the cells apart is up to the chosen colors.
+#' In dense trees the figures shrink (down to 40%) so that the grids of
+#' neighbouring nodes do not overlap.
 #' @param pos        Output of a topology renderer (\code{nodes}, \code{x}, \code{y}).
 #' @param tree       \code{phylo} object.
 #' @param color_list List of edge color vectors.
@@ -1063,21 +1086,42 @@
   cols <- matrix(cols, ncol = N)
   px <- pos$x; py <- pos$y
 
+  # Work in inches: tile the figures in a grid centered on the node.
+  # ncol = ceiling(sqrt(N)); characters fill it row by row from the top-left
+  # (N=2 -> 2x1, N=3/4 -> 2x2, N=5 -> 3x2). An incomplete last row stays
+  # centered on the node as a whole (empty cells are simply not drawn).
+  usr <- par("usr"); pin <- par("pin")
+  sx  <- (usr[2L] - usr[1L]) / pin[1L]
+  sy  <- (usr[4L] - usr[3L]) / pin[2L]
+  unit_in <- 0.375 * par("cin")[2L] * 1.05          # figure diameter per unit cex
+  step_in <- unit_in * cex
+  ncol <- ceiling(sqrt(N))
+  nrow <- ceiling(N / ncol)
+  cxs  <- rowMeans(matrix(px, ncol = N)) / sx
+  cys  <- rowMeans(matrix(py, ncol = N)) / sy
+
+  # Shrink the figures when the grids of two nodes would overlap (dense
+  # cladograms): the grids are axis-aligned rectangles ncol x nrow cells, so two
+  # of them are disjoint when |dx| >= ncol*step or |dy| >= nrow*step.
+  n_nodes <- length(cxs)
+  if (n_nodes > 1L) {
+    dxm <- abs(outer(cxs, cxs, "-")); dym <- abs(outer(cys, cys, "-"))
+    room <- pmax(dxm / ncol, dym / nrow)
+    diag(room) <- Inf
+    room <- min(room)
+    if (is.finite(room) && room < step_in) {
+      f <- max(0.4, room / step_in)                  # never below 40% of the size
+      cex <- cex * f
+      step_in <- step_in * f
+    }
+  }
+
   if (N > 1L) {
-    # Work in inches: spread the figures along the lane-offset direction
-    usr <- par("usr"); pin <- par("pin")
-    sx  <- (usr[2L] - usr[1L]) / pin[1L]
-    sy  <- (usr[4L] - usr[3L]) / pin[2L]
-    step_in <- 0.375 * cex * par("cin")[2L] * 1.05   # figure diameter
-    k  <- seq_len(N) - (N + 1) / 2
-    for (m in seq_along(pos$nodes)) {
-      xi <- px[m, ] / sx; yi <- py[m, ] / sy
-      ux <- xi[N] - xi[1L]; uy <- yi[N] - yi[1L]
-      ul <- sqrt(ux^2 + uy^2)
-      if (!is.finite(ul) || ul < 1e-9) { ux <- 0; uy <- 1; ul <- 1 }
-      cx <- mean(xi); cy <- mean(yi)
-      px[m, ] <- (cx + k * step_in * ux / ul) * sx
-      py[m, ] <- (cy + k * step_in * uy / ul) * sy
+    gx <- ((seq_len(N) - 1L) %% ncol) - (ncol - 1) / 2
+    gy <- (nrow - 1) / 2 - ((seq_len(N) - 1L) %/% ncol)   # row 1 on top
+    for (m in seq_len(n_nodes)) {
+      px[m, ] <- (cxs[m] + gx * step_in) * sx
+      py[m, ] <- (cys[m] + gy * step_in) * sy
     }
   }
 
@@ -1416,6 +1460,10 @@ export_multimapr_tree <- function(tree,
 
   label_offset_aj <- max_depth * 0.025 * scale_w
 
+  # Phylogram with the default offset: the lane step follows the branch width
+  # (in inches) instead of a data-unit step that depends on the number of tips.
+  auto_step_in <- if (offset_range == 0.1 && N > 1L && type == "phylogram")
+    .emtree_lane_step_in(lwd * (0.95 ^ (seq_len(N) - 1L)))
   if (offset_range == 0.1 && N > 1L) {
     lwd_factor <- switch(type,
                          "phylogram" = 0.012, "cladogram" = 0.012, "fan" = 0.003, 0.012)
@@ -1545,7 +1593,7 @@ export_multimapr_tree <- function(tree,
 
     # Definitive canvas: with expanded xlim/ylim if there is a legend, or normal otherwise.
     pp      <- .render_canvas(xlim_extra = xlim_final, ylim_extra = ylim_final)
-    offsets <- .emtree_calc_offsets(N, adjusted_offset_range)
+    offsets <- .emtree_calc_offsets(N, adjusted_offset_range, auto_step_in)
 
     # -- 5. Branch rendering by topology --------------------------------------
     node_pos <- if (type == "phylogram") {
@@ -1852,6 +1900,8 @@ plot_multimapr_screen <- function(tree,
 
   adjusted_offset_range <- offset_range / scale_h
   lwd_vec <- lwd * (0.95 ^ (seq_len(N) - 1L))
+  auto_step_in <- if (offset_range == 0.1 && N > 1L && type == "phylogram")
+    .emtree_lane_step_in(lwd_vec)
   cex_ley <- max(0.5, min(1.0, 10 / (n_tips + 10)))
 
   mar_base <- c(1, 1, 1, 4)
@@ -1885,7 +1935,7 @@ plot_multimapr_screen <- function(tree,
       pp <- .render_canvas_screen(ylim_extra = c(usr[3L], usr[4L] + extra))
     }
   }
-  offsets <- .emtree_calc_offsets(N, adjusted_offset_range)
+  offsets <- .emtree_calc_offsets(N, adjusted_offset_range, auto_step_in)
 
   # Dispatch to topology-specific geometric renderer
   node_pos <- if (type == "phylogram") {

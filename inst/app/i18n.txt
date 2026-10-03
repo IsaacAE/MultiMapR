@@ -115,7 +115,7 @@ step_mapping|Tipo de mapeo|Mapping type
 simple|Mapeo simple|Simple mapping
 simple_hint|Árbol gris neutro; los estados solo en las terminales. Admite uno o más caracteres.|Neutral gray tree; states only at the tips. One or more characters.
 ancestral|Reconstrucción ancestral|Ancestral reconstruction
-ancestral_hint|Las ramas se colorean según el estado inferido. Hasta 3 caracteres superpuestos.|Branches are colored by the inferred state. Up to 3 superimposed characters.
+ancestral_hint|Las ramas se colorean según el estado inferido. Hasta 5 caracteres superpuestos.|Branches are colored by the inferred state. Up to 5 superimposed characters.
 presentation|Presentación|Display
 pres_shapes|Figuras en las terminales|Figures at the tips
 pres_shapes_hint|Una columna de símbolos por carácter (anillos en abanico).|One column of symbols per character (rings in a fan).
@@ -151,12 +151,12 @@ show_nodes_hint|Una figura por nodo con el color del estado reconstruido (o de a
 node_figure|Figura de los nodos|Node figure
 step_chars|Caracteres|Characters
 chars_hint_simple|Uno o más caracteres: una columna de símbolos por carácter; en abanico, anillos concéntricos. El orden de selección es el orden de dibujo.|One or more characters: one column of symbols per character; concentric rings in a fan. Selection order is drawing order.
-chars_hint_anc|Hasta 3 caracteres superpuestos sobre las mismas ramas. El orden de selección es el orden de dibujo.|Up to 3 characters superimposed on the same branches. Selection order is drawing order.
+chars_hint_anc|Hasta 5 caracteres superpuestos sobre las mismas ramas. El orden de selección es el orden de dibujo.|Up to 5 characters superimposed on the same branches. Selection order is drawing order.
 search_ph|Buscar carácter (C23, diet, habitat…)|Search character (C23, diet, habitat…)
 no_chars|Selecciona al menos un carácter.|Select at least one character.
 need_data|Primero carga un árbol y una matriz en «1 · Datos».|Load a tree and a matrix in “1 · Data” first.
 remove_char|Quitar %s|Remove %s
-trim_warn|Elegiste %d caracteres. La reconstrucción admite 3: se usarán %s.|You chose %d characters. The reconstruction supports 3: %s will be used.
+trim_warn|Elegiste %d caracteres. La reconstrucción admite %d: se usarán %s.|You chose %d characters. The reconstruction supports %d: %s will be used.
 step_colors|Estados y colores|States and colors
 pal_global|Paleta global|Global palette
 colors_hint|Desmarca un estado para excluirlo (se dibuja en gris). Haz clic en un color para cambiarlo.|Uncheck a state to leave it out (drawn in gray). Click a swatch to change its color.
@@ -169,6 +169,8 @@ pal_plasma|Plasma|Plasma
 pal_reds|Rojos|Reds
 pal_greens|Verdes|Greens
 pal_blues|Azules|Blues
+pal_golds|Dorados|Golds
+pal_purples|Morados|Purples
 pal_wc|Winclada (wc)|Winclada (wc)
 pal_mm1|MultiMapR (MM1)|MultiMapR (MM1)
 card_meta|%d taxones · %d estados|%d taxa · %d states

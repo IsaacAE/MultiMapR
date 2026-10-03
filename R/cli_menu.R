@@ -34,11 +34,13 @@ PALETAS_ACCESIBLES <- list(
 
 #' Sequential color-blind-safe gradients for multi-character Ancestral Reconstruction.
 #'
-#' One gradient per character slot (up to 3). Each gradient has 10 steps
-#' sampled from continuous perceptual scales:
-#'   magma  — character 1 (dark purple → cream)
-#'   mako   — character 2 (near-black → pale green)
-#'   plasma — character 3 (dark blue → yellow)
+#' One gradient per character slot (up to 5, see \code{MAX_MULTIMAP}). Each
+#' gradient has 10 steps:
+#'   rojos   — character 1
+#'   verdes  — character 2
+#'   azules  — character 3
+#'   dorados — character 4
+#'   morados — character 5
 GAMAS_MULTIMAPEO <- list(
   # 1. WARM RANGE (Yellows, Oranges, Reds, Pinks)
   # Ideal for Character 1.
@@ -84,8 +86,41 @@ GAMAS_MULTIMAPEO <- list(
     "#4169E1", # 7: Azul real
     "#9370DB", # 8: Morado medio
     "#000033"  # 9: Azul casi negro
+  ),
+
+  # 4. GAMA DORADOS / CAFES (Para Carácter 4)
+  dorados = c(
+    "#FFD700", # 0: Oro
+    "#4A2C00", # 1: Café muy oscuro
+    "#FFFF66", # 2: Amarillo claro
+    "#B8860B", # 3: Oro oscuro
+    "#F5DEB3", # 4: Trigo
+    "#8B4513", # 5: Café silla
+    "#FFC000", # 6: Ámbar
+    "#CD853F", # 7: Perú
+    "#FFF8B0", # 8: Crema
+    "#2B1A00"  # 9: Café casi negro
+  ),
+
+  # 5. GAMA MORADOS / MAGENTAS (Para Carácter 5)
+  morados = c(
+    "#9400D3", # 0: Violeta oscuro
+    "#2A0033", # 1: Morado casi negro
+    "#FF00FF", # 2: Magenta puro
+    "#6A0DAD", # 3: Morado intenso
+    "#DDA0DD", # 4: Ciruela
+    "#800080", # 5: Púrpura
+    "#E6C8FF", # 6: Lavanda
+    "#BA55D3", # 7: Orquídea medio
+    "#4B0055", # 8: Berenjena
+    "#C71FCB"  # 9: Fucsia violáceo
   )
 )
+
+#' Maximum number of characters superimposed in one multimapping
+#' (ancestral reconstruction). One sequential gradient per slot in
+#' \code{GAMAS_MULTIMAPEO}.
+MAX_MULTIMAP <- 5L
 
 # ==============================================================================
 # SECTION 0b — NAMED PREDEFINED PALETTES
@@ -501,7 +536,7 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     selected_chars <- prompt_characters(
       available_chars,
       prompt_n = "How many characters to map?",
-      min_n = 1L, max_n = min(3L, length(available_chars)))
+      min_n = 1L, max_n = min(MAX_MULTIMAP, length(available_chars)))
     if (is.null(selected_chars)) return(invisible(NULL))
     config$caracteres <- selected_chars
 
@@ -527,8 +562,8 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
       config$mapear_todos <- length(cols) == length(all_states)
 
     } else {
-      # === MULTIMAPEO (2 o 3 CARACTERES): Usar Gamas Secuenciales (GAMAS_MULTIMAPEO) ===
-      # Carácter 1: Magma, Carácter 2: Mako, Carácter 3: Plasma
+      # === MULTIMAPEO (2 a 5 CARACTERES): Usar Gamas Secuenciales (GAMAS_MULTIMAPEO) ===
+      # Carácter 1: rojos, 2: verdes, 3: azules, 4: dorados, 5: morados
       for (i in seq_along(selected_chars)) {
         char          <- selected_chars[i]
         if (!is.null(user_palette)) {

@@ -139,7 +139,7 @@ than hidden.
 | Step | Contents |
 |----|----|
 | **A · Mapping type** | Simple mapping (display as figures or as coloured labels / terminal branches, with figure shape and size) or ancestral reconstruction (branch superimposition or coloured tree + tip figures; depth-weighted majority or Fitch with ACCTRAN / DELTRAN / Unambiguous and the colour of ambiguous branches). |
-| **B · Characters** | Searchable list with the number of states and % missing per character. Selection order is drawing order; ancestral reconstruction keeps the first 3 and says so. |
+| **B · Characters** | Searchable list with the number of states and % missing per character. Selection order is drawing order; ancestral reconstruction keeps the first 5 and says so. |
 | **C · States and colours** | A global palette plus one card per character: every observed state can be recoloured or unticked (unticked states are drawn in grey). `?` (missing) and `-` (inapplicable) get their own colour per character in the depth-weighted majority reconstruction (and then appear in the legend); they stay grey in simple mapping and take the ambiguity colour under Fitch. |
 | **D · Tree** | Phylogram / cladogram / fan, branch lengths, ladderisation, branch width and terminal-branch stretch; for cladograms, the shape of the branch tips (round / flat / square) and the branch angle (30–60°, or stretched to the full width). |
 | **E · Legend and view** | Legend on / off, its corner and whether the characters are stacked or side by side; species names on / off, with their size and colour; preview height. |
@@ -262,7 +262,7 @@ inference.
 Colours the **branches** of the tree according to the state inferred at
 each internal node, using the algorithm chosen in the menu.
 
-### Ancestral reconstruction — multi-character (up to 3)
+### Ancestral reconstruction — multi-character (up to 5)
 
 Superimposes the reconstruction of several characters on the same tree
 using **isotropic offsets** (equal in X and Y, computed at render time
@@ -509,7 +509,7 @@ Use `load_data(..., normalize_spaces = TRUE)` to convert spaces to `_`
 automatically before matching.
 
 **How many characters can I map at once?** Simple mapping has no limit.
-Ancestral reconstruction supports up to **3 characters** to keep the
+Ancestral reconstruction supports up to **5 characters** to keep the
 superimposition readable.
 
 **The figure looks fine on screen but tip labels are tiny in the PNG.**

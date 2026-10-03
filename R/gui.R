@@ -245,7 +245,9 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
        rojos  = GAMAS_MULTIMAPEO$rojos,
        verdes = GAMAS_MULTIMAPEO$verdes,
        azules = GAMAS_MULTIMAPEO$azules,
-       wc     = PALETAS_PREDEFINIDAS$wc,
+       dorados = GAMAS_MULTIMAPEO$dorados,
+       morados = GAMAS_MULTIMAPEO$morados,
+       wc    = PALETAS_PREDEFINIDAS$wc,
        MM1    = PALETAS_PREDEFINIDAS$MM1)
 }
 
@@ -253,7 +255,8 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 #' @noRd
 .GUI_PALETTE_KEYS <- c(auto = "pal_auto", okabe = "pal_okabe", tol = "pal_tol",
                        plasma = "pal_plasma", rojos = "pal_reds", verdes = "pal_greens",
-                       azules = "pal_blues", wc = "pal_wc", MM1 = "pal_mm1")
+                       azules = "pal_blues", dorados = "pal_golds", morados = "pal_purples",
+                       wc = "pal_wc", MM1 = "pal_mm1")
 
 #' Resolves a palette choice to n hex colors
 #'

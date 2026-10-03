@@ -596,7 +596,7 @@
 
   chars_used <- shiny::reactive({
     sel <- chars_sel()
-    if (mode_num() == 2L) utils::head(sel, 3L) else sel
+    if (mode_num() == 2L) utils::head(sel, MAX_MULTIMAP) else sel
   })
 
   output$char_list <- shiny::renderUI({
@@ -640,10 +640,11 @@
   output$trim_warn <- shiny::renderUI({
     tr <- trr()
     sel <- chars_sel()
-    if (mode_num() != 2L || length(sel) <= 3L) return(NULL)
+    if (mode_num() != 2L || length(sel) <= MAX_MULTIMAP) return(NULL)
     tags$div(class = "mm-warnbox", role = "status",
              tags$b(tr("lvl_warn")), " ",
-             tr("trim_warn", length(sel), paste(utils::head(sel, 3L), collapse = ", ")))
+             tr("trim_warn", length(sel), MAX_MULTIMAP,
+                paste(utils::head(sel, MAX_MULTIMAP), collapse = ", ")))
   })
 
   # ---- States and colors ------------------------------------------------------------
@@ -872,7 +873,7 @@
          tree   = d$tree,
          config = config,
          empty  = empty_chars,
-         trimmed = if (mt == 2L && length(chars_sel()) > 3L) utils::head(chars_sel(), 3L),
+         trimmed = if (mt == 2L && length(chars_sel()) > MAX_MULTIMAP) utils::head(chars_sel(), MAX_MULTIMAP),
          render = list(branch_width     = input$branch_width %||% 2,
                        use_edge_length  = uses_lengths(),
                        ladderize        = ladder,
