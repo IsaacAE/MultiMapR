@@ -71,7 +71,6 @@ col_scored|Codificados|Coded
 col_missing|Faltantes (?)|Missing (?)
 col_inapp|Inaplicables (-)|Inapplicable (-)
 per_char|Por carácter|Per character
-heatmap|Taxón × carácter|Taxon × character
 sort_by|Ordenar por|Sort by
 sort_none|Orden de la matriz|Matrix order
 sort_missing|% faltantes|% missing
@@ -83,9 +82,11 @@ matrix_tab|Matriz|Matrix
 data_colors|Colores|Colors
 reset_colors|Restablecer|Reset
 borders|Bordes|Borders
-cell_values|Estados en celdas|States in cells
-mx_hint|Pasa el cursor sobre una celda para ver su taxón, carácter y estado.|Hover over a cell to see its taxon, character and state.
-mx_trunc|Matriz muy grande: se muestran los primeros %d de %d caracteres. El mapa de calor y sus descargas incluyen todos.|Very large matrix: showing the first %d of %d characters. The heatmap and its downloads include all of them.
+mx_hint|Pasa el cursor sobre una celda para ver su taxón, carácter y estado. Haz clic en el encabezado de un carácter para elegir el color de cada estado.|Hover over a cell to see its taxon, character and state. Click a character header to pick a color for each state.
+mx_pick_hint|Clic para elegir el color de cada estado|Click to pick a color for each state
+mx_pick_title|Colores de los estados · %s|State colors · %s
+mx_no_states|Este carácter no tiene estados codificados.|This character has no scored states.
+mx_trunc|Matriz muy grande: se muestran los primeros %d de %d caracteres. Las descargas incluyen todos.|Very large matrix: showing the first %d of %d characters. The downloads include all of them.
 log_title|Mensajes de lectura|Reading messages
 goto_map|Ir a Mapear caracteres →|Go to Map characters →
 

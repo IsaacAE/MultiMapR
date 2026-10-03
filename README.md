@@ -110,8 +110,8 @@ reading log.</figcaption>
   download.
 - **Completeness plots** — `plot_character_stats()` (stacked bars,
   sortable by name or by % missing / inapplicable) and
-  `plot_character_completeness()` (taxon × character heat map), each
-  downloadable as PNG or PDF.
+  `plot_character_completeness()` (taxon × character heat map, downloaded from the
+  Matrix tab), each downloadable as PNG or PDF.
 - **Reading messages** — a log of everything the readers reported:
   format and size of each file, names harmonised against the tree, tips
   missing from the matrix, tips dropped, polymorphisms found. Each line

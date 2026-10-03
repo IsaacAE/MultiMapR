@@ -261,9 +261,7 @@
     tags$button(id = "stats_col_reset", type = "button", class = "mm-linkbtn action-button",
                 t("reset_colors")),
     tags$span(class = "mm-spacer"),
-    shiny::checkboxInput("stats_borders", t("borders"), TRUE),
-    shiny::conditionalPanel("input.cmp_tabs == 'heat'",
-                            shiny::checkboxInput("heat_values", t("cell_values"), TRUE)))
+    shiny::checkboxInput("stats_borders", t("borders"), TRUE))
 
   completeness <- bslib::navset_card_tab(
     id = "cmp_tabs",
@@ -275,9 +273,6 @@
     bslib::nav_panel(t("per_char"), value = "per",
                      tags$div(class = "mm-plotbox",
                               shiny::plotOutput("stats_plot", height = "auto"))),
-    bslib::nav_panel(t("heatmap"), value = "heat",
-                     tags$div(class = "mm-plotbox mm-plotbox-tall",
-                              shiny::uiOutput("heat_box"))),
     bslib::nav_spacer(),
     bslib::nav_item(tags$div(
       class = "mm-tabtools d-flex align-items-center gap-2 py-1",

@@ -448,7 +448,6 @@
       missing      = input$stats_col_missing,
       inapplicable = input$stats_col_inapp)))
     stats_border <- shiny::reactive(if (isFALSE(input$stats_borders)) NA else "grey30")
-    heat_values  <- shiny::reactive(if (isFALSE(input$heat_values)) FALSE else NULL)
 
     # The HTML views (matrix, table bars, KPIs) take the colors from CSS variables,
     # so changing a color does not re-render them.
@@ -471,30 +470,18 @@
       d <- dat(); if (is.null(d)) return(300)
       max(320, round((0.28 * length(d$chars) + 1.5) * 80))
     }
-    heat_layout <- shiny::reactive({
-      d <- dat(); shiny::req(d)
-      .completeness_layout(as.character(d$aligned$Species), d$chars, cell_in = 0.22)
-    })
-    # Wide matrices get a plot wider than the box (it scrolls) so cells stay legible;
-    # a fixed-width container stops Shiny from squeezing the image to 100%.
-    output$heat_box <- shiny::renderUI({
-      shiny::plotOutput("heat_plot", height = "auto",
-                        width = paste0(max(600, round(heat_layout()$width * 96)), "px"))
-    })
-    heat_height <- function() {
-      if (is.null(dat())) return(300)
-      max(360, round(heat_layout()$height * 96))
-    }
     output$stats_plot <- shiny::renderPlot({
       d <- dat(); shiny::req(d)
       plot_character_stats(d$aligned, sort_by = input$stats_sort %||% "none",
                            colors = stats_colors(), border = stats_border())
     }, height = stats_height, res = 96, bg = "white")
-    output$heat_plot <- shiny::renderPlot({
-      d <- dat(); shiny::req(d)
-      plot_character_completeness(d$aligned, colors = stats_colors(),
-                                  border = stats_border(), show_values = heat_values())
-    }, height = heat_height, res = 96, bg = "white")
+
+    # Per-character state colors picked on the matrix (character -> state -> "#rrggbb").
+    # The column is recolored in the browser while the picker moves (see
+    # multimapr.js); the store only lets a re-render and the mapping cards reuse them.
+    mx_colors <- shiny::reactiveVal(list())
+    shiny::observeEvent(dat(), mx_colors(list()), ignoreNULL = FALSE)
+    .mx_valid <- function(x) is.character(x) && length(x) == 1L && grepl("^#[0-9a-fA-F]{6}$", x)
 
     # Interactive taxon x character matrix (hover highlights row + column, see multimapr.js)
     output$matrix_table <- shiny::renderUI({
@@ -504,24 +491,93 @@
       species <- as.character(d$aligned$Species)
       n_show  <- min(length(d$chars), max(1L, floor(60000 / max(1L, length(species)))))
       chars   <- d$chars[seq_len(n_show)]
+      picked  <- shiny::isolate(mx_colors())
       cells <- vapply(chars, function(ch) {
         v <- trimws(as.character(d$aligned[[ch]]))
         v[is.na(v) | v == ""] <- "?"
         cls <- c(scored = "mm-c-s", missing = "mm-c-m",
                  inapplicable = "mm-c-i")[.classify_character_values(v)]
-        paste0('<td class="', cls, '">', esc(v), "</td>")
+        sty <- rep("", length(v))
+        map <- picked[[ch]]
+        hit <- v %in% names(map)
+        if (any(hit)) {
+          fill <- unlist(map[v[hit]], use.names = FALSE)
+          sty[hit] <- sprintf(' style="background:%s;color:%s"', fill, .contrast_ink(fill))
+        }
+        paste0('<td class="', cls, '"', sty, '>', esc(v), "</td>")
       }, character(length(species)))
       cells <- matrix(cells, nrow = length(species))
       body <- paste0('<tr><th scope="row">', esc(species), "</th>",
                      apply(cells, 1, paste, collapse = ""), "</tr>", collapse = "")
       head <- paste0('<tr><th scope="col" class="mm-mx-corner">', esc(tr("col_taxon")), "</th>",
-                     paste0('<th scope="col"><span>', esc(chars), "</span></th>", collapse = ""),
+                     paste0('<th scope="col" class="mm-mx-colhead" data-char="', esc(chars),
+                            '" title="', esc(tr("mx_pick_hint")), '"><span>', esc(chars),
+                            "</span></th>", collapse = ""),
                      "</tr>")
       note <- if (n_show < length(d$chars))
         tags$div(class = "mm-note mm-mx-note", tr("mx_trunc", n_show, length(d$chars)))
       htmltools::tagList(note,
               shiny::HTML(paste0('<table class="mm-matrix"><thead>', head, "</thead><tbody>",
                                  body, "</tbody></table>")))
+    })
+
+    # Click on a character header: one color picker per scored state
+    show_mx_picker <- function(ch) {
+      tr <- trr()
+      d <- dat(); shiny::req(d)
+      states <- setdiff(d$states[[ch]], c("?", "-"))
+      vals   <- trimws(as.character(d$aligned[[ch]]))
+      vals[is.na(vals) | vals == ""] <- "?"
+      cur    <- mx_colors()[[ch]]
+      sc     <- .gui_hex(stats_colors())
+      # Missing (?) and inapplicable (-) are listed after the scored states, only
+      # when the character has them; they start from the category colors.
+      special <- c("?", "-")[c("?", "-") %in% vals]
+      all_st  <- c(states, special)
+      base    <- stats::setNames(c(rep(sc[[1]], length(states)),
+                                   c(sc[[2]], sc[[3]])[match(special, c("?", "-"))]),
+                                 all_st)
+      rows <- lapply(all_st, function(st) {
+        lbl <- if (st == "?") paste(st, tr("state_missing"))
+               else if (st == "-") paste(st, tr("state_inapp")) else st
+        tags$div(class = "mm-state",
+                 tags$input(type = "color", class = "mm-mx-pick",
+                            value = if (!is.null(cur[[st]])) cur[[st]] else base[[st]],
+                            `data-char` = ch, `data-state` = st,
+                            `aria-label` = tr("state_color", st), title = tr("state_color", st)),
+                 tags$span(class = "mm-state-label", lbl),
+                 tags$span(class = "mm-state-count", tr("n_tax", sum(vals == st, na.rm = TRUE))))
+      })
+      shiny::showModal(shiny::modalDialog(
+        title = tr("mx_pick_title", ch),
+        if (length(all_st) == 0L) tags$div(class = "mm-note", tr("mx_no_states")) else rows,
+        footer = shiny::tagList(
+          shiny::actionButton("mx_reset_char", tr("reset_colors"), class = "btn-mm-secondary btn-mm-sm"),
+          shiny::modalButton(tr("close"))),
+        easyClose = TRUE, size = "s"))
+    }
+    shiny::observeEvent(input$mx_char_click, {
+      d <- dat()
+      ch <- input$mx_char_click
+      if (is.null(d) || !is.character(ch) || length(ch) != 1L || !ch %in% d$chars) return()
+      mx_picker_char(ch)
+      show_mx_picker(ch)
+    })
+    mx_picker_char <- shiny::reactiveVal(NULL)
+    shiny::observeEvent(input$mx_color_set, {
+      m <- input$mx_color_set
+      d <- dat()
+      if (is.null(d) || !m$char %in% d$chars || !.mx_valid(m$color)) return()
+      cur <- mx_colors()
+      cur[[m$char]][[as.character(m$state)]] <- tolower(m$color)
+      mx_colors(cur)
+    })
+    shiny::observeEvent(input$mx_reset_char, {
+      ch <- mx_picker_char()
+      if (is.null(ch)) return()
+      cur <- mx_colors(); cur[[ch]] <- NULL; mx_colors(cur)
+      session$sendCustomMessage("mm-mx-colors", list(char = ch, reset = TRUE))
+      show_mx_picker(ch)
     })
 
     output$dl_stats_csv <- shiny::downloadHandler(
@@ -546,10 +602,9 @@
                                    colors = stats_colors(), border = stats_border(),
                                    export_filename = base, export_format = format)
             } else {
-              # "matrix" and "heat" tabs both export the heatmap (with states in cells
-              # unless switched off on the heatmap tab)
+              # the matrix tab exports the taxon x character figure (states in cells)
               plot_character_completeness(d$aligned, colors = stats_colors(),
-                                          border = stats_border(), show_values = heat_values(),
+                                          border = stats_border(),
                                           export_filename = base, export_format = format)
             }))
           file.copy(paste0(base, ".", format), file, overwrite = TRUE)

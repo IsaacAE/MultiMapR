@@ -191,6 +191,46 @@
   });
   $(document).on('mouseleave', '.mm-matrix', function () { MM.mxClear(this); });
 
+  /* ---- Matrix: pick a color for each state of a character ------------------------ */
+  // Header click opens the picker (server-side modal); moving a picker recolors the
+  // column right away and reports the choice so a re-render keeps it.
+  MM.mxInk = function (hex) {
+    var c = [1, 3, 5].map(function (i) {
+      var v = parseInt(hex.substr(i, 2), 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) > 0.179 ? '#000000' : '#FFFFFF';
+  };
+  MM.mxColumn = function (ch) {
+    var table = document.querySelector('.mm-matrix');
+    if (!table) return null;
+    var heads = table.tHead.rows[0].cells;
+    for (var i = 0; i < heads.length; i++)
+      if (heads[i].getAttribute('data-char') === ch) return { table: table, idx: i };
+    return null;
+  };
+  MM.mxPaint = function (ch, state, color) {      // color = null clears the state
+    var col = MM.mxColumn(ch); if (!col) return;
+    Array.prototype.forEach.call(col.table.tBodies[0].rows, function (r) {
+      var td = r.cells[col.idx];
+      if (!td || (state !== null && td.textContent !== state)) return;
+      td.style.background = color || '';
+      td.style.color = color ? MM.mxInk(color) : '';
+    });
+  };
+  $(document).on('click', '.mm-matrix thead th.mm-mx-colhead', function () {
+    Shiny.setInputValue('mx_char_click', this.getAttribute('data-char'), { priority: 'event' });
+  });
+  $(document).on('input', 'input.mm-mx-pick', function () {
+    var ch = this.getAttribute('data-char'), st = this.getAttribute('data-state');
+    MM.mxPaint(ch, st, this.value);
+    Shiny.setInputValue('mx_color_set', { char: ch, state: st, color: this.value },
+                        { priority: 'event' });
+  });
+  Shiny.addCustomMessageHandler('mm-mx-colors', function (msg) {
+    if (msg.reset) MM.mxPaint(msg.char, null, null);
+  });
+
   /* ---- Preview canvas height ---------------------------------------------------- */
   MM.setCanvasHeight = function (h) {
     var c = document.getElementById('mm-canvas'); if (c && h) c.style.height = h + 'px';
