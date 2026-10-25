@@ -740,9 +740,9 @@
                  tags$span(class = "mm-state-label", states[si]),
                  tags$span(class = "mm-state-count", tr("n_tax", sum(vals == states[si], na.rm = TRUE))))
       })
-      # "?" and "-": editable per character only for the depth-weighted
-      # majority reconstruction; gray in simple mapping; under Fitch they take
-      # the ambiguity color chosen in step A.
+      # "?" and "-": editable per character in simple mapping and in the
+      # depth-weighted majority reconstruction; under Fitch they take the
+      # ambiguity color chosen in step A.
       special_row <- function(s, editable) {
         key <- if (s == "?") "state_missing" else "state_inapp"
         swatch <- if (editable) {
@@ -760,9 +760,9 @@
                  tags$span(class = "mm-state-count", tr("n_tax", sum(vals == s, na.rm = TRUE))))
       }
       special <- shiny::tagList(
-        shiny::conditionalPanel("input.mode == 'ancestral' && input.algo != 'fitch'",
+        shiny::conditionalPanel("!(input.mode == 'ancestral' && input.algo == 'fitch')",
                                 lapply(c("?", "-"), special_row, editable = TRUE)),
-        shiny::conditionalPanel("!(input.mode == 'ancestral' && input.algo != 'fitch')",
+        shiny::conditionalPanel("input.mode == 'ancestral' && input.algo == 'fitch'",
                                 lapply(c("?", "-"), special_row, editable = FALSE)),
         shiny::conditionalPanel("input.mode == 'ancestral' && input.algo == 'fitch'",
                                 tags$div(class = "mm-note", tr("missing_fitch_note"))))
@@ -910,18 +910,20 @@
       config$mapear_todos  <- all_selected
       config$algoritmo     <- if (identical(input$algo, "fitch")) 2L else 1L
       config$fitch_mode    <- if (config$algoritmo == 2L) input$optim %||% "acctran" else NULL
-      if (config$algoritmo == 1L) {
-        config$missing_colors <- stats::setNames(lapply(draw, function(ch) {
-          pfx <- card_prefix(d, ch)
-          c("?" = input[[missing_input_id(pfx, "?")]] %||% .GUI_MISSING_DEFAULT,
-            "-" = input[[missing_input_id(pfx, "-")]] %||% .GUI_MISSING_DEFAULT)
-        }), draw)
-      }
       if (config$algoritmo == 2L) config$ambiguity_color <- input$ambiguity_color %||% "#FF00FF"
       if (config$funcion_multi == 2L) {
         config$pch_figura <- pch
         config$tam_figura <- size
       }
+    }
+    # Missing / inapplicable colors: simple mapping and depth-weighted majority
+    # (Fitch uses the single ambiguity color).
+    if (mt == 1L || config$algoritmo == 1L) {
+      config$missing_colors <- stats::setNames(lapply(draw, function(ch) {
+        pfx <- card_prefix(d, ch)
+        c("?" = input[[missing_input_id(pfx, "?")]] %||% .GUI_MISSING_DEFAULT,
+          "-" = input[[missing_input_id(pfx, "-")]] %||% .GUI_MISSING_DEFAULT)
+      }), draw)
     }
     ladder <- switch(input$ladderize %||% "TRUE", "TRUE" = TRUE, "right" = "right", FALSE)
     list(status = "ok",

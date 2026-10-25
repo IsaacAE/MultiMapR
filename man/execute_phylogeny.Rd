@@ -139,17 +139,20 @@ is reserved for it.}
 names and titles are aligned in both.}
 
 \item{missing_colors}{Colors for missing (\code{"?"}) and inapplicable
-(\code{"-"}) tips in the ancestral reconstruction
-with the default (depth-weighted majority)
-algorithm: a vector named \code{"?"} and/or
-\code{"-"} applied to every character, e.g.
+(\code{"-"}) tips in simple mapping and in the
+ancestral reconstruction with the default
+(depth-weighted majority) algorithm: a vector
+named \code{"?"} and/or \code{"-"} applied to
+every character, e.g.
 \code{c("?" = "grey80", "-" = "black")}, or a list
 named by character to give each one its own
-colors. The chosen colors take part in the
-reconstruction and appear in the legend.
-\code{NULL} (default) keeps them gray. Fitch
-ignores it: there \code{"?"} and \code{"-"} always
-take \code{ambiguity_color}.}
+colors. In simple mapping they color the tip
+figures (or terminal branches); in the
+reconstruction they also take part in the
+branch coloring. In both they appear in the
+legend. \code{NULL} (default) keeps them gray.
+Fitch ignores it: there \code{"?"} and \code{"-"}
+always take \code{ambiguity_color}.}
 
 \item{show_nodes}{Logical. Ancestral reconstruction only: draw a
 figure on every internal node filled with the

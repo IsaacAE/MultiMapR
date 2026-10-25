@@ -86,11 +86,8 @@ plot_simple_mapping <- function(filogenia, config) {
   col_lbl         <- config$label_color %||% "black"
   show_leg        <- config$show_legend %||% TRUE
 
-  asignar_color <- function(valor, colores_estado) {
-    valor <- as.character(valor)
-    if (is.na(valor) || valor == "") return("gray70")
-    if (valor %in% names(colores_estado)) return(colores_estado[[valor]])
-    "gray70"
+  asignar_color <- function(valor, colores_estado, car) {
+    .ancestral_tip_color(valor, colores_estado, config, car)
   }
 
   exportar  <- !is.null(config$export_filename)
@@ -117,7 +114,7 @@ plot_simple_mapping <- function(filogenia, config) {
   .simple_legend_blocks <- function() {
     lapply(seq_along(caracteres), function(i) {
       car   <- caracteres[i]
-      col_e <- colores_por_car[[car]]
+      col_e <- c(colores_por_car[[car]], .missing_legend_entries(config, car))
       list(title  = if (tipo_arbol == "fan") paste0("C", i, " (", car, ")") else car,
            labels = names(col_e), colors = unname(col_e))
     })
@@ -165,7 +162,7 @@ plot_simple_mapping <- function(filogenia, config) {
         # all other edges stay gray.
         char1     <- caracteres[1L]
         col_tips1 <- sapply(datos_ord[[char1]], asignar_color,
-                            colores_estado = colores_por_car[[char1]])
+                            colores_estado = colores_por_car[[char1]], car = char1)
 
         edge_col <- rep("gray70", nrow(filogenia$edge))
         for (e in seq_len(nrow(filogenia$edge))) {
@@ -268,7 +265,8 @@ plot_simple_mapping <- function(filogenia, config) {
         old_xpd <- par("xpd"); par(xpd = TRUE)
         for (i in seq_len(n_car)) {
           col_tips     <- sapply(datos_ord[[caracteres[i]]], asignar_color,
-                                 colores_estado = colores_por_car[[caracteres[i]]])
+                                 colores_estado = colores_por_car[[caracteres[i]]],
+                                 car = caracteres[i])
           radio_actual <- radio_base + (i - 1L) * incremento_radio
 
           points(radio_actual * cos(angulos),
@@ -325,7 +323,7 @@ plot_simple_mapping <- function(filogenia, config) {
         # all other edges (internal) stay gray.
         char1     <- caracteres[1L]
         col_tips1 <- sapply(datos_ord[[char1]], asignar_color,
-                            colores_estado = colores_por_car[[char1]])
+                            colores_estado = colores_por_car[[char1]], car = char1)
 
         edge_col <- rep("gray70", nrow(filogenia$edge))
         for (e in seq_len(nrow(filogenia$edge))) {
@@ -387,8 +385,9 @@ plot_simple_mapping <- function(filogenia, config) {
         fig_x <- fig_y <- fig_col <- NULL
         for (i in seq_along(caracteres)) {
           col_tips <- sapply(datos_ord[[caracteres[i]]], asignar_color,
-                             colores_estado = colores_por_car[[caracteres[i]]])
-          fig_x   <- c(fig_x,   rep(x_columnas[i], n_tips))
+                             colores_estado = colores_por_car[[caracteres[i]]],
+                             car = caracteres[i])
+          fig_x  <- c(fig_x,   rep(x_columnas[i], n_tips))
           fig_y   <- c(fig_y,   yy_tip)
           fig_col <- c(fig_col, col_tips)
         }
@@ -566,8 +565,8 @@ init_edge_colors <- function(filogenia) {
 
 #' Normalizes the colors chosen for missing ("?") and inapplicable ("-") tips
 #'
-#' Used by the depth-weighted majority reconstruction, where each character
-#' may give "?" and "-" their own color (Fitch always uses the single
+#' Used by simple mapping and the depth-weighted majority reconstruction,
+#' where each character may give "?" and "-" their own color (Fitch always uses the single
 #' ambiguity color instead, see \code{.get_fitch_ambig_color()}).
 #'
 #' @param missing_colors \code{NULL}; a vector named \code{"?"} and/or
@@ -599,12 +598,13 @@ init_edge_colors <- function(filogenia) {
   }
 }
 
-#' Color of a tip state for ancestral reconstruction
+#' Color of a tip state (simple mapping and ancestral reconstruction)
 #'
 #' Observed states take their mapped color. Missing (\code{"?"}, empty or
 #' \code{NA}) and inapplicable (\code{"-"}) tips take the Fitch ambiguity color
 #' under Fitch, or the per-character color from \code{config$missing_colors}
-#' under the depth-weighted majority algorithm (gray70 when none was chosen).
+#' in simple mapping and under the depth-weighted majority algorithm (gray70
+#' when none was chosen).
 #' Unmapped (unticked) states stay gray70.
 #'
 #' @param valor          Tip state.
@@ -627,7 +627,8 @@ init_edge_colors <- function(filogenia) {
 
 #' Legend entries for the missing / inapplicable colors of one character
 #'
-#' Depth-weighted majority only (Fitch shows one "Ambiguous / Missing" entry).
+#' Simple mapping and depth-weighted majority (Fitch shows one
+#' "Ambiguous / Missing" entry).
 #' An entry is added when the user chose a color for that symbol and the
 #' symbol occurs in the character's data.
 #'

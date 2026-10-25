@@ -1579,6 +1579,13 @@ export_multimapr_tree <- function(tree,
                                         pp_h$yy[seq_len(n_tips)])
           if (is.null(ylim_final)) ylim_final <- usr[3:4]
           ylim_final[2L] <- ylim_final[2L] + extra
+          # Reserve room on the right for the columns of terminal figures
+          # (they are drawn beyond the tip labels, which fill the canvas).
+          if (!is.null(overlay_fn)) {
+            if (is.null(xlim_final)) xlim_final <- usr[1:2]
+            xlim_final[2L] <- xlim_final[2L] +
+              (0.03 * length(header_labels) + 0.03) * diff(usr[1:2])
+          }
         }
       }
     }, finally = .close_device_restore(prev_dev))   # always close; leaves no file on disk

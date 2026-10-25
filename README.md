@@ -140,7 +140,7 @@ than hidden.
 |----|----|
 | **A · Mapping type** | Simple mapping (display as figures or as coloured labels / terminal branches, with figure shape and size) or ancestral reconstruction (branch superimposition or coloured tree + tip figures; depth-weighted majority or Fitch with ACCTRAN / DELTRAN / Unambiguous and the colour of ambiguous branches). |
 | **B · Characters** | Searchable list with the number of states and % missing per character. Selection order is drawing order; ancestral reconstruction keeps the first 5 and says so. |
-| **C · States and colours** | A global palette plus one card per character: every observed state can be recoloured or unticked (unticked states are drawn in grey). `?` (missing) and `-` (inapplicable) get their own colour per character in the depth-weighted majority reconstruction (and then appear in the legend); they stay grey in simple mapping and take the ambiguity colour under Fitch. |
+| **C · States and colours** | A global palette plus one card per character: every observed state can be recoloured or unticked (unticked states are drawn in grey). `?` (missing) and `-` (inapplicable) get their own colour per character in simple mapping and in the depth-weighted majority reconstruction (grey by default, and they appear in the legend); they take the ambiguity colour under Fitch. |
 | **D · Tree** | Phylogram / cladogram / fan, branch lengths, ladderisation, branch width and terminal-branch stretch; for cladograms, the shape of the branch tips (round / flat / square) and the branch angle (30–60°, or stretched to the full width). |
 | **E · Legend and view** | Legend on / off, its corner and whether the characters are stacked or side by side; species names on / off, with their size and colour; preview height. |
 | **F · Export** | PNG (300 dpi) or vector PDF, file name, automatic or custom dimensions in inches, “Download”, “Save to Exports/” and an “Export preview” at the chosen size. |
@@ -227,7 +227,7 @@ file. For CSV files:
 - Configurable separator (default `,`).
 - Excel UTF-8 BOM removed automatically.
 - Inapplicable (`-`) and unknown (`?`) states preserved and rendered in
-  grey.
+  grey by default (their colour can be changed with `missing_colors`).
 - Polymorphisms supported: `"0/1"`, `"urban,forest"`, `"01"` (numeric
   without separator).
 
@@ -281,7 +281,9 @@ works well for trees with many states.
 **Missing and inapplicable data.** By default `?` and `-` tips are grey and,
 like any other tip, take part in the majority vote. `missing_colors` gives them
 their own colours, either for every character or per character; the chosen
-colours are used on tip figures and branches and appear in the legend:
+colours are used on tip figures and branches and appear in the legend. It also
+works in simple mapping, where it colours the tip figures (or terminal
+branches); in the interface the same colours are picked on each character card:
 
 ``` r
 # same colours for every character
