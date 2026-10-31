@@ -5,12 +5,17 @@
 \title{Computes the offset vector from the current physical device parameters
 (par("usr") / par("pin")).}
 \usage{
-.emtree_calc_offsets(N, offset_range = 0.1)
+.emtree_calc_offsets(N, offset_range = 0.1, step_in = NULL)
 }
 \arguments{
 \item{N}{Number of histories.}
 
-\item{offset_range}{Amplitude of the Y range (default 0.1).}
+\item{offset_range}{Step between layers in Y data units (default 0.1).}
+
+\item{step_in}{Optional step between layers in INCHES. When given it
+replaces \code{offset_range}, so the lane separation
+follows the branch width on any canvas size and number
+of tips (a data-unit step shrinks as the tree grows).}
 }
 \value{
 List with \code{dx} and \code{dy} (vectors of length N).

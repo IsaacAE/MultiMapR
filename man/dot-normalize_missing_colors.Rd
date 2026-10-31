@@ -18,8 +18,8 @@ Named list \emph{character} -> \code{c("?" = color, "-" = color)}
 (only the symbols supplied), or \code{NULL}.
 }
 \description{
-Used by the depth-weighted majority reconstruction, where each character
-may give "?" and "-" their own color (Fitch always uses the single
+Used by simple mapping and the depth-weighted majority reconstruction,
+where each character may give "?" and "-" their own color (Fitch always uses the single
 ambiguity color instead, see \code{.get_fitch_ambig_color()}).
 }
 \keyword{internal}

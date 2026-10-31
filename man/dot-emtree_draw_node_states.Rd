@@ -19,8 +19,10 @@
 }
 \description{
 One figure per node and character, filled with the node's color. With
-several characters the figures sit side by side, in lane order, along the
-direction in which the lanes are offset at that node, spaced by their
-own diameter so none hides another.
+several characters the figures form a grid centered on the node (filled
+row by row from the top-left, in lane order), spaced by their own diameter
+so none hides another. Telling the cells apart is up to the chosen colors.
+In dense trees the figures shrink (down to 40\%) so that the grids of
+neighbouring nodes do not overlap.
 }
 \keyword{internal}

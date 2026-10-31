@@ -2,7 +2,7 @@
 % Please edit documentation in R/core_render.R
 \name{.ancestral_tip_color}
 \alias{.ancestral_tip_color}
-\title{Color of a tip state for ancestral reconstruction}
+\title{Color of a tip state (simple mapping and ancestral reconstruction)}
 \usage{
 .ancestral_tip_color(valor, colores_estado, config, car)
 }
@@ -22,7 +22,8 @@ A single color string.
 Observed states take their mapped color. Missing (\code{"?"}, empty or
 \code{NA}) and inapplicable (\code{"-"}) tips take the Fitch ambiguity color
 under Fitch, or the per-character color from \code{config$missing_colors}
-under the depth-weighted majority algorithm (gray70 when none was chosen).
+in simple mapping and under the depth-weighted majority algorithm (gray70
+when none was chosen).
 Unmapped (unticked) states stay gray70.
 }
 \keyword{internal}

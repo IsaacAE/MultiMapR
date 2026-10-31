@@ -5,16 +5,18 @@
 \alias{GAMAS_MULTIMAPEO}
 \title{Sequential color-blind-safe gradients for multi-character Ancestral Reconstruction.}
 \format{
-An object of class \code{list} of length 3.
+An object of class \code{list} of length 5.
 }
 \usage{
 GAMAS_MULTIMAPEO
 }
 \description{
-One gradient per character slot (up to 3). Each gradient has 10 steps
-sampled from continuous perceptual scales:
-magma  — character 1 (dark purple → cream)
-mako   — character 2 (near-black → pale green)
-plasma — character 3 (dark blue → yellow)
+One gradient per character slot (up to 5, see \code{MAX_MULTIMAP}). Each
+gradient has 10 steps:
+rojos   — character 1
+verdes  — character 2
+azules  — character 3
+dorados — character 4
+morados — character 5
 }
 \keyword{datasets}

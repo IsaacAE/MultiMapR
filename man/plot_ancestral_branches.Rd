@@ -27,6 +27,6 @@ plot_ancestral_branches(
 Invisible NULL. Draws on the active graphics device.
 }
 \description{
-Delegates to \code{dibujar_filograma_canvas()} with a list of a single vector.
+Draws one ancestral mapping on the phylogeny.
 For fan and cladogram it preserves the original plot.phylo() behavior.
 }

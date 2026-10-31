@@ -15,7 +15,8 @@
 Named vector label -> color, or \code{NULL}.
 }
 \description{
-Depth-weighted majority only (Fitch shows one "Ambiguous / Missing" entry).
+Simple mapping and depth-weighted majority (Fitch shows one
+"Ambiguous / Missing" entry).
 An entry is added when the user chose a color for that symbol and the
 symbol occurs in the character's data.
 }
