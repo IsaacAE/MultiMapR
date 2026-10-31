@@ -2,7 +2,7 @@
 % Please edit documentation in R/MultiMapR.R
 \name{execute_phylogeny}
 \alias{execute_phylogeny}
-\title{Main orchestrator of MultiMapR}
+\title{Map discrete characters on a phylogeny (interactive console workflow)}
 \usage{
 execute_phylogeny(
   phylogeny,
@@ -42,17 +42,14 @@ NEXUS; the format is detected automatically).}
 
 \item{branch_width}{Branch width in points (default \code{2}).
 Reference values: thin \eqn{\approx} 1, normal = 2,
-thick \eqn{\approx} 4, very thick \eqn{\approx} 8.
-Previously requested interactively in the menu; now a
-direct parameter.}
+thick \eqn{\approx} 4, very thick \eqn{\approx} 8.}
 
 \item{use_edge_length}{Logical. When \code{TRUE} (default) and the tree
 carries branch lengths, they are used for proportional
 rendering (phylogram / fan). When \code{FALSE} all
 branches are drawn with uniform length (cladogram
 style), regardless of whether \code{edge.length} is
-present. When \code{NULL} (previous interactive
-behavior) the menu asks the user only if the tree has
+when \code{NULL} the menu asks the user, but only if the tree has
 branch lengths and the topology supports them.}
 
 \item{ladderize}{Controls whether the tree is ladderized before
@@ -178,4 +175,11 @@ Invisible NULL.
 Supports argument polymorphism: if \code{phylogeny} and \code{character_data}
 are strings (file paths on disk), the data are loaded automatically
 through \code{load_data()} before configuring the mapping.
+}
+\examples{
+if (interactive()) {
+  tree <- system.file("extdata", "bats_tre.tre", package = "MultiMapR")
+  chars <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+  execute_phylogeny(tree, chars)
+}
 }

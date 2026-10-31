@@ -1,46 +1,18 @@
-################################################################################
-# fitch.R
-#
-# Adapter for the Fitch/Sankoff algorithm for use as 'external_algorithm'
-# within the MultiMapR package.
-#
-# ALGORITHM
-#   Downpass and uppass are computed via the Sankoff (1975) two-pass dynamic
-#   program with a 0/1 (unordered Fitch-equivalent) cost matrix, rather than
-#   the earlier frequency-count heuristic. The heuristic under-counted the
-#   most-parsimonious-reconstruction (MPR) set at nodes with a 3-way tie
-#   propagated through more than one ambiguous ancestor (e.g. a node whose
-#   two children are fixed to two DIFFERENT single states, sitting directly
-#   below a node that is itself tied with a third, unrelated state coming
-#   from the outgroup) -- it only ever allowed a state into a node's MPR set
-#   if that state was already present among the node's own children, so a
-#   state that was optimal purely by tying with the *parent's* assignment
-#   could be wrongly excluded. Sankoff's two-pass DP has no such blind spot:
-#   a state is included in a node's MPR set exactly when it participates in
-#   some assignment achieving the tree's true minimum length, which is
-#   exactly what ACCTRAN/DELTRAN/unambiguous need.
-#
-#   Verified against Winclada (TNT) on real data (bats_tre_pol.tre /
-#   matriz_politomy.csv, characters 11 and 12): tree length (L) and the
-#   per-node MPR sets it reports match exactly, including a 4-state
-#   character with a genuine 3-way tie descending from the root.
-#
-# AMBIGUITY COLOR
-#   All ambiguous / missing-data states (?, -, and unresolved internal nodes)
-#   are ALWAYS rendered in FITCH_AMBIG_COLOR regardless of any color the user
-#   may have assigned to those states in the palette.
-#
-# SIGNATURE expected by MultiMapR:
+# Ancestral state reconstruction by Sankoff (1975) two-pass parsimony with a 0/1
+# cost matrix (equivalent to Fitch for unordered characters), providing ACCTRAN,
+# DELTRAN and unambiguous optimizations. Entry point:
 #   external_algorithm(tree, tip_colors, edge_colors, config) -> edge_colors
-################################################################################
+# Ambiguous / missing states (?, -, unresolved nodes) are always drawn in
+# FITCH_AMBIG_COLOR, whatever palette the user chose.
+#
+# Reference: Sankoff, D. (1975). Minimal mutation trees of sequences.
+# SIAM Journal on Applied Mathematics 28(1): 35-42.
 
 FITCH_AMBIG_COLOR <- "#FF00FF"   # magenta
 
-# ============================================================================ #
 # DOWNPASS (tips -> root): Sankoff cost matrix S[node, state].
 # Returns $sets = F (downpass-only MPR sets, used by ACCTRAN) alongside the
 # raw cost matrix $S (needed by the uppass) and bookkeeping fields.
-# ============================================================================ #
 .fitch_downpass <- function(phylo, tip_states) {
   n_tips      <- Ntip(phylo)
   n_nodes     <- phylo$Nnode
@@ -108,13 +80,9 @@ FITCH_AMBIG_COLOR <- "#FF00FF"   # magenta
 }
 
 
-# ============================================================================ #
-# UPPASS (root -> tips): Sankoff second pass. G[node, state] = minimal cost of
-# everything OUTSIDE this node's subtree, given this node = state.
-# Returns $sets = M, the true MPR set: every state that participates in at
-# least one most-parsimonious reconstruction of the whole tree. Used by
-# DELTRAN and by the unambiguous (acctran==deltran) comparison.
-# ============================================================================ #
+# Uppass (root -> tips): G[node, state] is the minimal cost outside the node's
+# subtree given node = state. Returns $sets = M, the true MPR set (states in at
+# least one most-parsimonious reconstruction), used by DELTRAN and Unambiguous.
 .fitch_uppass <- function(phylo, down_result) {
   S        <- down_result$S
   alphabet <- down_result$alphabet
@@ -154,10 +122,7 @@ FITCH_AMBIG_COLOR <- "#FF00FF"   # magenta
 }
 
 
-# ============================================================================ #
-# OPTIMIZATION (ACCTRAN / DELTRAN / Unambiguous) -> one unique state per node
-# Unchanged: consumes s_down (F) and s_up (M) exactly as the previous version.
-# ============================================================================ #
+# Optimization (ACCTRAN / DELTRAN / Unambiguous): one state per node, from s_down (F) and s_up (M).
 .fitch_optimize <- function(phylo, down_result, up_result, tip_states, config = NULL) {
   s_down  <- down_result$sets
   s_up    <- up_result$sets
@@ -238,14 +203,10 @@ FITCH_AMBIG_COLOR <- "#FF00FF"   # magenta
     return(calc_mode(current_mode))
   }
 
-  # UNAMBIGUOUS: a node is genuinely unambiguous iff its MPR set (s_up, the
-  # full Sankoff up-pass set) has exactly one member -- i.e. every
-  # most-parsimonious reconstruction of the whole tree agrees on this node's
-  # state. This must NOT be defined as "ACCTRAN's value equals DELTRAN's
-  # value": since DELTRAN falls back to ACCTRAN's own value whenever it
-  # can't inherit the parent's state (see above), the two can coincide by
-  # construction of the tie-break even when the node's true MPR set has
-  # 2+ members (e.g. {1,3}) and is therefore genuinely ambiguous.
+  # UNAMBIGUOUS: a node is unambiguous iff its MPR set (s_up) has exactly one member.
+  # It must not be defined as ACCTRAN == DELTRAN: DELTRAN falls back to ACCTRAN's value
+  # when it cannot inherit the parent's state, so the two can coincide on nodes whose
+  # MPR set still has 2+ members.
   opt_unamb <- character(total)
   opt_unamb[seq_len(n_tips)] <- tip_states
   for (nd in (n_tips + 1L):total) {
@@ -255,9 +216,7 @@ FITCH_AMBIG_COLOR <- "#FF00FF"   # magenta
 }
 
 
-# ============================================================================ #
-# PUBLIC FUNCTION -- signature compatible with MultiMapR
-# ============================================================================ #
+# Public entry point
 external_algorithm <- function(tree, tip_colors, edge_colors, config = NULL) {
   n_tips <- Ntip(tree)
   tip_states <- names(tip_colors)

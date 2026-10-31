@@ -1,49 +1,13 @@
-################################################################################
-# load_data.R
-#
-# Utilities to load and prepare phylogenetic data in MultiMapR.
-#
-# MAIN FUNCTION:
-#   load_data(tree_path, csv_path, ...)  ->  list(tree, characters)
-#
-# SUPPORTED TREE FORMATS:
-#   .tre / .tree / .nwk  ->  read.tree()   (Newick)
-#   .nex / .nexus        ->  read.nexus()  (NEXUS)
-#   TNT `tread`          ->  converted to Newick (with or without commas)
-#   (automatic detection by extension; the other format and a tolerant
-#    NEXUS TREES-block parser are tried if the first attempt fails)
-#
-# SUPPORTED CHARACTER MATRIX FORMATS:
-#   CSV / TSV / ";"-separated text:
-#     - With or without a header for characters (automatic detection)
-#     - Species column: any column (index or name)
-#     - Numeric and text (string) characters
-#     - Inapplicable "-" and unknown "?" are preserved as-is
-#     - Trailing separators / empty columns are discarded
-#     - UTF-8 BOM (files exported from Excel) removed automatically
-#   TNT (`xread`, e.g. .tnt / .ss), including `cnames` character names
-#   NEXUS CHARACTERS / DATA block (Mesquite, MorphoBank, PAUP...)
-#
-# Polymorphisms written as [01], {01} or (0 1) are converted to "0/1",
-# the notation understood by the Fitch module.
-#
-# NOTE: This file is part of the MultiMapR package. Dependencies
-# (ape, tools) are declared in DESCRIPTION; library() is not used here.
-################################################################################
+# Loading and preparing data: trees (Newick, NEXUS, TNT `tread`) and character
+# matrices (CSV/TSV, TNT `xread`, NEXUS CHARACTERS/DATA). Entry point: load_data().
+# Polymorphisms written as [01], {01} or (0 1) become "0/1", the notation the
+# Fitch module understands.
 
 
-# ============================================================================ #
 # BOM HANDLING
-# ============================================================================ #
 
 #' Removes the UTF-8 BOM (EF BB BF) if present and returns the path to use
-#'
-#' If the file has a BOM, copies the content without the first 3 bytes to a
-#' temporary file and returns its path. If there is no BOM, returns the original path.
-#' The temporary file is automatically deleted when the R session ends.
-#'
-#' @param csv_path Path to the original file.
-#' @return Path to the clean file (temporary or original).
+#' @noRd
 .remove_bom <- function(csv_path) {
   con <- file(csv_path, open = "rb")
   bom <- readBin(con, raw(), n = 3)
@@ -72,9 +36,7 @@
 
 
 #' Reads a text file as lines, without BOM and without carriage returns
-#'
-#' @param path Path to the file.
-#' @return Character vector with one element per line.
+#' @noRd
 .read_lines_clean <- function(path) {
   lines <- readLines(.remove_bom(path), warn = FALSE)
   gsub("\r", "", lines, fixed = TRUE)
@@ -82,9 +44,7 @@
 
 
 #' Removes surrounding single or double quotes (and whitespace) from names
-#'
-#' @param x Character vector.
-#' @return Character vector.
+#' @noRd
 .strip_quotes <- function(x) {
   x <- trimws(x)
   x <- sub("^(['\"])(.*)\\1$", "\\2", x, perl = TRUE)
@@ -92,9 +52,7 @@
 }
 
 
-# ============================================================================ #
 # AUTOMATIC HEADER DETECTION
-# ============================================================================ #
 
 # Labels commonly used for the species column
 .SPECIES_LABELS <- c("species", "specie", "especie", "especies", "taxon",
@@ -103,20 +61,7 @@
                      "nombres", "sp", "spp")
 
 #' Decides whether the first row of a raw table is a header
-#'
-#' Rules, in order:
-#'   1. The species cell is a typical label ("Species", "Taxon", "OTU",
-#'      "Especie"...)                                       -> header.
-#'   2. The character cells are consecutive integers 1..k   -> header.
-#'   3. Most character cells of the first row are values that also appear
-#'      in the same column further down (e.g. "0", "1", "?"), or all of them
-#'      look like state codes                               -> data (no header).
-#'   4. Otherwise                                           -> header.
-#' With a single row the old rule is used: taxon names contain a space or "_".
-#'
-#' @param raw     Data.frame read with \code{header = FALSE} (all character).
-#' @param sp_idx  Index of the species column.
-#' @return TRUE if a header is detected, FALSE otherwise.
+#' @noRd
 .detect_header <- function(raw, sp_idx = 1L) {
   first        <- trimws(as.character(unlist(raw[1, ], use.names = FALSE)))
   species_cell <- .strip_quotes(first[sp_idx])
@@ -142,19 +87,10 @@
 }
 
 
-# ============================================================================ #
 # COLUMN NAME NORMALIZATION
-# ============================================================================ #
 
 #' Generates R-safe character names
-#'
-#' If the CSV has a header, those names are used (sanitized).
-#' If there is no header, generates "char1", "char2", ...
-#'
-#' @param raw_names  Vector with the raw names of the character columns.
-#'                   NULL or empty -> automatic names are generated.
-#' @param n          Number of character columns.
-#' @return Character vector of length n.
+#' @noRd
 .normalize_char_names <- function(raw_names, n) {
   if (is.null(raw_names) || length(raw_names) == 0) {
     return(paste0("char", seq_len(n)))
@@ -166,18 +102,10 @@
 }
 
 
-# ============================================================================ #
 # STATE NORMALIZATION
-# ============================================================================ #
 
 #' Converts polymorphism notations to the "0/1" form used by Fitch
-#'
-#'   `[01]`, `{01}`, `(01)`, `[0 1]`, `(0,1)`, `{0/1}`  ->  `0/1`
-#'   `[0]`                                              ->  `0`
-#' Any other value is returned unchanged (trimmed).
-#'
-#' @param x Character vector of states.
-#' @return Character vector of the same length.
+#' @noRd
 .normalize_polymorphism <- function(x) {
   x    <- trimws(x)
   poly <- grepl("^[\\[{(].*[\\]})]$", x, perl = TRUE)
@@ -194,11 +122,7 @@
 
 
 #' Splits a TNT/NEXUS state string into one token per character
-#'
-#' `01?[01]-{12}(34)` -> `0` `1` `?` `[01]` `-` `{12}` `(34)`
-#'
-#' @param s Single string without whitespace.
-#' @return Character vector of tokens.
+#' @noRd
 .tokenize_states <- function(s) {
   if (!nzchar(s)) return(character(0))
   regmatches(s, gregexpr("\\[[^\\]]*\\]|\\{[^}]*\\}|\\([^)]*\\)|.", s, perl = TRUE))[[1]]
@@ -206,13 +130,7 @@
 
 
 #' Builds the final character data.frame shared by all matrix readers
-#'
-#' @param species           Character vector of species names.
-#' @param states            Character matrix/data.frame (rows = species).
-#' @param char_names        Raw character names or NULL.
-#' @param normalize_spaces  Replace spaces with "_" in species names.
-#' @param source_label      Text used in the summary message.
-#' @return Data.frame with a "Species" column and one column per character.
+#' @noRd
 .build_character_table <- function(species, states, char_names,
                                    normalize_spaces, source_label) {
   species <- .strip_quotes(species)
@@ -238,18 +156,10 @@
 }
 
 
-# ============================================================================ #
 # TREE READING
-# ============================================================================ #
 
 #' Converts the text of a TNT `tread` file to a Newick string
-#'
-#' Handles the quoted title after `tread`, the `proc` footer, several trees
-#' separated by "*" (only the first is kept) and the space-separated,
-#' comma-less TNT syntax, e.g. \code{(A (B C)(D E))}.
-#'
-#' @param lines Lines of the file.
-#' @return Newick string ending with ";".
+#' @noRd
 .tnt_tread_to_newick <- function(lines) {
   txt <- paste(lines, collapse = " ")
   txt <- sub("^\\s*tread\\b", "", txt, ignore.case = TRUE, perl = TRUE)
@@ -277,17 +187,7 @@
 
 
 #' Sanitizes a tree file for compatibility with ape
-#'
-#' Removes common problems produced by different phylogenetic programs:
-#'   - Windows line endings (CR+LF converted to LF) and UTF-8 BOM
-#'   - Numbered comments in Mesquite TRANSLATE blocks (`[0]`, `[1]`, ...)
-#'     that ape cannot parse
-#'   - TNT `tread` format (with or without a quoted title): rewritten as plain
-#'     Newick so that read.tree() can parse it. TNT separates tips with spaces
-#'     instead of commas; the missing commas are inserted.
-#'
-#' @param tree_path Path to the original file.
-#' @return Path to the clean file (temporary).
+#' @noRd
 .sanitize_tree <- function(tree_path) {
   lines <- .read_lines_clean(tree_path)
 
@@ -311,13 +211,7 @@
 
 
 #' Tolerant parser for the TREES block of a NEXUS file
-#'
-#' Used when \code{ape::read.nexus()} fails, e.g. with TNT exports where the
-#' Newick string is on a different line from \code{tree name =}, with
-#' \code{[&U]} comments or with \code{end ;}. Supports TRANSLATE tables.
-#'
-#' @param path Path to the (sanitized) NEXUS file.
-#' @return phylo object (the first tree of the block).
+#' @noRd
 .read_nexus_trees_fallback <- function(path) {
   txt <- paste(.read_lines_clean(path), collapse = "\n")
   m   <- regexpr("(?is)begin\\s+trees\\s*;.*?(\\bend(block)?\\s*;|$)", txt, perl = TRUE)
@@ -352,17 +246,7 @@
 
 
 #' Reads a phylogenetic tree file (Newick, NEXUS or TNT)
-#'
-#' Compatible with files from Mesquite, TNT, WinClada and other programs
-#' that produce non-standard variants of the NEXUS/Newick format.
-#' TNT files using the \code{tread} / \code{proc-;} syntax are automatically
-#' converted to plain Newick before parsing. Tip labels are trimmed and
-#' surrounding quotes are removed. If the file holds several trees, the first
-#' one is used.
-#'
-#' @param tree_path    Path to the tree file.
-#' @param tree_format  "auto" (default), "newick" or "nexus".
-#' @return phylo object.
+#' @noRd
 read_tree <- function(tree_path, tree_format = "auto") {
   if (!file.exists(tree_path))
     stop(paste0("Tree file not found: '", tree_path, "'"))
@@ -422,17 +306,10 @@ read_tree <- function(tree_path, tree_format = "auto") {
 }
 
 
-# ============================================================================ #
 # CHARACTER MATRIX READING
-# ============================================================================ #
 
 #' Guesses the field separator of a delimited text file
-#'
-#' Chooses among ",", ";" and tab the one that splits the first lines into
-#' the largest consistent number of fields.
-#'
-#' @param path Path to the file (BOM-free).
-#' @return Separator character.
+#' @noRd
 .detect_sep <- function(path) {
   lines <- head(readLines(path, warn = FALSE), 20)
   lines <- lines[nzchar(trimws(lines))]
@@ -446,22 +323,7 @@ read_tree <- function(tree_path, tree_format = "auto") {
 
 
 #' Reads a character CSV file and prepares it for MultiMapR
-#'
-#' Rows may have different numbers of fields (trailing separators are common
-#' in files exported from Excel); columns that are completely empty are
-#' discarded. The header is detected automatically (see \code{.detect_header})
-#' unless \code{header} is given.
-#'
-#' @param csv_path           Path to the CSV file.
-#' @param sep                Field separator (default ","). Use \code{"auto"}
-#'                           to detect ",", ";" or tab. If the given separator
-#'                           yields a single column, the others are tried.
-#' @param species_col        Index or name of the species column (default 1).
-#' @param normalize_spaces   If TRUE, replaces spaces with "_" in species names
-#'                           (default FALSE).
-#' @param header             \code{NA} (default, automatic), \code{TRUE} or
-#'                           \code{FALSE}.
-#' @return Data.frame with a "Species" column and "charN" or custom-named columns.
+#' @noRd
 read_csv_characters <- function(csv_path,
                                 sep               = ",",
                                 species_col       = 1,
@@ -502,7 +364,7 @@ read_csv_characters <- function(csv_path,
   if (ncol(raw_data) < 2 || nrow(raw_data) < 1)
     stop("The CSV must have at least two columns: species + one character.")
 
-  # --- Species column index (names only make sense with a header) ---
+  # Species column index (names only make sense with a header)
   first_row <- trimws(as.character(unlist(raw_data[1, ], use.names = FALSE)))
   if (is.character(species_col)) {
     sp_idx <- match(species_col, first_row)
@@ -519,7 +381,7 @@ read_csv_characters <- function(csv_path,
   header_row <- if (has_header) first_row else NULL
   body       <- if (has_header) raw_data[-1, , drop = FALSE] else raw_data
 
-  # --- Character columns: all except species, discarding empty ones ---
+  # Character columns: all except species, discarding empty ones
   char_idx <- setdiff(seq_len(ncol(raw_data)), sp_idx)
   empty    <- vapply(char_idx, function(j)
     all(body[[j]] == "") && (is.null(header_row) || header_row[j] == ""), logical(1))
@@ -541,15 +403,7 @@ read_csv_characters <- function(csv_path,
 
 
 #' Reads a TNT character matrix (`xread` command)
-#'
-#' Supports an optional quoted title after \code{xread}, polymorphisms in
-#' square brackets, interleaved blocks and the \code{cnames} block for
-#' character names. State names from \code{cnames} are stored in the
-#' \code{"state_labels"} attribute of the result.
-#'
-#' @param path              Path to the TNT file.
-#' @param normalize_spaces  Replace spaces with "_" in species names.
-#' @return Data.frame with a "Species" column and one column per character.
+#' @noRd
 read_tnt_characters <- function(path, normalize_spaces = FALSE) {
   lines <- .read_lines_clean(path)
   start <- grep("^\\s*xread\\b", lines, ignore.case = TRUE, perl = TRUE)[1]
@@ -600,16 +454,7 @@ read_tnt_characters <- function(path, normalize_spaces = FALSE) {
 
 
 #' Reads the CHARACTERS / DATA block of a NEXUS file
-#'
-#' Handles quoted taxon names, \code{MISSING}, \code{GAP} and
-#' \code{MATCHCHAR} symbols, interleaved and wrapped matrices, polymorphisms
-#' \code{(01)} / \code{{01}}, and character names from \code{CHARLABELS} or
-#' \code{CHARSTATELABELS} (state names are stored in the
-#' \code{"state_labels"} attribute of the result).
-#'
-#' @param path              Path to the NEXUS file.
-#' @param normalize_spaces  Replace spaces with "_" in species names.
-#' @return Data.frame with a "Species" column and one column per character.
+#' @noRd
 read_nexus_characters <- function(path, normalize_spaces = FALSE) {
   txt <- paste(.read_lines_clean(path), collapse = "\n")
   m   <- regexpr("(?is)begin\\s+(characters|data)\\s*;.*?\\bend(block)?\\s*;", txt, perl = TRUE)
@@ -646,7 +491,7 @@ read_nexus_characters <- function(path, normalize_spaces = FALSE) {
     e[nzchar(e)]
   }
 
-  # --- Character and state names ---
+  # Character and state names
   char_names   <- NULL
   state_labels <- vector("list", n_char)
   cl <- command_text("charlabels")
@@ -674,7 +519,7 @@ read_nexus_characters <- function(path, normalize_spaces = FALSE) {
     }
   }
 
-  # --- Matrix ---
+  # Matrix
   mx <- regmatches(block, regexec("(?is)\\bmatrix\\b(.*?);", block, perl = TRUE))[[1]]
   if (length(mx) < 2) stop("No MATRIX command found in the CHARACTERS block.")
   mlines <- trimws(strsplit(mx[2], "\n", fixed = TRUE)[[1]])
@@ -714,14 +559,7 @@ read_nexus_characters <- function(path, normalize_spaces = FALSE) {
 
 
 #' Turns per-taxon state sequences into the MultiMapR character table
-#'
-#' @param seqs         Named list: one state string (or token vector) per taxon.
-#' @param n_char       Declared number of characters.
-#' @param n_tax        Declared number of taxa (NA if unknown).
-#' @param char_names   Character names or NULL.
-#' @param state_labels List of state names per character or NULL.
-#' @param normalize_spaces,source_label See \code{.build_character_table}.
-#' @return Data.frame (see \code{.build_character_table}).
+#' @noRd
 .matrix_from_sequences <- function(seqs, n_char, n_tax, char_names, state_labels,
                                    normalize_spaces, source_label) {
   tokens <- lapply(seqs, function(s) if (length(s) == 1) .tokenize_states(s) else s)
@@ -751,9 +589,7 @@ read_nexus_characters <- function(path, normalize_spaces = FALSE) {
 
 
 #' Detects the format of a character matrix file
-#'
-#' @param path Path to the file.
-#' @return "tnt", "nexus" or "csv".
+#' @noRd
 .detect_matrix_format <- function(path) {
   ext <- tolower(tools::file_ext(path))
   if (ext %in% c("tnt", "ss", "xread")) return("tnt")
@@ -766,13 +602,7 @@ read_nexus_characters <- function(path, normalize_spaces = FALSE) {
 
 
 #' Reads a character matrix in CSV, TNT or NEXUS format
-#'
-#' @param path              Path to the matrix file.
-#' @param format            "auto" (default), "csv", "tnt" or "nexus".
-#' @param sep,species_col,header  Only used for CSV files
-#'                          (see \code{read_csv_characters}).
-#' @param normalize_spaces  Replace spaces with "_" in species names.
-#' @return Data.frame with a "Species" column and one column per character.
+#' @noRd
 read_characters <- function(path,
                             format           = "auto",
                             sep              = ",",
@@ -793,19 +623,10 @@ read_characters <- function(path,
 }
 
 
-# ============================================================================ #
 # TREE <-> CSV COMPATIBILITY VALIDATION
-# ============================================================================ #
 
-#' Reconciles species names that differ only in spaces, underscores, quotes
-#' or letter case
-#'
-#' "Saccopteryx bilineata" (matrix) is renamed to "Saccopteryx_bilineata"
-#' (tree). Only unambiguous one-to-one matches are applied.
-#'
-#' @param tree  phylo object.
-#' @param data  Data.frame with a "Species" column.
-#' @return \code{data} with harmonized species names.
+#' Reconciles species names that differ only in spaces, underscores, quotes or letter case
+#' @noRd
 .harmonize_species <- function(tree, data) {
   tips      <- tree$tip.label
   sp        <- data$Species
@@ -829,12 +650,7 @@ read_characters <- function(path,
 
 
 #' Checks that the CSV names match the tree tip.labels
-#'
-#' @param tree     phylo object.
-#' @param data     Data.frame with a "Species" column.
-#' @param strict   If TRUE raises an error on any discrepancy;
-#'                 if FALSE (default) only warns and returns unmatched names.
-#' @return Invisible: vector of CSV names not found in the tree.
+#' @noRd
 validate_compatibility <- function(tree, data, strict = FALSE) {
   tips            <- tree$tip.label
   sp              <- data$Species
@@ -865,62 +681,10 @@ validate_compatibility <- function(tree, data, strict = FALSE) {
 }
 
 
-# ============================================================================ #
 # MAIN FUNCTION
-# ============================================================================ #
 
 #' Loads a tree and a character matrix ready to use with MultiMapR
-#'
-#' Automatically detects:
-#'   - Tree format (Newick / NEXUS / TNT \code{tread}).
-#'   - Matrix format (CSV / TNT \code{xread} / NEXUS CHARACTERS block).
-#'   - Presence or absence of a header in the CSV, and its separator
-#'     problems (trailing separators, ";" or tab instead of ",").
-#'   - UTF-8 BOM (files exported from Excel).
-#'   - Character types (numeric or strings): preserved as text.
-#'   - Species names that differ from the tips only in spaces vs "_",
-#'     quotes or letter case (renamed to the tree labels).
-#'
-#' @param tree_path          Path to the tree file (.tre, .nwk, .nex, .nexus, ...).
-#' @param csv_path           Path to the character matrix (.csv, .tnt, .nex, ...).
-#' @param sep                CSV field separator (default ","; \code{"auto"}
-#'                           detects it).
-#' @param species_col        Species column: integer index or column name (default 1).
-#' @param normalize_spaces   If TRUE converts spaces to "_" in species names
-#'                           (useful when the tree uses "_" and the CSV uses " ").
-#' @param tree_format        "auto" (default), "newick" or "nexus".
-#' @param strict             If TRUE, raises an error on tree/CSV discrepancies
-#'                           (default FALSE).
-#' @param matrix_format      "auto" (default), "csv", "tnt" or "nexus".
-#' @param header             CSV header: \code{NA} (default, automatic),
-#'                           \code{TRUE} or \code{FALSE}.
-#'
-#' @return List with:
-#'   \item{tree}{phylo object ready for ape / MultiMapR.}
-#'   \item{characters}{Data.frame with a "Species" column and character columns.}
-#'
-#' @examples
-#' \dontrun{
-#'   # CSV without header (numeric characters)
-#'   d1 <- load_data("tree2_jadc.tre", "Matriz_JAIR.csv")
-#'   execute_phylogeny(d1$tree, d1$characters)
-#'
-#'   # CSV with BOM and species names with spaces
-#'   d2 <- load_data("bats_tre.tre", "bats_matrix.csv",
-#'                   normalize_spaces = TRUE)
-#'   execute_phylogeny(d2$tree, d2$characters)
-#'
-#'   # Semicolon separator, species column by name
-#'   d3 <- load_data("tree.nex", "data.csv",
-#'                   sep = ";", species_col = "Taxon")
-#'   execute_phylogeny(d3$tree, d3$characters)
-#'
-#'   # TNT matrix and TNT tree
-#'   d4 <- load_data("tree_tnt.tre", "matrix.tnt")
-#'
-#'   # Polymorphic use: pass paths directly to the orchestrator
-#'   execute_phylogeny("my_tree.tre", "my_characters.csv")
-#' }
+#' @noRd
 load_data <- function(tree_path,
                       csv_path,
                       sep               = ",",

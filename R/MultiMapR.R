@@ -1,9 +1,4 @@
-# ==============================================================================
-# PACKAGE-LEVEL IMPORTS
-# Centralises all base-R importFrom declarations so devtools::document()
-# writes them to NAMESPACE automatically. Nothing else in the package needs
-# to repeat these.
-# ==============================================================================
+# Package-level imports (written to NAMESPACE by roxygen).
 
 #' @importFrom grDevices adjustcolor colors dev.cur dev.list dev.new dev.off dev.set pdf png
 #' @importFrom graphics  axis barplot legend lines par plot plot.new points rect segments strheight strwidth text
@@ -13,17 +8,7 @@
 "_PACKAGE"
 
 #' Opens a graphics device, evaluates an expression, and closes the device
-#'
-#' @param filename   Output filename without extension.
-#' @param format     Output format: \code{"png"} or \code{"pdf"}.
-#' @param phylogeny  \code{phylo} object; used only to calculate default dimensions.
-#' @param tree_type  Tree topology string (\code{"phylogram"}, \code{"cladogram"}, or \code{"fan"}).
-#'                   Fan trees use square dimensions.
-#' @param expr       Expression to evaluate inside the open device (the drawing code).
-#' @param width      Device width in inches. \code{NULL} = automatic.
-#' @param height     Device height in inches. \code{NULL} = automatic.
-#' @import ape
-#' @keywords internal
+#' @noRd
 .export_device <- function(filename, format, phylogeny, tree_type, expr,
                            width = NULL, height = NULL) {
   n_tips         <- Ntip(phylogeny)
@@ -64,15 +49,7 @@
 }
 
 #' Closes the current device and re-activates a previously active one
-#'
-#' \code{dev.off()} activates the *next* device in the list, which is not
-#' necessarily the one that was active before a temporary device was opened
-#' (e.g. RStudio's plot pane instead of a Shiny plot device). Restoring it
-#' explicitly keeps subsequent drawing on the intended device.
-#'
-#' @param prev Device number returned by \code{dev.cur()} before the temporary
-#'             device was opened.
-#' @keywords internal
+#' @noRd
 .close_device_restore <- function(prev) {
   dev.off()
   if (prev > 1L && prev %in% dev.list()) dev.set(prev)
@@ -80,19 +57,7 @@
 }
 
 #' Prepares the tree for a configured mapping and draws it
-#'
-#' Applies the rendering parameters (branch width, branch lengths,
-#' ladderization, label offset) to \code{config} and a working copy of the
-#' tree, then dispatches to the matching graphics controller in
-#' \code{core_render.R}. Shared by \code{\link{execute_phylogeny}} (CLI loop)
-#' and \code{\link{run_multimapr_app}} (graphical interface).
-#'
-#' @param phylogeny        Untouched \code{phylo} object.
-#' @param config           Configuration list (see \code{setup_mapping_config()}).
-#' @param branch_width,use_edge_length,ladderize,terminal_stretch,tip_end,branch_angle,show_labels,label_size,label_color,show_legend,legend_layout,missing_colors,show_nodes,node_shape,node_size
-#'                         See \code{\link{execute_phylogeny}}.
-#' @return Invisibly, the updated \code{config}.
-#' @keywords internal
+#' @noRd
 .render_configured_mapping <- function(phylogeny, config,
                                        branch_width     = 2,
                                        use_edge_length  = NULL,
@@ -130,7 +95,7 @@
   if (!is.null(missing_colors))
     config$missing_colors <- .normalize_missing_colors(missing_colors, config$characters)
 
-  # -- Branch width (parameter overrides menu default of 2) ------------------
+  # Branch width (parameter overrides menu default of 2)
   if (!is.numeric(branch_width) || length(branch_width) != 1L || branch_width <= 0)
     stop("`branch_width` must be a positive number.")
   config$branch_width <- branch_width
@@ -138,7 +103,7 @@
                           "phylogram" = 0.012, "cladogram" = 0.012, "fan" = 0.003, 0.012)
   config$offset_range <- max(0.05, branch_width * offset_factor)
 
-  # -- Branch lengths ----------------------------------------------------------
+  # Branch lengths
   # use_edge_length = NULL  -> respect menu choice stored in config
   # use_edge_length = TRUE  -> always use lengths if present
   # use_edge_length = FALSE -> always strip lengths (uniform branches)
@@ -150,7 +115,7 @@
     working_tree$edge.length <- NULL
   }
 
-  # -- Ladderize ---------------------------------------------------------------
+  # Ladderize
   # ladderize = TRUE    -> ape::ladderize(right = FALSE) [larger clade bottom]
   # ladderize = "right" -> ape::ladderize(right = TRUE)  [larger clade top]
   # ladderize = FALSE   -> no reordering
@@ -169,10 +134,8 @@
   max_depth <- max(node.depth.edgelength(phy_tmp))
   config$label_offset <- max_depth * 0.025
 
-  # Dispatch to the corresponding graphics controller (core_render.R)
-  # plot_ancestral_reconstruction() internally handles multi_function:
-  #   multi_function == 1 -> branch overlay
-  #   multi_function == 2 -> ancestral reconstruction + tip figures
+  # Dispatch to the graphics controller (core_render.R); plot_ancestral_reconstruction()
+  # handles multi_function (1 = branch overlay, 2 = reconstruction + tip figures).
   if (config$mapping_type == 1) {
     plot_simple_mapping(working_tree, config)
   } else {
@@ -183,11 +146,9 @@
 }
 
 
-# ==============================================================================
-# MAIN FUNCTION -- ORCHESTRATOR
-# ==============================================================================
+# Main entry point
 
-#' Main orchestrator of MultiMapR
+#' Map discrete characters on a phylogeny (interactive console workflow)
 #'
 #' Supports argument polymorphism: if `phylogeny` and `character_data`
 #' are strings (file paths on disk), the data are loaded automatically
@@ -200,15 +161,12 @@
 #' @param branch_width       Branch width in points (default \code{2}).
 #'                           Reference values: thin \eqn{\approx} 1, normal = 2,
 #'                           thick \eqn{\approx} 4, very thick \eqn{\approx} 8.
-#'                           Previously requested interactively in the menu; now a
-#'                           direct parameter.
 #' @param use_edge_length    Logical. When \code{TRUE} (default) and the tree
 #'                           carries branch lengths, they are used for proportional
 #'                           rendering (phylogram / fan). When \code{FALSE} all
 #'                           branches are drawn with uniform length (cladogram
 #'                           style), regardless of whether \code{edge.length} is
-#'                           present. When \code{NULL} (previous interactive
-#'                           behavior) the menu asks the user only if the tree has
+#'                           when \code{NULL} the menu asks the user, but only if the tree has
 #'                           branch lengths and the topology supports them.
 #' @param ladderize          Controls whether the tree is ladderized before
 #'                           plotting. \code{TRUE} (default) sorts clades so the
@@ -305,6 +263,12 @@
 #' @param node_size          Multiplier of the automatic node-figure size
 #'                           (default \code{1}).
 #' @return Invisible NULL.
+#' @examples
+#' if (interactive()) {
+#'   tree <- system.file("extdata", "bats_tre.tre", package = "MultiMapR")
+#'   chars <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+#'   execute_phylogeny(tree, chars)
+#' }
 #' @export
 execute_phylogeny <- function(phylogeny, character_data,
                               branch_width         = 2,
@@ -333,7 +297,7 @@ execute_phylogeny <- function(phylogeny, character_data,
                               node_size            = 1) {
   tryCatch({
 
-    # POLYMORPHISM: If file paths (character) are passed, load data automatically
+    # If file paths were passed, load the data first
     if (is.character(phylogeny) && is.character(character_data)) {
       cat("\n[MultiMapR] File paths detected. Loading data automatically...\n")
       loaded_data      <- load_data(tree_path        = phylogeny,
@@ -370,18 +334,11 @@ execute_phylogeny <- function(phylogeny, character_data,
 
     config <- NULL  # NULL forces a full setup_mapping_config() run
 
-    # ==========================================================================
-    # MAIN SESSION LOOP
-    # Lets the user, after each rendered plot, either:
-    #   - run through the entire CLI again with a brand-new configuration, or
-    #   - keep everything as configured and only pick a different ancestral
-    #     reconstruction algorithm, or
-    #   - exit the session.
-    # ==========================================================================
+    # Session loop: after each plot the user can restart the CLI, switch the ancestral
+    # algorithm keeping the configuration, or exit.
     repeat {
 
       if (is.null(config)) {
-        # Continue with the normal system flow using the modular interface
         config <- setup_mapping_config(original_phylogeny, character_data, use_palettes,
                                        user_palette = palette,
                                        ambiguity_color = ambiguity_color)
@@ -405,7 +362,7 @@ execute_phylogeny <- function(phylogeny, character_data,
                                            node_shape       = node_shape,
                                            node_size        = node_size)
 
-      # -- What next? ----------------------------------------------------------
+      # What next?
       next_action <- prompt_post_run_menu(allow_algorithm_change = (config$mapping_type == 2))
 
       if (next_action == "exit") {

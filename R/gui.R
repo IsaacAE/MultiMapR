@@ -1,30 +1,11 @@
-################################################################################
-# gui.R
-#
-# Graphical user interface for MultiMapR (Shiny + bslib).
-# Gives point-and-click access to the same pipeline the console menus drive:
-#   load_data()  ->  character_stats() / plot_character_*()
-#                ->  config list  ->  .render_configured_mapping()
-# The configuration list built by the interface has exactly the fields
-# produced by setup_mapping_config() (cli_menu.R), so the plots and exported
-# files are identical to the ones obtained through execute_phylogeny().
-#
-# Files:
-#   gui.R          entry point, theme, i18n, shared non-reactive helpers
-#   gui_ui.R       layout (navbar, Data, Map, Help) and UI components
-#   gui_server.R   server logic
-#   inst/app/      www/multimapr.css (tokens), www/multimapr.js, i18n.txt
-#
-# Design reference: design_handoff_multimapr_gui/README.md
-#
-# shiny and bslib are only suggested dependencies: they are checked when
-# run_multimapr_app() is called.
-################################################################################
+# Shiny + bslib interface (run_multimapr_app()). It builds the same config list as
+# setup_mapping_config() and drives .render_configured_mapping(), so its figures
+# match those of execute_phylogeny(). Layout lives in gui_ui.R, server logic in
+# gui_server.R, assets (css, js, i18n.txt) in inst/app/. shiny and bslib are only
+# suggested dependencies, checked when the app is launched.
 
 
-# ==============================================================================
-# SECTION 1 -- PUBLIC ENTRY POINT
-# ==============================================================================
+# Public entry point
 
 #' Launch the MultiMapR graphical interface
 #'
@@ -63,15 +44,15 @@
 #'   \code{Exports} folder of the current working directory, as in the
 #'   console workflow.
 #' @examples
-#' \dontrun{
+#' if (interactive()) {
+#'   tree <- system.file("extdata", "bats_tre.tre", package = "MultiMapR")
+#'   chars <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+#'
 #'   # Empty interface: load the files from the "Data" tab
 #'   run_multimapr_app()
 #'
 #'   # Spanish interface with data already loaded
-#'   run_multimapr_app("bats_tre.tre", "bats_matrix.csv", lang = "es")
-#'
-#'   d <- load_data("bats_tre.tre", "bats_matrix.csv")
-#'   run_multimapr_app(d$tree, d$characters)
+#'   run_multimapr_app(tree, chars, lang = "es")
 #' }
 #' @export
 run_multimapr_app <- function(tree = NULL, characters = NULL,
@@ -111,10 +92,6 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 
 
 #' Builds the MultiMapR Shiny application object
-#'
-#' @param initial  NULL or list(tree, characters, kind, names, log) to preload.
-#' @param lang     "en" or "es".
-#' @return A \code{shiny.appobj}.
 #' @noRd
 .mmr_app <- function(initial = NULL, lang = "en") {
   www <- .gui_app_file("www")
@@ -128,9 +105,7 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 }
 
 
-# ==============================================================================
-# SECTION 2 -- ASSETS, THEME AND TRANSLATIONS
-# ==============================================================================
+# Assets, theme and translations
 
 #' Path to a file shipped in inst/app
 #' @noRd
@@ -159,10 +134,6 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 }
 
 #' Interface dictionary (inst/app/i18n.txt: key | es | en)
-#'
-#' Kept outside the R code so that the Spanish text does not need escapes and
-#' translators can edit one file. Cached after the first read.
-#' @return Named list: key -> c(es = , en = ).
 #' @noRd
 .gui_dict <- local({
   cache <- NULL
@@ -182,10 +153,6 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 })
 
 #' Returns a translation function for the interface strings
-#'
-#' \code{tr(key, ...)} looks \code{key} up in the dictionary and, when extra
-#' arguments are given, formats the text with \code{sprintf()}.
-#' @param lang "en" or "es".
 #' @noRd
 .gui_translator <- function(lang) {
   dict <- .gui_dict()
@@ -200,14 +167,9 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 }
 
 
-# ==============================================================================
-# SECTION 3 -- NON-REACTIVE HELPERS
-# ==============================================================================
+# Non-reactive helpers
 
 #' Evaluates an expression capturing console output, messages and warnings
-#'
-#' @param expr Expression to evaluate.
-#' @return list(value, log) where \code{log} is a character vector.
 #' @noRd
 .gui_capture <- function(expr) {
   msgs  <- character(0)
@@ -229,7 +191,6 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 }
 
 #' Converts any R color (name or hex) to a "#RRGGBB" string
-#' @param col Character vector of colors.
 #' @noRd
 .gui_hex <- function(col) {
   m <- grDevices::col2rgb(col)
@@ -242,11 +203,11 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
   list(okabe  = ACCESSIBLE_PALETTES$okabe,
        tol    = ACCESSIBLE_PALETTES$tol,
        plasma = ACCESSIBLE_PALETTES$plasma,
-       rojos  = MULTIMAP_RAMPS$rojos,
-       verdes = MULTIMAP_RAMPS$verdes,
-       azules = MULTIMAP_RAMPS$azules,
-       dorados = MULTIMAP_RAMPS$dorados,
-       morados = MULTIMAP_RAMPS$morados,
+       reds  = MULTIMAP_RAMPS$reds,
+       greens = MULTIMAP_RAMPS$greens,
+       blues = MULTIMAP_RAMPS$blues,
+       golds = MULTIMAP_RAMPS$golds,
+       purples = MULTIMAP_RAMPS$purples,
        wc    = PRESET_PALETTES$wc,
        MM1    = PRESET_PALETTES$MM1)
 }
@@ -254,22 +215,11 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 #' Dictionary key (or literal name) for each palette
 #' @noRd
 .GUI_PALETTE_KEYS <- c(auto = "pal_auto", okabe = "pal_okabe", tol = "pal_tol",
-                       plasma = "pal_plasma", rojos = "pal_reds", verdes = "pal_greens",
-                       azules = "pal_blues", dorados = "pal_golds", morados = "pal_purples",
+                       plasma = "pal_plasma", reds = "pal_reds", greens = "pal_greens",
+                       blues = "pal_blues", golds = "pal_golds", purples = "pal_purples",
                        wc = "pal_wc", MM1 = "pal_mm1")
 
 #' Resolves a palette choice to n hex colors
-#'
-#' "auto" reproduces the console behavior with \code{use_palettes = TRUE}:
-#' simple mapping uses the accessible palettes (one per character slot),
-#' single-character reconstruction uses Okabe-Ito and multi-character
-#' reconstruction uses the sequential ranges of \code{MULTIMAP_RAMPS}.
-#'
-#' @param choice       Palette name or "auto".
-#' @param n            Number of colors needed.
-#' @param slot         Position of the character in the selection.
-#' @param mapping_type 1 (simple) or 2 (ancestral).
-#' @param n_selected   Number of selected characters.
 #' @noRd
 .gui_palette_colors <- function(choice, n, slot = 1L, mapping_type = 1L, n_selected = 1L) {
   pals <- .gui_palettes()
@@ -300,13 +250,6 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 .GUI_MISSING_DEFAULT <- "#B3B3B3"
 
 #' Figure dimensions in inches, as computed by .export_device()
-#'
-#' @param n_tips    Number of terminals.
-#' @param tree_type "phylogram", "cladogram" or "fan".
-#' @param width,height Custom inches or NULL (automatic).
-#' @param branch_angle Cladogram branch angle in degrees when the engine draws
-#'   it at a fixed angle; NULL for the stretched layout.
-#' @return list(width, height, auto_height).
 #' @noRd
 .gui_figure_dims <- function(n_tips, tree_type, width = NULL, height = NULL,
                              branch_angle = NULL) {
@@ -322,9 +265,6 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 }
 
 #' Runs a drawing expression with a throw-away device as the active device
-#'
-#' Export functions also draw on the active device after writing the file;
-#' this keeps that extra rendering away from the user's screen devices.
 #' @noRd
 .gui_with_sink_device <- function(expr) {
   prev <- dev.cur()
@@ -338,12 +278,6 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 }
 
 #' Draws a configured mapping into a PNG file
-#'
-#' @param spec    list(tree, config, render) from the interface.
-#' @param file    Output PNG path.
-#' @param width_px  Width in device pixels.
-#' @param dims    list(width, height) in inches (figure proportions).
-#' @return list(log, seconds).
 #' @noRd
 .gui_render_png <- function(spec, file, width_px, dims) {
   res      <- width_px / dims$width
@@ -360,13 +294,6 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 }
 
 #' Exports a configured mapping through the package export engine
-#'
-#' @param spec     list(tree, config, render) from the interface.
-#' @param format   "png" or "pdf".
-#' @param filename File name without extension.
-#' @param width,height Inches or NULL (automatic).
-#' @param out_dir  Directory in which the \code{Exports/} folder is created.
-#' @return list(path, log).
 #' @noRd
 .gui_export_mapping <- function(spec, format, filename, width, height, out_dir) {
   old_wd <- setwd(out_dir)
@@ -387,31 +314,23 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 }
 
 #' Counts the branches left ambiguous by a Fitch optimization
-#'
-#' Reproduces the tip coloring of \code{plot_ancestral_reconstruction()} and
-#' calls \code{external_algorithm()} for each mapped character.
-#'
-#' @param spec  list(tree, config, render) with a Fitch configuration.
-#' @param mode  "acctran", "deltran" or "unambiguous".
-#' @return Integer: ambiguous branches summed over the mapped characters
-#'   (NA if the reconstruction fails).
 #' @noRd
 .gui_count_ambiguous <- function(spec, mode) {
   cfg <- spec$config
   cfg$fitch_mode <- mode
   ambig <- toupper(.gui_hex(.get_fitch_ambig_color(cfg)))
   tree  <- spec$tree
-  resolve_color <- function(valor, colores_estado) {
-    valor <- as.character(valor)
-    if (is.na(valor) || valor == "") return("gray70")
-    if (valor %in% names(colores_estado)) return(colores_estado[[valor]])
+  resolve_color <- function(value, state_colors) {
+    value <- as.character(value)
+    if (is.na(value) || value == "") return("gray70")
+    if (value %in% names(state_colors)) return(state_colors[[value]])
     "gray70"
   }
   tryCatch({
     total <- 0L
     for (ch in cfg$characters) {
       tip_colors <- sapply(cfg$aligned_data[[ch]], resolve_color,
-                           colores_estado = cfg$colors_by_character[[ch]])
+                           state_colors = cfg$colors_by_character[[ch]])
       ec <- external_algorithm(tree, tip_colors, init_edge_colors(tree), cfg)
       total <- total + sum(toupper(.gui_hex(unname(ec))) == ambig)
     }

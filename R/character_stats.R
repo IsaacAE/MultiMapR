@@ -1,28 +1,13 @@
-################################################################################
-# character_stats.R
-#
-# Per-character summary statistics: missing ("?") and inapplicable ("-") data
-# counts. Independent of tree topology or the chosen ancestral algorithm --
-# purely a property of the character matrix. Includes plotting companions
-# (plot_character_stats / plot_character_completeness) for when the printed
-# table is too dense to read at a glance.
-################################################################################
+# Per-character summary statistics (counts of missing "?" and inapplicable "-" data),
+# independent of the tree, plus plotting helpers for dense matrices.
 
-#' Default colorblind-safe palette (Okabe-Ito) for the three data categories
-#' used throughout this file: scored, missing ("?") and inapplicable ("-").
-#' @keywords internal
+#' Default colorblind-safe palette (Okabe-Ito) for the three data categories used throughout this file: scored, missing ("?") and inapplicable ("-")
+#' @noRd
 CHAR_STATS_COLORS <- c(scored = "#009E73", missing = "#E69F00", inapplicable = "#56B4E9")
 
 
 #' Completes a (possibly partial) scored/missing/inapplicable color vector
-#'
-#' Entries missing from \code{colors} or not valid R colors fall back to
-#' \code{\link{CHAR_STATS_COLORS}}, so callers can override just one of the
-#' three categories (e.g. \code{c(missing = "grey80")}).
-#' @param colors Named character vector (any subset of \code{scored},
-#'   \code{missing}, \code{inapplicable}).
-#' @return Named character vector with all three entries.
-#' @keywords internal
+#' @noRd
 .resolve_stats_colors <- function(colors) {
   out <- CHAR_STATS_COLORS
   if (is.null(colors)) return(out)
@@ -35,9 +20,7 @@ CHAR_STATS_COLORS <- c(scored = "#009E73", missing = "#E69F00", inapplicable = "
 
 
 #' Black or white, whichever reads better on top of each fill color
-#' @param fill Vector of R colors.
-#' @return Character vector of \code{"#000000"} / \code{"#FFFFFF"}.
-#' @keywords internal
+#' @noRd
 .contrast_ink <- function(fill) {
   m <- grDevices::col2rgb(fill) / 255
   lin <- ifelse(m <= 0.03928, m / 12.92, ((m + 0.055) / 1.055)^2.4)
@@ -47,11 +30,7 @@ CHAR_STATS_COLORS <- c(scored = "#009E73", missing = "#E69F00", inapplicable = "
 
 
 #' Classifies each cell of a character column as scored/missing/inapplicable
-#'
-#' @param vals  Character (or coercible) vector: one character column.
-#' @return Character vector, same length as \code{vals}, with values
-#'   \code{"scored"}, \code{"missing"} or \code{"inapplicable"}.
-#' @keywords internal
+#' @noRd
 .classify_character_values <- function(vals) {
   vals      <- as.character(vals)
   vals_trim <- trimws(vals)
@@ -82,6 +61,11 @@ CHAR_STATS_COLORS <- c(scored = "#009E73", missing = "#E69F00", inapplicable = "
 #'   \code{n_inapplicable}, \code{pct_inapplicable}, \code{n_scored},
 #'   \code{n_states}. An extra \code{"TOTAL"} row aggregates across all
 #'   summarized characters (percentages over the pooled cell count).
+#' @examples
+#' csv <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+#' m <- read.csv(csv, header = FALSE, colClasses = "character", fileEncoding = "UTF-8-BOM")
+#' chars <- stats::setNames(m, c("Species", paste0("char", seq_len(ncol(m) - 1))))
+#' head(character_stats(chars))
 #' @export
 character_stats <- function(character_data, characters = NULL) {
   if (!is.data.frame(character_data))
@@ -147,15 +131,7 @@ character_stats <- function(character_data, characters = NULL) {
 
 
 #' Prints a character-statistics table to the console
-#'
-#' Console-formatting wrapper around \code{\link{character_stats}}, used by
-#' the interactive CLI (\code{setup_mapping_config()}) to surface missing /
-#' inapplicable data counts before the user picks characters to map.
-#'
-#' @param character_data  See \code{\link{character_stats}}.
-#' @param characters      See \code{\link{character_stats}}.
-#' @return Invisibly, the data.frame from \code{\link{character_stats}}.
-#' @keywords internal
+#' @noRd
 print_character_stats <- function(character_data, characters = NULL) {
   st <- character_stats(character_data, characters)
   body <- st[st$character != "TOTAL", , drop = FALSE]
@@ -179,9 +155,7 @@ print_character_stats <- function(character_data, characters = NULL) {
 }
 
 
-# ==============================================================================
 # PLOTS
-# ==============================================================================
 
 #' Bar chart of missing / inapplicable data per character
 #'
@@ -211,6 +185,11 @@ print_character_stats <- function(character_data, characters = NULL) {
 #'                         scale with the number of characters.
 #' @return Invisibly, the \code{character_stats()} data.frame used to draw
 #'   the plot (without the \code{"TOTAL"} row), in the order plotted.
+#' @examples
+#' csv <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+#' m <- read.csv(csv, header = FALSE, colClasses = "character", fileEncoding = "UTF-8-BOM")
+#' chars <- stats::setNames(m, c("Species", paste0("char", seq_len(ncol(m) - 1))))
+#' plot_character_stats(chars)
 #' @export
 plot_character_stats <- function(character_data, characters = NULL,
                                   sort_by = c("none", "pct_missing", "pct_inapplicable", "character"),
@@ -276,18 +255,7 @@ plot_character_stats <- function(character_data, characters = NULL,
 
 
 #' Page layout (in inches) of the taxon x character heatmap
-#'
-#' Shared by \code{\link{plot_character_completeness}} (margins and default
-#' export size) and the graphical interface (preview size), so the preview
-#' and the exported file are laid out the same way.
-#'
-#' @param species     Taxon labels (rows).
-#' @param characters  Character labels (columns).
-#' @param cell_in     Target cell side, in inches.
-#' @return List with \code{mai} (bottom, left, top, right margins),
-#'   \code{width}, \code{height} (suggested device size) and the logical
-#'   flags \code{right_labels} / \code{top_labels}.
-#' @keywords internal
+#' @noRd
 .completeness_layout <- function(species, characters, cell_in = 0.2) {
   n_taxa <- length(species); n_char <- length(characters)
   ch_w   <- 0.075                                # ~ width of one glyph at cex 0.8
@@ -338,6 +306,11 @@ plot_character_stats <- function(character_data, characters = NULL,
 #' @param width,height      Device size in inches when exporting. Defaults
 #'                          scale with matrix dimensions.
 #' @return Invisibly, \code{NULL}.
+#' @examples
+#' csv <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+#' m <- read.csv(csv, header = FALSE, colClasses = "character", fileEncoding = "UTF-8-BOM")
+#' chars <- stats::setNames(m, c("Species", paste0("char", seq_len(ncol(m) - 1))))
+#' plot_character_completeness(chars)
 #' @export
 plot_character_completeness <- function(character_data, characters = NULL,
                                          colors = CHAR_STATS_COLORS,

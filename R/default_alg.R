@@ -1,25 +1,10 @@
-################################################################################
-# default_alg.R
-#
-# Default ancestral reconstruction algorithm for MultiMapR.
-# Assigns colors to internal branches by depth-weighted majority vote.
-#
-# Exported function:
+# Default ancestral reconstruction: colors branches by depth-weighted majority vote
+# of their descendants.
 #   default_algorithm(tree, tip_colors, edge_colors) -> updated edge_colors
-#
-# Loaded automatically from main_MultiMapR.R when the user
-# selects algorithm 1 (default).
-################################################################################
 
 
 #' Gets all descendants of a node (iterative)
-#'
-#' Iterative version of getDescendants() that avoids recursion problems
-#' in large trees and does not use <<-.
-#'
-#' @param tree  phylo object.
-#' @param node  Index of the starting node.
-#' @return Integer vector of descendant node indices.
+#' @noRd
 .get_descendants <- function(tree, node) {
   edges   <- tree$edge
   pending <- node
@@ -37,39 +22,19 @@
 
 
 #' Default algorithm: colors branches by depth-weighted majority vote
-#'
-#' Steps:
-#'   1. Colors the edges leading to each tip with that tip's color.
-#'   2. Traverses internal nodes in postorder (deepest first).
-#'   3. For each internal node, determines the predominant color among
-#'      its descendants weighted by depth; that color is assigned to
-#'      the edge ENTERING the node.
-#'   4. After assigning all nodes, propagates each internal node's color
-#'      to the vertical edges connecting it to its parent, preventing
-#'      segments from remaining gray when the parent had no color yet.
-#'
-#' @param tree        phylo object.
-#' @param tip_colors  Named character vector: \code{tip_colors[[i]]} is the color of tip \code{i}.
-#' @param edge_colors Named character vector initialised with gray
-#'                    (names: "parent-child").
-#' @return Named character vector of length nrow(tree$edge) with updated
-#'         colors for each edge.
+#' @noRd
 default_algorithm <- function(tree, tip_colors, edge_colors) {
   n_tips  <- Ntip(tree)
   n_nodes <- Nnode(tree)
   edges   <- tree$edge
 
-  # ------------------------------------------------------------------
   # Step 1: edges leading to tips
-  # ------------------------------------------------------------------
   for (i in seq_len(n_tips)) {
     idx              <- which(edges[, 2] == i)
     edge_colors[idx] <- tip_colors[i]
   }
 
-  # ------------------------------------------------------------------
   # Step 2: postorder traversal of internal nodes (deepest first)
-  # ------------------------------------------------------------------
   all_nodes    <- (n_tips + 1):(n_tips + n_nodes)
   # Without edge lengths ape reads uninitialised memory, so use unit lengths.
   depth_tree <- tree
@@ -122,19 +87,10 @@ default_algorithm <- function(tree, tip_colors, edge_colors) {
     node_color[nd]   <- predominant
   }
 
-  # ------------------------------------------------------------------
-  # Step 3: propagate colors to edges between internal nodes that
-  # remained gray.
-  #
-  # Problem: in a phylogram, the parent->child edge has a vertical
-  # segment (the "elbow") that ape draws with that edge's color.
-  # If the edge remained gray because the child node was still gray
-  # when the parent was processed, the vertical stays uncolored.
-  #
-  # Solution: for each parent->child edge where BOTH are internal nodes,
-  # if the color is gray but the child node has an assigned color,
-  # use the child's color (which reflects what predominates in its subtree).
-  # ------------------------------------------------------------------
+  # Step 3: propagate colors to edges between internal nodes that stayed gray. ape
+  # draws a phylogram's vertical elbow with the edge's color, so if the child was
+  # still gray when the parent was processed the elbow would stay uncolored; use
+  # the child's color (what predominates in its subtree).
   for (i in seq_len(nrow(edges))) {
     parent <- edges[i, 1]
     child  <- edges[i, 2]
@@ -152,14 +108,8 @@ default_algorithm <- function(tree, tip_colors, edge_colors) {
     }
   }
 
-  # ------------------------------------------------------------------
-  # Step 4: color the edges leaving the root node.
-  #
-  # The root has no incoming edge, so node_color[root] stays empty
-  # and ape draws the initial vertical segment in gray.
-  # We assign to each root->child edge that is still gray the color
-  # of the corresponding child node (already computed in previous steps).
-  # ------------------------------------------------------------------
+  # Step 4: color the root->child edges that are still gray with the child's color
+  # (the root has no incoming edge, so ape would draw its vertical in gray).
   root       <- n_tips + 1L
   root_children <- edges[edges[, 1] == root, 2]
 

@@ -31,3 +31,9 @@ observed state and how many distinct states are observed. Polymorphic
 codings (e.g. \code{"0/1"}, \code{"01"}) count as one scored taxon and
 contribute all of their member states to the observed-state count.
 }
+\examples{
+csv <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+m <- read.csv(csv, header = FALSE, colClasses = "character", fileEncoding = "UTF-8-BOM")
+chars <- stats::setNames(m, c("Species", paste0("char", seq_len(ncol(m) - 1))))
+head(character_stats(chars))
+}

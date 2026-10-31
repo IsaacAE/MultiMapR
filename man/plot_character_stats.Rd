@@ -54,3 +54,9 @@ scored / missing ("?") / inapplicable ("-") taxon counts. Visual
 companion to \code{\link{character_stats}} for matrices where the printed
 table is too dense to scan quickly.
 }
+\examples{
+csv <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+m <- read.csv(csv, header = FALSE, colClasses = "character", fileEncoding = "UTF-8-BOM")
+chars <- stats::setNames(m, c("Species", paste0("char", seq_len(ncol(m) - 1))))
+plot_character_stats(chars)
+}

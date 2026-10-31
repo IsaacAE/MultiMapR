@@ -1,22 +1,11 @@
-################################################################################
-# gui_ui.R
-#
-# Layout and components of the MultiMapR interface (see gui.R).
-# Every visible string comes from the dictionary (inst/app/i18n.txt): static
-# text is emitted as <span data-i18n="key"> so the language can be switched
-# in the browser without reloading; server-rendered fragments are translated
-# in R with the current language.
-################################################################################
+# Layout and components of the interface (see gui.R). Visible strings come from
+# inst/app/i18n.txt: static text is emitted as <span data-i18n="key"> so the
+# language can be switched in the browser without reloading.
 
 
-# ==============================================================================
-# SECTION 1 -- SMALL COMPONENTS
-# ==============================================================================
+# Small components
 
 #' Translatable text node
-#' @param key Dictionary key.
-#' @param tr  Translator.
-#' @param tag Tag function (default span).
 #' @noRd
 .gui_t <- function(key, tr, tag = shiny::tags$span, ...) {
   tag(`data-i18n` = key, ..., tr(key))
@@ -134,12 +123,9 @@
 }
 
 
-# ==============================================================================
-# SECTION 2 -- PAGE LAYOUT
-# ==============================================================================
+# Page layout
 
 #' Builds the interface layout
-#' @param tr Translator (initial language).
 #' @noRd
 .gui_ui <- function(tr) {
   tags <- shiny::tags
@@ -185,9 +171,7 @@
 }
 
 
-# ==============================================================================
-# SECTION 3 -- 1 - DATA
-# ==============================================================================
+# 1 - data
 
 #' @noRd
 .gui_page_data <- function(tr) {
@@ -313,9 +297,7 @@
 }
 
 
-# ==============================================================================
-# SECTION 4 -- 2 - MAP CHARACTERS
-# ==============================================================================
+# 2 - map characters
 
 #' @noRd
 .gui_page_map <- function(tr) {
@@ -346,7 +328,7 @@
               t(key, class = "mm-sr"))
   }
 
-  # ---- Step A -- mapping type ------------------------------------------------
+  # Step A -- mapping type
   step_a <- step(
     "A", "step_mapping",
     tags$div(class = "mm-rcards",
@@ -432,7 +414,7 @@
                                value = 1, step = 0.1, pre = "×", ticks = FALSE)))))
   )
 
-  # ---- Step B -- characters -------------------------------------------------
+  # Step B -- characters
   step_b <- step(
     "B", "step_chars",
     shiny::conditionalPanel("input.mode == 'simple'",
@@ -447,7 +429,7 @@
     shiny::uiOutput("char_list")
   )
 
-  # ---- Step C -- states and colors -----------------------------------------
+  # Step C -- states and colors
   step_c <- step(
     "C", "step_colors",
     .gui_label("pal_global", tr),
@@ -460,7 +442,7 @@
     shiny::uiOutput("char_cards")
   )
 
-  # ---- Step D -- tree --------------------------------------------------------
+  # Step D -- tree
   step_d <- step(
     "D", "step_tree",
     .gui_label("topology", tr),
@@ -489,7 +471,7 @@
     shiny::uiOutput("tip_note")
   )
 
-  # ---- Step E -- legend and view ---------------------------------------------
+  # Step E -- legend and view
   step_e <- step(
     "E", "step_view",
     shiny::checkboxInput("show_legend", t("show_legend"), TRUE),
@@ -517,7 +499,7 @@
                        value = 640, step = 20, post = " px", ticks = FALSE)
   )
 
-  # ---- Step F -- export ------------------------------------------------------
+  # Step F -- export
   step_f <- step(
     "F", "step_export",
     .gui_label("format", tr),
@@ -557,7 +539,7 @@
     bslib::accordion(id = "steps", multiple = FALSE, open = "A", class = "mm-steps",
                      step_a, step_b, step_c, step_d, step_e, step_f))
 
-  # ---- Preview column ---------------------------------------------------------
+  # Preview column
   topbar <- tags$div(
     class = "mm-card mm-topbar",
     t("preview", class = "mm-upper"),
@@ -611,9 +593,7 @@
 }
 
 
-# ==============================================================================
-# SECTION 5 -- HELP
-# ==============================================================================
+# Help
 
 #' @noRd
 .gui_page_help <- function(tr) {

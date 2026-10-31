@@ -59,14 +59,14 @@ bar) and has a light and a dark theme; the figure preview is always drawn
 on white, as in the exported file.
 }
 \examples{
-\dontrun{
+if (interactive()) {
+  tree <- system.file("extdata", "bats_tre.tre", package = "MultiMapR")
+  chars <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+
   # Empty interface: load the files from the "Data" tab
   run_multimapr_app()
 
   # Spanish interface with data already loaded
-  run_multimapr_app("bats_tre.tre", "bats_matrix.csv", lang = "es")
-
-  d <- load_data("bats_tre.tre", "bats_matrix.csv")
-  run_multimapr_app(d$tree, d$characters)
+  run_multimapr_app(tree, chars, lang = "es")
 }
 }

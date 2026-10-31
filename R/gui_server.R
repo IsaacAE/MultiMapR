@@ -1,24 +1,9 @@
-################################################################################
-# gui_server.R
-#
-# Server logic of the MultiMapR interface (see gui.R / gui_ui.R).
-#   Section 1  helpers (log entries, data loading)
-#   Section 2  server: language, data page
-#   Section 3  server: map page (characters, colors, tree, preview, export,
-#              ACCTRAN / DELTRAN comparison)
-################################################################################
+# Server logic of the interface (see gui.R / gui_ui.R): helpers, data page, map page.
 
 
-# ==============================================================================
-# SECTION 1 -- HELPERS
-# ==============================================================================
+# Helpers
 
 #' Creates a log entry
-#'
-#' Entries keep the dictionary key and its arguments (not the text), so the
-#' log is re-translated when the language changes. Raw package messages are
-#' stored in \code{text}.
-#' @param level "info", "warn", "error" or "ok".
 #' @noRd
 .gui_log_entry <- function(level, key = NULL, ..., text = NULL) {
   list(level = level, key = key, args = list(...), text = text,
@@ -59,12 +44,6 @@
 }
 
 #' Reads tree and matrix step by step so errors can say which file failed
-#'
-#' @param tree_path,matrix_path Paths on disk.
-#' @param names  Display names (the uploaded files live under temporary names).
-#' @param opts   list(tree_format, matrix_format, sep, species_col, header,
-#'               normalize_spaces, prune).
-#' @return list(ok, tree, characters, log, error = list(title_key, message, ntip)).
 #' @noRd
 .gui_read_inputs <- function(tree_path, matrix_path, names, opts) {
   log <- list()
@@ -78,7 +57,7 @@
          error = list(title_key = title_key, message = msg, ntip = ntip))
   }
 
-  # -- 1. tree -----------------------------------------------------------------
+  # 1. tree
   tree_fmt <- if (identical(opts$tree_format, "tnt")) "newick" else opts$tree_format
   res <- tryCatch(.gui_capture(read_tree(tree_path, tree_format = tree_fmt)),
                   error = function(e) e)
@@ -89,7 +68,7 @@
   log[[length(log) + 1]] <- .gui_log_entry(
     "info", if (has_bl) "log_tree_read_bl" else "log_tree_read", names[1], Ntip(tree))
 
-  # -- 2. matrix ---------------------------------------------------------------
+  # 2. matrix
   sep <- switch(opts$sep, tab = "\t", opts$sep)
   mfmt <- if (identical(opts$matrix_format, "auto")) suppressMessages(.detect_matrix_format(matrix_path))
           else opts$matrix_format
@@ -106,7 +85,7 @@
   log[[length(log) + 1]] <- .gui_log_entry("info", "log_matrix_read", names[2], toupper(mfmt),
                                            nrow(characters), ncol(characters) - 1L)
 
-  # -- 3. names ----------------------------------------------------------------
+  # 3. names
   res <- .gui_capture(.harmonize_species(tree, characters))
   characters <- res$value
   log <- c(log, .gui_log_from_capture(res$log, rename))
@@ -115,8 +94,6 @@
 }
 
 #' Reconciles tree and matrix (optionally pruning tips absent from the matrix)
-#'
-#' @return list(ok, tree, characters, aligned, log) or list(ok = FALSE, log, error).
 #' @noRd
 .gui_reconcile <- function(tree, characters, prune) {
   log <- list()
@@ -159,20 +136,16 @@
 }
 
 
-# ==============================================================================
-# SECTION 2 -- SERVER
-# ==============================================================================
+# Server
 
 #' Builds the server function
-#' @param lang0    Initial language.
-#' @param initial  NULL or list(tree, characters, kind, names, log).
 #' @noRd
 .gui_server <- function(lang0, initial) {
   function(input, output, session) {
     tags <- shiny::tags
     isolate <- shiny::isolate
 
-    # ---- Language -------------------------------------------------------------
+    # Language
     dict <- .gui_dict()
     session$sendCustomMessage("mm-dict", list(dict = lapply(dict, as.list), lang = lang0))
     lang <- shiny::reactiveVal(lang0)
@@ -189,7 +162,7 @@
                                  selected = isolate(input[[id]]))
     }, ignoreInit = TRUE)
 
-    # ---- State ------------------------------------------------------------------
+    # State
     dat        <- shiny::reactiveVal(NULL)   # loaded data set
     data_state <- shiny::reactiveVal("empty")
     data_err   <- shiny::reactiveVal(NULL)
@@ -206,7 +179,7 @@
     output$data_state <- shiny::renderText(data_state())
     shiny::outputOptions(output, "data_state", suspendWhenHidden = FALSE)
 
-    # ---- Data loading ---------------------------------------------------------------
+    # Data loading
     set_data <- function(tree, characters, prune, entries, kind, names) {
       rec <- .gui_reconcile(tree, characters, prune)
       entries <- c(entries, rec$log)
@@ -324,13 +297,13 @@
       })
     }
 
-    # ---- Navigation -------------------------------------------------------------
+    # Navigation
     shiny::observeEvent(input$goto_map,    bslib::nav_select("nav", "map"))
     shiny::observeEvent(input$formats_btn, bslib::nav_select("nav", "help"))
     shiny::observeEvent(input$goto_data,   bslib::nav_select("nav", "data"))
     shiny::observeEvent(input$open_opts,   bslib::accordion_panel_open("read_opts_acc", "opts"))
 
-    # ---- Data page outputs ---------------------------------------------------------
+    # Data page outputs
     output$src_badge <- shiny::renderUI({
       tr <- trr()
       d <- dat()
@@ -442,7 +415,7 @@
                                     tags$td(class = "mm-dist-cell", dist(tot)))))
     })
 
-    # ---- Data-category colors (scored / missing / inapplicable) and borders -------
+    # Data-category colors (scored / missing / inapplicable) and borders
     stats_colors <- shiny::reactive(.resolve_stats_colors(c(
       scored       = input$stats_col_scored,
       missing      = input$stats_col_missing,
@@ -618,9 +591,7 @@
 }
 
 
-# ==============================================================================
-# SECTION 3 -- MAP PAGE
-# ==============================================================================
+# Map page
 
 #' Server logic of "2 - Map characters"
 #' @noRd
@@ -631,7 +602,7 @@
 
   mode_num <- shiny::reactive(if (identical(input$mode, "ancestral")) 2L else 1L)
 
-  # ---- Characters (selection order = drawing order) -----------------------------
+  # Characters (selection order = drawing order)
   chars_sel <- shiny::reactiveVal(character(0))
   shiny::observeEvent(dat(), {
     d <- dat()
@@ -702,7 +673,7 @@
                 paste(utils::head(sel, MAX_MULTIMAP), collapse = ", ")))
   })
 
-  # ---- States and colors ------------------------------------------------------------
+  # States and colors
   card_prefix <- function(d, ch) paste0("d", d$id, "_c", match(ch, d$chars))
   missing_input_id <- function(pfx, s) paste0(pfx, if (s == "?") "_miss" else "_inapp")
   card_states <- function(d, ch) setdiff(d$states[[ch]], c("?", "-"))
@@ -820,7 +791,7 @@
     })
   }, ignoreNULL = FALSE)
 
-  # ---- Tree options -------------------------------------------------------------------
+  # Tree options
   bl_pref <- shiny::reactiveVal(TRUE)
   bl_disabled <- shiny::reactive({
     d <- dat()
@@ -852,7 +823,7 @@
     NULL
   })
 
-  # ---- Configuration (same structure as setup_mapping_config()) ------------------------
+  # Configuration (same structure as setup_mapping_config())
   spec <- shiny::reactive({
     d <- dat()
     if (is.null(d)) return(list(status = "empty"))
@@ -956,7 +927,7 @@
     if (ok(w) && ok(h)) list(w = w, h = h) else list(w = NULL, h = NULL)
   })
 
-  # ---- Summaries ------------------------------------------------------------------------
+  # Summaries
   topo_label <- function(tr, x) tr(x %||% "phylogram")
   n_chars_label <- function(tr, n) if (n == 1) tr("n_char_1") else tr("n_chars", n)
   optim_label <- function(tr) switch(input$optim %||% "acctran",
@@ -1025,7 +996,7 @@
     if (mode_num() == 2L && !isTRUE(input$clado_stretch)) input$branch_angle %||% 45
   })
 
-  # ---- Preview ---------------------------------------------------------------------------
+  # Preview
   # Container width with hysteresis. The canvas has a fixed height and scrolls:
   # when the image is just taller than the canvas, a vertical scrollbar appears,
   # the container loses ~15 px, the image is re-rendered shorter, the scrollbar
@@ -1123,7 +1094,7 @@
 
   output$map_log <- shiny::renderUI(.gui_render_log(map_log(), trr()))
 
-  # ---- ACCTRAN / DELTRAN comparison --------------------------------------------------------
+  # ACCTRAN / DELTRAN comparison
   cmp_open <- shiny::reactiveVal(FALSE)
   shiny::observeEvent(input$cmp_toggle, cmp_open(!cmp_open()))
   shiny::observeEvent(input$cmp_close, cmp_open(FALSE))
@@ -1168,7 +1139,7 @@
     })
   })
 
-  # ---- Export --------------------------------------------------------------------------------
+  # Export
   auto_name <- shiny::reactive({
     sel <- chars_used()
     topo <- tolower(topo_label(trr(), input$topology))
@@ -1271,7 +1242,7 @@
              trr()("saved_to", rel))
   })
 
-  # ---- Export preview ------------------------------------------------------------------------
+  # Export preview
   # Renders with the real export engine (same code path as Download / Save) at the
   # chosen size, so proportions and relative text size match the final file. The
   # size can be changed inside the dialog and then applied to the export settings.

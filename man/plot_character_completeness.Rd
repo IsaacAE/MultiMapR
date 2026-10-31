@@ -63,3 +63,9 @@ repeated on the right and character names on top for wide / tall
 matrices, and heavier guide lines every \code{guide_every} rows/columns
 help follow a row or column across the plot.
 }
+\examples{
+csv <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+m <- read.csv(csv, header = FALSE, colClasses = "character", fileEncoding = "UTF-8-BOM")
+chars <- stats::setNames(m, c("Species", paste0("char", seq_len(ncol(m) - 1))))
+plot_character_completeness(chars)
+}

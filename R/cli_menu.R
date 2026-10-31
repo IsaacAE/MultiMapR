@@ -1,130 +1,96 @@
-################################################################################
-# cli_menu.R
-#
-# Interactive interface module for MultiMapR.
-# Contains all console menu logic: color prompts, character selection,
-# state configuration, and full mapping setup.
-#
-# Dependencies (must exist in the global environment when this module is loaded,
-# provided by data_utils.R):
-#   align_tree_data() — aligns tips with character data
-#   sort_states()     — sorts unique states of a character
-#   is_valid_color()  — validates R color names / hex codes
-#
-# Author: MultiMapR — user interface module
-################################################################################
+# Interactive console menus: color prompts, character selection, state configuration
+# and the full mapping setup (setup_mapping_config()).
 
 
-# ==============================================================================
-# SECTION 0 — ACCESSIBLE COLOR PALETTES
-# ==============================================================================
+# Accessible color palettes
 
-#' Predefined color-blind-friendly palettes used in automatic color assignment.
-#'
-#' Used for Simple Mapping and single-character Ancestral Reconstruction.
-#' Each palette contains up to 10 colors.
-#'   okabe  — Okabe-Ito (most widely recommended for color-blind accessibility)
-#'   tol    — Paul Tol Muted (high-contrast, print-friendly)
-#'   plasma — Plasma perceptual gradient (viridis family, ordered data)
+#' Predefined color-blind-friendly palettes used in automatic color assignment
+#' @noRd
 ACCESSIBLE_PALETTES <- list(
   okabe  = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#999999", "#44AA99"),
   tol    = c("#332288", "#88CCEE", "#44AA99", "#117733", "#999933", "#DDCC77", "#CC6677", "#882255", "#AA4499", "#DDDDDD"),
   plasma = c("#0D0887", "#46039F", "#7201A8", "#9C179E", "#BD3786", "#D8576B", "#ED7953", "#FA9E3B", "#FDC926", "#F0F921")
 )
 
-#' Sequential color-blind-safe gradients for multi-character Ancestral Reconstruction.
-#'
-#' One gradient per character slot (up to 5, see \code{MAX_MULTIMAP}). Each
-#' gradient has 10 steps:
-#'   rojos   — character 1
-#'   verdes  — character 2
-#'   azules  — character 3
-#'   dorados — character 4
-#'   morados — character 5
+#' Sequential color-blind-safe gradients for multi-character Ancestral Reconstruction
+#' @noRd
 MULTIMAP_RAMPS <- list(
-  # 1. WARM RANGE (Yellows, Oranges, Reds, Pinks)
-  # Ideal for Character 1.
-  # Initial jump: Light Yellow -> Dark Red -> Medium Orange
-  rojos = c(
-    "#FF0000", # 0: Rojo puro brillante
-    "#660000", # 1: Granate muy oscuro
-    "#FF1493", # 2: Rosa neón (DeepPink)
-    "#FF8C00", # 3: Naranja oscuro
-    "#DC143C", # 4: Carmesí
-    "#FFB6C1", # 5: Rosa claro
-    "#8B0000", # 6: Rojo sangre
-    "#C71585", # 7: Violeta medio
-    "#FF4500", # 8: Rojo anaranjado
-    "#330000"  # 9: Rojo casi negro
+  # Warm range (yellows, oranges, reds, pinks): character 1
+  reds = c(
+    "#FF0000",
+    "#660000",
+    "#FF1493",
+    "#FF8C00",
+    "#DC143C",
+    "#FFB6C1",
+    "#8B0000",
+    "#C71585",
+    "#FF4500",
+    "#330000"
   ),
 
-  # 2. GAMA VERDES (Para Carácter 2)
-  # Salto: Verde lima -> Verde noche -> Cian puro
-  verdes = c(
-    "#00FF00", # 0: Verde lima puro
-    "#004000", # 1: Verde bosque muy oscuro
-    "#00FFFF", # 2: Cian puro (contrasta brutal con el lima)
-    "#2E8B57", # 3: Verde mar
-    "#ADFF2F", # 4: Amarillo verdoso
-    "#00FF7F", # 5: Verde primavera
-    "#808000", # 6: Oliva
-    "#228B22", # 7: Verde hoja
-    "#9ACD32", # 8: Verde amarillento
-    "#002000"  # 9: Verde casi negro
+  # Greens: character 2
+  greens = c(
+    "#00FF00",
+    "#004000",
+    "#00FFFF",
+    "#2E8B57",
+    "#ADFF2F",
+    "#00FF7F",
+    "#808000",
+    "#228B22",
+    "#9ACD32",
+    "#002000"
   ),
 
-  # 3. GAMA AZULES / MORADOS (Para Carácter 3)
-  # Salto: Azul puro -> Índigo oscuro -> Azul cielo brillante
-  azules = c(
-    "#0000FF", # 0: Azul puro
-    "#000066", # 1: Azul marino muy oscuro
-    "#00BFFF", # 2: Azul cielo profundo
-    "#8A2BE2", # 3: Violeta azulado brillante
-    "#1E90FF", # 4: Azul Dodger
-    "#4B0082", # 5: Índigo
-    "#87CEFA", # 6: Azul claro
-    "#4169E1", # 7: Azul real
-    "#9370DB", # 8: Morado medio
-    "#000033"  # 9: Azul casi negro
+  # Blues / purples: character 3
+  blues = c(
+    "#0000FF",
+    "#000066",
+    "#00BFFF",
+    "#8A2BE2",
+    "#1E90FF",
+    "#4B0082",
+    "#87CEFA",
+    "#4169E1",
+    "#9370DB",
+    "#000033"
   ),
 
-  # 4. GAMA DORADOS / CAFES (Para Carácter 4)
-  dorados = c(
-    "#FFD700", # 0: Oro
-    "#4A2C00", # 1: Café muy oscuro
-    "#FFFF66", # 2: Amarillo claro
-    "#B8860B", # 3: Oro oscuro
-    "#F5DEB3", # 4: Trigo
-    "#8B4513", # 5: Café silla
-    "#FFC000", # 6: Ámbar
-    "#CD853F", # 7: Perú
-    "#FFF8B0", # 8: Crema
-    "#2B1A00"  # 9: Café casi negro
+  # Golds / browns: character 4
+  golds = c(
+    "#FFD700",
+    "#4A2C00",
+    "#FFFF66",
+    "#B8860B",
+    "#F5DEB3",
+    "#8B4513",
+    "#FFC000",
+    "#CD853F",
+    "#FFF8B0",
+    "#2B1A00"
   ),
 
-  # 5. GAMA MORADOS / MAGENTAS (Para Carácter 5)
-  morados = c(
-    "#9400D3", # 0: Violeta oscuro
-    "#2A0033", # 1: Morado casi negro
-    "#FF00FF", # 2: Magenta puro
-    "#6A0DAD", # 3: Morado intenso
-    "#DDA0DD", # 4: Ciruela
-    "#800080", # 5: Púrpura
-    "#E6C8FF", # 6: Lavanda
-    "#BA55D3", # 7: Orquídea medio
-    "#4B0055", # 8: Berenjena
-    "#C71FCB"  # 9: Fucsia violáceo
+  # Purples / magentas: character 5
+  purples = c(
+    "#9400D3",
+    "#2A0033",
+    "#FF00FF",
+    "#6A0DAD",
+    "#DDA0DD",
+    "#800080",
+    "#E6C8FF",
+    "#BA55D3",
+    "#4B0055",
+    "#C71FCB"
   )
 )
 
-#' Maximum number of characters superimposed in one multimapping
-#' (ancestral reconstruction). One sequential gradient per slot in
-#' \code{MULTIMAP_RAMPS}.
+#' Maximum number of characters superimposed in one multimapping (ancestral reconstruction)
+#' @noRd
 MAX_MULTIMAP <- 5L
 
-# ==============================================================================
-# SECTION 0b — NAMED PREDEFINED PALETTES
-# ==============================================================================
+# Named predefined palettes
 
 PRESET_PALETTES <- list(
   wc  = c("green", "blue", "black", "red", "yellow", "cyan1", "darkgreen"),
@@ -132,14 +98,10 @@ PRESET_PALETTES <- list(
 )
 
 
-# ==============================================================================
-# SECTION 1 — EXIT UTILITY
-# ==============================================================================
+# Exit utility
 
 #' Checks whether the user wants to exit
-#'
-#' @param input String entered by the user.
-#' @return TRUE if the user typed 'exit', FALSE otherwise.
+#' @noRd
 check_exit <- function(input) {
   if (tolower(trimws(input)) == "exit") {
     cat("Exiting...\n")
@@ -149,17 +111,10 @@ check_exit <- function(input) {
 }
 
 
-# ==============================================================================
-# SECTION 2 — COLOR AND CHARACTER SELECTORS
-# ==============================================================================
+# Color and character selectors
 
 #' Prompts the user for a color for a given state
-#'
-#' Repeats the prompt until the user enters a valid color recognized
-#' by R (name or hex) or types 'exit' to cancel.
-#'
-#' @param state String with the name of the state whose color is requested.
-#' @return String with the chosen color, or invisible(NULL) if the user cancels.
+#' @noRd
 prompt_state_color <- function(state) {
   prompt_msg <- paste0("Color for state '", state,
                        "' (name or hex, 'exit' to quit): ")
@@ -175,13 +130,7 @@ prompt_state_color <- function(state) {
 }
 
 #' Prompts the user for colors for all states of a character
-#'
-#' Iterates over each state in \code{sorted_states} calling
-#' \code{prompt_state_color()} and builds a named vector state -> color.
-#'
-#' @param sorted_states  Vector of already-sorted states.
-#' @param character_name String with the character name (for the header).
-#' @return Named character vector state -> color.
+#' @noRd
 prompt_character_colors <- function(sorted_states, character_name) {
   cat("\nAssign colors for character:", character_name, "\n")
   colors <- vapply(sorted_states, prompt_state_color, character(1))
@@ -190,17 +139,7 @@ prompt_character_colors <- function(sorted_states, character_name) {
 }
 
 #' Prompts the user to select one or several characters from a list
-#'
-#' Displays the available characters numbered and allows choosing between
-#' \code{min_n} and \code{max_n} of them. If only one character is available
-#' or \code{min_n == max_n == 1}, returns it directly without asking.
-#'
-#' @param available_chars Vector of available character names.
-#' @param prompt_n        Prompt text asking for the number of characters.
-#' @param min_n           Minimum number of characters to select (default 1).
-#' @param max_n           Maximum number of characters to select (default all).
-#' @return Character vector with selected character names,
-#'         or invisible(NULL) if the user cancels.
+#' @noRd
 prompt_characters <- function(available_chars, prompt_n, min_n = 1,
                               max_n = length(available_chars)) {
   cat("\nAvailable characters:\n")
@@ -253,25 +192,11 @@ prompt_characters <- function(available_chars, prompt_n, min_n = 1,
 }
 
 #' Prompts the user which states of a character to include and their colors
-#'
-#' Displays the unique states of the character, allows choosing a subset
-#' (or all with option 0), then requests a color for each selected state.
-#' State selection is always interactive. If \code{auto_palette} is supplied,
-#' colors are assigned automatically from that palette (no color prompts);
-#' otherwise the user is asked to type a color for each state.
-#'
-#' @param aligned_data  Data.frame aligned with the phylogeny.
-#' @param character     Name of the character column to configure.
-#' @param auto_palette  Optional character vector of colors (a palette).
-#'                      When not NULL, colors are auto-assigned but state
-#'                      selection is still shown interactively.
-#' @param strict        If TRUE, raises an error when auto_palette has fewer
-#'                      colors than selected states instead of recycling.
-#' @return Named character vector state -> color, or invisible(NULL) if cancelled.
+#' @noRd
 prompt_states_and_colors <- function(aligned_data, character, auto_palette = NULL, strict = FALSE) {
   all_states <- sort_states(as.character(unique(aligned_data[[character]])))
 
-  # --- State selection (always interactive) -----------------------------------
+  # State selection (always interactive)
   cat("\nAvailable states for '", character, "':\n", sep = "")
   for (i in seq_along(all_states)) cat(sprintf("  %d: %s\n", i, all_states[i]))
 
@@ -291,9 +216,8 @@ prompt_states_and_colors <- function(aligned_data, character, auto_palette = NUL
     cat(sprintf("Invalid selection. Enter 0 or numbers between 1 and %d separated by commas.\n",
                 length(all_states)))
   }
-  # ----------------------------------------------------------------------------
 
-  # --- Color assignment: automatic (palette) or manual -----------------------
+  # Color assignment: automatic (palette) or manual
   if (!is.null(auto_palette)) {
     if (length(selected_states) > length(auto_palette)) {
       if (strict) {
@@ -302,32 +226,22 @@ prompt_states_and_colors <- function(aligned_data, character, auto_palette = NUL
       }
       cat(sprintf("  [!] Warning: '%s' has more selected states than colors in the palette. Colors will be recycled.\n",
                   character))
-      colores_asignados <- rep(auto_palette, length.out = length(selected_states))
+      assigned_colors <- rep(auto_palette, length.out = length(selected_states))
     } else {
-      colores_asignados <- auto_palette[seq_along(selected_states)]
+      assigned_colors <- auto_palette[seq_along(selected_states)]
     }
-    names(colores_asignados) <- selected_states
+    names(assigned_colors) <- selected_states
     cat(sprintf("  \u2192 Colors assigned automatically to '%s': %s\n",
                 character, paste(selected_states, collapse = ", ")))
-    return(colores_asignados)
+    return(assigned_colors)
   }
-  # ----------------------------------------------------------------------------
 
   prompt_character_colors(selected_states, character)
 }
 
 
 #' Prompts for the ancestral reconstruction algorithm (and Fitch mode)
-#'
-#' Extracted as a standalone step so it can be reused both inside
-#' \code{setup_mapping_config()} (first-time setup) and directly from the
-#' main loop in \code{execute_phylogeny()} when the user only wants to try
-#' a different algorithm while keeping the rest of the configuration.
-#'
-#' @return A list with \code{algorithm} (\code{"majority"} or \code{"fitch"})
-#'         and \code{fitch_mode} (NULL unless \code{algorithm == "fitch"}), or
-#'         invisible(NULL) if the
-#'         user cancels.
+#' @noRd
 prompt_ancestral_algorithm <- function() {
   cat("\nAncestral reconstruction algorithm:\n")
   cat("  1: Default (depth-weighted majority)\n")
@@ -360,21 +274,10 @@ prompt_ancestral_algorithm <- function() {
 }
 
 
-# ==============================================================================
-# SECTION 2b — POST-RUN LOOP MENU
-# ==============================================================================
+# Post-run loop menu
 
 #' Prompts the user for what to do after a plot has been rendered
-#'
-#' Drives the main loop in \code{execute_phylogeny()}: the user can start a
-#' completely new configuration from scratch, re-run keeping everything as
-#' before but choosing a different ancestral reconstruction algorithm, or
-#' exit the session.
-#'
-#' @param allow_algorithm_change Logical. TRUE only when the previous run was
-#'   an ancestral reconstruction (mapping_type == 2), since "algorithm" has
-#'   no meaning for simple mapping.
-#' @return One of \code{"new"}, \code{"algorithm"}, \code{"exit"}.
+#' @noRd
 prompt_post_run_menu <- function(allow_algorithm_change = FALSE) {
   cat("\n=== What would you like to do next? ===\n")
   cat("  1: Run again with a completely new configuration\n")
@@ -402,32 +305,10 @@ prompt_post_run_menu <- function(allow_algorithm_change = FALSE) {
 }
 
 
-# ==============================================================================
-# SECTION 3 — FULL MAPPING CONFIGURATION
-# ==============================================================================
+# Full mapping configuration
 
 #' Orchestrates all interactive menus and returns the configuration list
-#'
-#' Walks through menus for mapping type, characters, colors, algorithm,
-#' line width, tree topology, branch lengths, and export options, then
-#' packages all user decisions into a homogeneous \code{config} list consumed
-#' by the rendering functions in \code{main_MultiMapR.R}.
-#'
-#' @param phylogeny        \code{phylo} object (ape).
-#' @param character_data   Data.frame with a \code{"Species"} column and characters.
-#' @param use_palettes     Logical. If \code{TRUE}, colors are assigned automatically
-#'                         from \code{ACCESSIBLE_PALETTES}; color prompts are skipped but
-#'                         state-selection prompts are still shown interactively.
-#' @param user_palette     Optional character vector of colors supplied directly by
-#'                         the user via the \code{palette} argument to
-#'                         \code{execute_phylogeny}. When provided, color prompts are
-#'                         skipped entirely and an error is raised if the palette has
-#'                         fewer colors than selected states. Takes precedence over
-#'                         \code{use_palettes}.
-#' @param ambiguity_color  Optional color string for ambiguous/missing branches in
-#'                         Fitch reconstructions. Defaults to magenta (\code{"#FF00FF"}).
-#' @return Configuration list, or invisible(NULL) if the user cancels.
-#' @seealso \code{\link{execute_phylogeny}}
+#' @noRd
 setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE,
                                  user_palette = NULL, ambiguity_color = NULL) {
 
@@ -443,7 +324,7 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
 
   print_character_stats(aligned_data, available_chars)
 
-  # --- Mapping type ------------------------------------------------------------
+  # Mapping type
   cat("\nMapping type:\n")
   cat("  1: Simple mapping \u2014 colored figures at terminals\n")
   cat("  2: Ancestral reconstruction \u2014 branch coloring\n")
@@ -457,9 +338,7 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
   config <- list(mapping_type = mapping_type, aligned_data = aligned_data,
                  ambiguity_color = ambiguity_color)
 
-  # ==========================================================================
   # SIMPLE MAPPING
-  # ==========================================================================
   if (mapping_type == 1) {
 
     selected_chars <- prompt_characters(
@@ -473,13 +352,13 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     for (i in seq_along(selected_chars)) {
       char         <- selected_chars[i]
       if (!is.null(user_palette)) {
-        paleta_actual <- user_palette
+        current_palette <- user_palette
       } else {
-        paleta_actual <- if (use_palettes && i <= length(ACCESSIBLE_PALETTES))
+        current_palette <- if (use_palettes && i <= length(ACCESSIBLE_PALETTES))
           ACCESSIBLE_PALETTES[[i]] else NULL
       }
       cols <- prompt_states_and_colors(aligned_data, char,
-                                       auto_palette = paleta_actual,
+                                       auto_palette = current_palette,
                                        strict = !is.null(user_palette))
       if (is.null(cols)) return(invisible(NULL))
       colors_by_char[[char]] <- cols
@@ -510,13 +389,11 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
         if (is.na(t) || t <= 0) { cat("Invalid value, using 1.\n"); 1 } else t
       }
     } else {
-      config$figure_pch <- 21L   # valor por defecto, no se usará en el render
+      config$figure_pch <- 21L   # unused in this mode
       config$figure_size <- 1
     }
 
-    # ==========================================================================
     # ANCESTRAL RECONSTRUCTION
-    # ==========================================================================
   } else {
 
     cat("\nVisualization mode:\n")
@@ -542,16 +419,16 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     manual_chars   <- character(0)  # chars whose colors were TYPED, not auto-assigned
 
     if (length(selected_chars) == 1) {
-      # === 1 SOLO CARÁCTER: Usar Paleta Okabe-Ito (ACCESSIBLE_PALETTES) ===
+      # One character: Okabe-Ito palette (ACCESSIBLE_PALETTES)
       char          <- selected_chars[1]
       if (!is.null(user_palette)) {
-        paleta_actual <- user_palette
+        current_palette <- user_palette
       } else {
-        paleta_actual <- if (use_palettes) ACCESSIBLE_PALETTES[[1]] else NULL
+        current_palette <- if (use_palettes) ACCESSIBLE_PALETTES[[1]] else NULL
       }
-      if (is.null(paleta_actual)) manual_chars <- c(manual_chars, char)
+      if (is.null(current_palette)) manual_chars <- c(manual_chars, char)
       cols <- prompt_states_and_colors(aligned_data, char,
-                                       auto_palette = paleta_actual,
+                                       auto_palette = current_palette,
                                        strict = !is.null(user_palette))
       if (is.null(cols)) return(invisible(NULL))
       colors_by_char[[char]] <- cols
@@ -560,19 +437,18 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
       config$map_all <- length(cols) == length(all_states)
 
     } else {
-      # === MULTIMAPEO (2 a 5 CARACTERES): Usar Gamas Secuenciales (MULTIMAP_RAMPS) ===
-      # Carácter 1: rojos, 2: verdes, 3: azules, 4: dorados, 5: morados
+      # 2-5 characters: sequential ramps (MULTIMAP_RAMPS): reds, greens, blues, golds, purples
       for (i in seq_along(selected_chars)) {
         char          <- selected_chars[i]
         if (!is.null(user_palette)) {
-          paleta_actual <- user_palette
+          current_palette <- user_palette
         } else {
-          paleta_actual <- if (use_palettes && i <= length(MULTIMAP_RAMPS))
+          current_palette <- if (use_palettes && i <= length(MULTIMAP_RAMPS))
             MULTIMAP_RAMPS[[i]] else NULL
         }
-        if (is.null(paleta_actual)) manual_chars <- c(manual_chars, char)
+        if (is.null(current_palette)) manual_chars <- c(manual_chars, char)
         cols <- prompt_states_and_colors(aligned_data, char,
-                                         auto_palette = paleta_actual,
+                                         auto_palette = current_palette,
                                          strict = !is.null(user_palette))
         if (is.null(cols)) return(invisible(NULL))
         colors_by_char[[char]] <- cols
@@ -586,13 +462,9 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     }
     config$colors_by_character <- colors_by_char
 
-    # If the user manually typed a color for "?" or "-" while picking state
-    # colors above (Fitch always treats these as one ambiguity color, see
-    # fitch.R), and no global ambiguity_color was passed to
-    # execute_phylogeny(), promote that manual choice so Fitch actually
-    # renders it instead of silently falling back to magenta. Auto-assigned
-    # palette colors (use_palettes / palette=) are NOT eligible here, since
-    # landing on "?" there is incidental, not a deliberate user choice.
+    # If the user typed a color for "?" or "-" while picking state colors and no global
+    # ambiguity_color was given, promote it so Fitch renders it instead of magenta.
+    # Auto-assigned palette colors are not eligible: landing on "?" there is incidental.
     if (is.null(config$ambiguity_color)) {
       for (char in manual_chars) {
         cols <- colors_by_char[[char]]
@@ -632,7 +504,7 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     config$fitch_mode <- algo_result$fitch_mode
   }
 
-  # --- Tree type ---------------------------------------------------------------
+  # Tree type
   letter_to_type <- c("p" = "phylogram", "c" = "cladogram", "f" = "fan")
   cat("\nTree type:\n")
   cat("  p: Phylogram\n")
@@ -648,19 +520,10 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
   cat(sprintf("  \u2192 Tree type: %s\n", tree_type))
   config$tree_type <- tree_type
 
-  # --- Dynamic offset range based on branch width ------------------------------
-  # branch_width is supplied as a parameter to execute_phylogeny() and
-  # recalculated there once config$branch_width is known.  Here we set a placeholder
-  # using the default width (2) so config is always complete before rendering.
-  # The offset between branches must grow proportionally to the width so
-  # branches never overlap. The conversion factor varies by tree type because
-  # data coordinates differ in scale:
-  #   . phylogram / cladogram: Y axis is linear (1 unit ~= 1 tip),
-  #     empirical width->offset relation is ~0.012 units/pt.
-  #   . fan: coordinates are polar; spread is a percentage of the radius,
-  #     so a larger factor is needed (~0.0025 x R_max per pt).
-  #     Since R_max is unknown here, a relative scale factor is used,
-  #     adjusted automatically in .emtree_render_fan().
+  # Offset between branches grows with branch width so they never overlap: ~0.012
+  # units/pt for phylogram/cladogram (1 unit ~ 1 tip); for fan it is relative to R_max
+  # (~0.0025 * R_max per pt), adjusted in .emtree_render_fan(). branch_width is a
+  # placeholder here (default 2); execute_phylogeny() overrides it.
   offset_factor <- switch(tree_type,
                           "phylogram"  = 0.012,
                           "cladogram"  = 0.012,
@@ -670,7 +533,7 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
   config$branch_width        <- 2          # default; overridden by execute_phylogeny()
   config$offset_range <- max(0.05, config$branch_width * offset_factor)
 
-  # --- Branch lengths ----------------------------------------------------------
+  # Branch lengths
   if (!is.null(phylogeny$edge.length) && tree_type %in% c("phylogram", "fan")) {
     cat("\nThe tree has branch lengths.\n")
     cat("  1: Use proportional branch lengths in the plot\n")
@@ -682,7 +545,7 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     config$use_edge_length <- FALSE
   }
 
-  # --- Export ------------------------------------------------------------------
+  # Export
   cat("\nExport the plot?\n")
   cat("  1: Yes \u2014 save to file\n")
   cat("  2: No \u2014 display in R window\n")
@@ -711,8 +574,7 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     fn <- sub("\\.(png|pdf)$", "", fn, ignore.case = TRUE)
     config$export_filename <- if (nzchar(fn)) fn else default_name
 
-    # ── DIMENSIONS MENU ───────────────────────────────────────────────────────
-    # The "Automatic" option preserves the original behavior (height ∝ Ntip).
+    # Dimensions
     cat("\nExported file dimensions:\n")
     cat("  1: Automatic (recommended \u2014 height proportional to number of terminals)\n")
     cat("  2: Custom (width and height in inches)\n")
@@ -745,11 +607,8 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
       config$width  <- NULL
       config$height <- NULL
     }
-    # ── END DIMENSIONS MENU ───────────────────────────────────────────────────
 
-    # ── LEGEND CORNER MENU ────────────────────────────────────────────────────
-    # Space for the legend is reserved by expanding the margin of the chosen
-    # corner so it never overlaps labels or the plot itself.
+    # Legend corner (that margin is expanded so the legend never overlaps the plot)
     cat("\nIn which corner do you want to place the legend?\n")
     cat("  1: Bottom-left   (bottomleft)  \u2014 recommended for phylogram\n")
     cat("  2: Bottom-right  (bottomright)\n")
@@ -762,7 +621,6 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     config$legend_corner <- if (nzchar(trimws(corner_str)) && trimws(corner_str) %in% names(corner_map))
       corner_map[[trimws(corner_str)]] else "bottomleft"
     cat(sprintf("  \u2192 Legend at: %s\n", config$legend_corner))
-    # ── END LEGEND CORNER MENU ────────────────────────────────────────────────
 
   } else {
     config$export_filename <- NULL

@@ -2,7 +2,7 @@
 % Please edit documentation in R/export_multimapr_tree.R
 \name{export_multimapr_tree}
 \alias{export_multimapr_tree}
-\title{Exports a multi-history evolutionary phylogenetic tree}
+\title{Draws several branch-color histories on one phylogeny and saves the figure}
 \usage{
 export_multimapr_tree(
   tree,
@@ -126,8 +126,8 @@ per character; \code{"horizontal"} places them side by side.
 Symbols, state names and titles are aligned in both.}
 
 \item{overlay_fn}{Optional function called after the legend, inside the open device,
-with \code{par("usr")} already set. Receives \code{pp}, \code{cex_aj},
-\code{label_offset_aj}, \code{R_tips}, and \code{gap_u}.}
+with \code{par("usr")} already set. Receives \code{pp}, \code{cex_adj},
+\code{label_offset_adj}, \code{R_tips}, and \code{gap_u}.}
 
 \item{hide_fan_labels}{When \code{TRUE}, omits radial tip labels in fan topology,
 delegating their drawing to \code{overlay_fn}.}
@@ -153,48 +153,22 @@ character is drawn side by side. Default \code{FALSE}.}
 Invisible: full path of the generated file (string).
 }
 \description{
-Overlays N evolutionary histories (branch color vectors) onto a
-phylogeny, supporting three topology types and two output formats.
-Applies the "Blank Canvas" strategy with isotropic diagonal offset
-calculated on the fly from the actual physical parameters of the device.
+Overlays N histories (one vector of branch colors each) on a phylogeny as
+parallel lanes, for a phylogram, cladogram or fan, and writes the result to a
+PNG (300 dpi) or PDF file in an \code{Exports/} folder of the working directory.
 }
-\section{Internal workflow}{
-
-\enumerate{
-\item Exhaustive argument validation.
-\item Dynamic dimension calculation (height proportional to Ntip; fan = square).
-\item Graphics device opening (PNG @ 300 dpi, or PDF).
-\item Blank Canvas: \code{plot(tree, edge.color="transparent")}
-populates \code{.PlotPhyloEnv} without rendering edges.
-\item Extraction of nodal coordinates and physical canvas parameters.
-\item On-the-fly calculation of isotropic offsets (scale_x/scale_y).
-\item Topology-based rendering (phylogram / cladogram / fan).
-\item Guaranteed device closure via \code{finally}.
-}
-}
-
 \examples{
-\dontrun{
-library(ape)
-set.seed(42)
-tree <- rtree(30)
-n_e  <- nrow(tree$edge)
+tree <- ape::read.nexus(system.file("extdata", "bats_tre.tre", package = "MultiMapR"))
+n_edges <- nrow(tree$edge)
+set.seed(1)
+history1 <- sample(c("steelblue", "tomato", "gray70"), n_edges, replace = TRUE)
+history2 <- sample(c("darkorange", "mediumseagreen", "gray70"), n_edges, replace = TRUE)
 
-ec1 <- sample(c("steelblue",  "tomato",        "gray70"), n_e, replace = TRUE)
-ec2 <- sample(c("darkorange", "mediumseagreen", "gray70"), n_e, replace = TRUE)
-ec3 <- sample(c("mediumpurple","gold3",         "gray70"), n_e, replace = TRUE)
-
-# Phylogram PNG
-export_multimapr_tree(tree, list(ec1, ec2, ec3),
-                      "my_tree_phylogram", type = "phylogram", format = "png")
-
-# Cladogram PDF
-export_multimapr_tree(tree, list(ec1, ec2),
-                      "my_tree_cladogram", type = "cladogram", format = "pdf")
-
-# Fan PNG
-export_multimapr_tree(tree, list(ec1, ec2, ec3),
-                      "my_tree_fan",       type = "fan",       format = "png")
-}
+owd <- setwd(tempdir())  # figures are written to ./Exports
+export_multimapr_tree(tree, list(history1, history2), "bats_phylogram",
+                      type = "phylogram", format = "png",
+                      legend_labels = c("A", "B", "Ambiguous"),
+                      legend_colors = c("steelblue", "tomato", "gray70"))
+setwd(owd)
 
 }
