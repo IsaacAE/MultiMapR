@@ -1,6 +1,6 @@
 Package: MultiMapR
 Title: Mapping and Visualization of Discrete Characters on Phylogenies
-Version: 1.0.1.1
+Version: 2.0.0.0
 Authors@R: c(
     person("Kevin Isaac", "Alcántara Estrada", role = c("aut", "cre"),
            email = "isaac.ae@ciencias.unam.mx"),
