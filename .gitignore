@@ -10,3 +10,6 @@ Exports/
 # Plots written to the working directory by ad-hoc runs
 Rplots.pdf
 Rplot*.png
+
+# Local planning notes (not published)
+docs/
