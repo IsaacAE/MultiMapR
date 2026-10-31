@@ -10,8 +10,8 @@ plot_ancestral_with_terminals(filogenia, config)
 \item{filogenia}{phylo object.}
 
 \item{config}{Configuration list from setup_mapping_config().
-Must contain: datos_ord, caracteres, colores_por_caracter,
-algoritmo, tipo_arbol, grosor, pch_figura, tam_figura,
+Must contain: aligned_data, characters, colors_by_character,
+algorithm, tree_type, branch_width, figure_pch, figure_size,
 and optionally export_filename / export_format.}
 }
 \value{
@@ -20,7 +20,7 @@ Invisible NULL. Draws on the active graphics device.
 \description{
 Combines two visualization layers in a single plot:
 Layer 1 — Branches painted with the ancestral reconstruction result
-(using the algorithm selected in config$algoritmo).
+(using the algorithm selected in config$algorithm).
 Layer 2 — Colored figures (circles or squares) at the tips showing the
 observed tip states (equivalent to the simple mapping squares).
 }

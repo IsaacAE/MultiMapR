@@ -888,12 +888,11 @@
     size <- input$shape_size %||% 1.4
     config <- list(mapping_type         = mt,
                    aligned_data         = d$aligned,
-                   datos_ord            = d$aligned,
                    ambiguity_color      = NULL,
-                   caracteres           = draw,
-                   colores_por_caracter = colors_by_char,
-                   tipo_arbol           = tree_type,
-                   grosor               = input$branch_width %||% 2,
+                   characters           = draw,
+                   colors_by_character  = colors_by_char,
+                   tree_type            = tree_type,
+                   branch_width         = input$branch_width %||% 2,
                    use_edge_length      = uses_lengths(),
                    legend_corner        = input$legend_corner %||% "bottomleft",
                    export_filename      = NULL,
@@ -903,22 +902,22 @@
     if (mt == 1L) {
       shapes <- !identical(input$presentation, "labels")
       config$simple_mode <- if (shapes) "figures" else "tip_color"
-      config$pch_figura  <- if (shapes) pch else 21L
-      config$tam_figura  <- if (shapes) size else 1
+      config$figure_pch  <- if (shapes) pch else 21L
+      config$figure_size  <- if (shapes) size else 1
     } else {
-      config$funcion_multi <- if (identical(input$viz, "tree_tips")) 2L else 1L
-      config$mapear_todos  <- all_selected
-      config$algoritmo     <- if (identical(input$algo, "fitch")) 2L else 1L
-      config$fitch_mode    <- if (config$algoritmo == 2L) input$optim %||% "acctran" else NULL
-      if (config$algoritmo == 2L) config$ambiguity_color <- input$ambiguity_color %||% "#FF00FF"
-      if (config$funcion_multi == 2L) {
-        config$pch_figura <- pch
-        config$tam_figura <- size
+      config$multi_function <- if (identical(input$viz, "tree_tips")) 2L else 1L
+      config$map_all  <- all_selected
+      config$algorithm     <- if (identical(input$algo, "fitch")) "fitch" else "majority"
+      config$fitch_mode    <- if (identical(config$algorithm, "fitch")) input$optim %||% "acctran" else NULL
+      if (identical(config$algorithm, "fitch")) config$ambiguity_color <- input$ambiguity_color %||% "#FF00FF"
+      if (config$multi_function == 2L) {
+        config$figure_pch <- pch
+        config$figure_size <- size
       }
     }
     # Missing / inapplicable colors: simple mapping and depth-weighted majority
     # (Fitch uses the single ambiguity color).
-    if (mt == 1L || config$algoritmo == 1L) {
+    if (mt == 1L || identical(config$algorithm, "majority")) {
       config$missing_colors <- stats::setNames(lapply(draw, function(ch) {
         pfx <- card_prefix(d, ch)
         c("?" = input[[missing_input_id(pfx, "?")]] %||% .GUI_MISSING_DEFAULT,
@@ -1051,7 +1050,7 @@
     wcss <- wcss - 4
     ratio <- min(max(session$clientData$pixelratio %||% 1, 1), 2)
     cd <- isolate(custom_dims())
-    dims <- .gui_figure_dims(Ntip(s$tree), s$config$tipo_arbol, cd$w, cd$h, spec_angles(s))
+    dims <- .gui_figure_dims(Ntip(s$tree), s$config$tree_type, cd$w, cd$h, spec_angles(s))
     file <- tempfile("mmr_preview_", fileext = ".png")
     res <- tryCatch(.gui_render_png(s, file, wcss * ratio, dims), error = function(e) e)
     if (!is.null(last_png) && file.exists(last_png)) unlink(last_png)
@@ -1102,17 +1101,17 @@
       return()
     }
     cfg <- s$config
-    add("info", "log_active", paste(cfg$caracteres, collapse = ", "))
+    add("info", "log_active", paste(cfg$characters, collapse = ", "))
     if (length(s$trimmed)) add("warn", "log_trimmed", length(isolate(chars_sel())),
                                paste(s$trimmed, collapse = ", "))
     for (ch in s$empty) add("error", "log_no_states", ch)
-    if (identical(cfg$tipo_arbol, "cladogram") && isTRUE(isolate(dat())$has_lengths))
+    if (identical(cfg$tree_type, "cladogram") && isTRUE(isolate(dat())$has_lengths))
       add("warn", "log_clado_bl")
     if (identical(p$status, "error")) {
       add("error", text = p$message)
     } else {
       entries <- c(entries, .gui_log_from_capture(p$log))
-      if (isTRUE(cfg$algoritmo == 2L)) {
+      if (identical(cfg$algorithm, "fitch")) {
         n <- .gui_count_ambiguous(s, cfg$fitch_mode)
         if (!is.na(n)) add("info", "log_ambig", toupper(cfg$fitch_mode), n,
                            toupper(.gui_hex(.get_fitch_ambig_color(cfg))))
@@ -1141,9 +1140,9 @@
     output[[paste0("cmp_img_", m)]] <- shiny::renderImage({
       shiny::req(cmp_active())
       s <- spec_d()
-      shiny::req(identical(s$status, "ok"), isTRUE(s$config$algoritmo == 2L))
+      shiny::req(identical(s$status, "ok"), identical(s$config$algorithm, "fitch"))
       s$config$fitch_mode <- m
-      dims <- .gui_figure_dims(Ntip(s$tree), s$config$tipo_arbol, branch_angle = spec_angles(s))
+      dims <- .gui_figure_dims(Ntip(s$tree), s$config$tree_type, branch_angle = spec_angles(s))
       file <- tempfile(paste0("mmr_cmp_", m, "_"), fileext = ".png")
       .gui_render_png(s, file, 900, dims)
       list(src = file, contentType = "image/png", alt = paste("Fitch", toupper(m)))
@@ -1152,7 +1151,7 @@
     output[[paste0("cmp_note_", m)]] <- shiny::renderText({
       shiny::req(cmp_active())
       s <- spec_d()
-      shiny::req(identical(s$status, "ok"), isTRUE(s$config$algoritmo == 2L))
+      shiny::req(identical(s$status, "ok"), identical(s$config$algorithm, "fitch"))
       tr <- trr()
       n <- .gui_count_ambiguous(s, m)
       paste0(tr(paste0("cmp_note_", m)), " \u00B7 ",

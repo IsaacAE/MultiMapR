@@ -7,8 +7,9 @@
 prompt_ancestral_algorithm()
 }
 \value{
-A list with \code{algoritmo} (1 or 2) and \code{fitch_mode}
-(NULL unless \code{algoritmo == 2}), or invisible(NULL) if the
+A list with \code{algorithm} (\code{"majority"} or \code{"fitch"})
+and \code{fitch_mode} (NULL unless \code{algorithm == "fitch"}), or
+invisible(NULL) if the
 user cancels.
 }
 \description{

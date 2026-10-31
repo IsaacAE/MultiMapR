@@ -239,16 +239,16 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 #' Palettes offered by the interface (all defined in cli_menu.R)
 #' @noRd
 .gui_palettes <- function() {
-  list(okabe  = PALETAS_ACCESIBLES$okabe,
-       tol    = PALETAS_ACCESIBLES$tol,
-       plasma = PALETAS_ACCESIBLES$plasma,
-       rojos  = GAMAS_MULTIMAPEO$rojos,
-       verdes = GAMAS_MULTIMAPEO$verdes,
-       azules = GAMAS_MULTIMAPEO$azules,
-       dorados = GAMAS_MULTIMAPEO$dorados,
-       morados = GAMAS_MULTIMAPEO$morados,
-       wc    = PALETAS_PREDEFINIDAS$wc,
-       MM1    = PALETAS_PREDEFINIDAS$MM1)
+  list(okabe  = ACCESSIBLE_PALETTES$okabe,
+       tol    = ACCESSIBLE_PALETTES$tol,
+       plasma = ACCESSIBLE_PALETTES$plasma,
+       rojos  = MULTIMAP_RAMPS$rojos,
+       verdes = MULTIMAP_RAMPS$verdes,
+       azules = MULTIMAP_RAMPS$azules,
+       dorados = MULTIMAP_RAMPS$dorados,
+       morados = MULTIMAP_RAMPS$morados,
+       wc    = PRESET_PALETTES$wc,
+       MM1    = PRESET_PALETTES$MM1)
 }
 
 #' Dictionary key (or literal name) for each palette
@@ -263,7 +263,7 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 #' "auto" reproduces the console behavior with \code{use_palettes = TRUE}:
 #' simple mapping uses the accessible palettes (one per character slot),
 #' single-character reconstruction uses Okabe-Ito and multi-character
-#' reconstruction uses the sequential ranges of \code{GAMAS_MULTIMAPEO}.
+#' reconstruction uses the sequential ranges of \code{MULTIMAP_RAMPS}.
 #'
 #' @param choice       Palette name or "auto".
 #' @param n            Number of colors needed.
@@ -276,11 +276,11 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
   pal <- if (!identical(choice, "auto") && choice %in% names(pals)) {
     pals[[choice]]
   } else if (mapping_type == 2L && n_selected > 1L) {
-    GAMAS_MULTIMAPEO[[min(slot, length(GAMAS_MULTIMAPEO))]]
+    MULTIMAP_RAMPS[[min(slot, length(MULTIMAP_RAMPS))]]
   } else if (mapping_type == 2L) {
-    PALETAS_ACCESIBLES$okabe
+    ACCESSIBLE_PALETTES$okabe
   } else {
-    PALETAS_ACCESIBLES[[((slot - 1L) %% length(PALETAS_ACCESIBLES)) + 1L]]
+    ACCESSIBLE_PALETTES[[((slot - 1L) %% length(ACCESSIBLE_PALETTES)) + 1L]]
   }
   if (n <= 0) return(character(0))
   .gui_hex(rep(pal, length.out = n))
@@ -401,7 +401,7 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
   cfg$fitch_mode <- mode
   ambig <- toupper(.gui_hex(.get_fitch_ambig_color(cfg)))
   tree  <- spec$tree
-  resolver <- function(valor, colores_estado) {
+  resolve_color <- function(valor, colores_estado) {
     valor <- as.character(valor)
     if (is.na(valor) || valor == "") return("gray70")
     if (valor %in% names(colores_estado)) return(colores_estado[[valor]])
@@ -409,9 +409,9 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
   }
   tryCatch({
     total <- 0L
-    for (ch in cfg$caracteres) {
-      tip_colors <- sapply(cfg$datos_ord[[ch]], resolver,
-                           colores_estado = cfg$colores_por_caracter[[ch]])
+    for (ch in cfg$characters) {
+      tip_colors <- sapply(cfg$aligned_data[[ch]], resolve_color,
+                           colores_estado = cfg$colors_by_character[[ch]])
       ec <- external_algorithm(tree, tip_colors, init_edge_colors(tree), cfg)
       total <- total + sum(toupper(.gui_hex(unname(ec))) == ambig)
     }

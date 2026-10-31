@@ -71,7 +71,11 @@ default_algorithm <- function(tree, tip_colors, edge_colors) {
   # Step 2: postorder traversal of internal nodes (deepest first)
   # ------------------------------------------------------------------
   all_nodes    <- (n_tips + 1):(n_tips + n_nodes)
-  node_depths  <- node.depth.edgelength(tree)
+  # Without edge lengths ape reads uninitialised memory, so use unit lengths.
+  depth_tree <- tree
+  if (is.null(depth_tree$edge.length))
+    depth_tree$edge.length <- rep(1, nrow(depth_tree$edge))
+  node_depths  <- node.depth.edgelength(depth_tree)
   sorted_nodes <- all_nodes[order(node_depths[all_nodes], decreasing = TRUE)]
 
   # Store the color assigned to each node for use in step 4

@@ -107,7 +107,7 @@ adjust_cex <- function(phylogeny, min_cex = 0.2, config = NULL) {
   if (!is.null(config) && !is.null(config$height)) {
     height_default <- n_tips * 0.25 + 2
 
-    if (!is.null(config$tipo_arbol) && config$tipo_arbol == "fan") {
+    if (!is.null(config$tree_type) && config$tree_type == "fan") {
       width_default  <- 12
       height_default <- max(height_default, width_default)
     }

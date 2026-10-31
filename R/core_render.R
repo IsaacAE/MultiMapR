@@ -11,7 +11,7 @@
 #' Horizontal distance between the columns of terminal figures
 #'
 #' At least the historical 2.5 "M" widths, and never less than the figure's
-#' own diameter plus a margin, so large figures (\code{tam_figura}) do not
+#' own diameter plus a margin, so large figures (\code{figure_size}) do not
 #' touch the next column. Figures with \code{pch} 21-25 have a diameter of
 #' about \code{0.375 * pt.cex} character heights.
 #'
@@ -71,12 +71,12 @@ resolve_tip_color <- function(value, color_map, color_na = "gray70") {
 #' @return Invisible NULL. Draws on the active graphics device.
 plot_simple_mapping <- function(filogenia, config) {
 
-  datos_ord       <- config$datos_ord
-  caracteres      <- config$caracteres
-  colores_por_car <- config$colores_por_caracter
-  tipo_arbol      <- config$tipo_arbol
-  pch_fig         <- config$pch_figura
-  tam_fig         <- config$tam_figura
+  datos_ord       <- config$aligned_data
+  caracteres      <- config$characters
+  colores_por_car <- config$colors_by_character
+  tipo_arbol      <- config$tree_type
+  pch_fig         <- config$figure_pch
+  tam_fig         <- config$figure_size
   simple_mode     <- config$simple_mode %||% "figures"   # "figures" | "tip_color"
   cex_aj          <- adjust_cex(filogenia, config = config)
   n_tips          <- Ntip(filogenia)
@@ -86,7 +86,7 @@ plot_simple_mapping <- function(filogenia, config) {
   col_lbl         <- config$label_color %||% "black"
   show_leg        <- config$show_legend %||% TRUE
 
-  asignar_color <- function(valor, colores_estado, car) {
+  resolve_color <- function(valor, colores_estado, car) {
     .ancestral_tip_color(valor, colores_estado, config, car)
   }
 
@@ -147,7 +147,7 @@ plot_simple_mapping <- function(filogenia, config) {
       # ── Step 1: tree coordinates — calculated off-screen before opening ──────
       # the final device (see PHASE 1 fan block below).
       # Here we only read the already-calculated results.
-      obj <- .fan_coords_explorador
+      obj <- .fan_coords_probe
 
       xx_tip <- obj$xx[seq_len(n_tips)]
       yy_tip <- obj$yy[seq_len(n_tips)]
@@ -161,7 +161,7 @@ plot_simple_mapping <- function(filogenia, config) {
         # Edges whose child is a tip are painted with that tip's state color;
         # all other edges stay gray.
         char1     <- caracteres[1L]
-        col_tips1 <- sapply(datos_ord[[char1]], asignar_color,
+        col_tips1 <- sapply(datos_ord[[char1]], resolve_color,
                             colores_estado = colores_por_car[[char1]], car = char1)
 
         edge_col <- rep("gray70", nrow(filogenia$edge))
@@ -190,7 +190,7 @@ plot_simple_mapping <- function(filogenia, config) {
              type           = "fan",
              cex            = cex_aj,
              label.offset   = 0,           # labels drawn manually below
-             edge.width     = config$grosor,
+             edge.width     = config$branch_width,
              edge.color     = edge_col,
              tip.color      = "transparent",
              show.tip.label = FALSE,
@@ -249,7 +249,7 @@ plot_simple_mapping <- function(filogenia, config) {
              type           = "fan",
              cex            = cex_aj,
              label.offset   = config$label_offset,
-             edge.width     = config$grosor,
+             edge.width     = config$branch_width,
              tip.color      = "transparent",
              show.tip.label = FALSE,
              no.margin      = TRUE,
@@ -264,7 +264,7 @@ plot_simple_mapping <- function(filogenia, config) {
         # ── Symbol rings ──────────────────────────────────────────────────────────
         old_xpd <- par("xpd"); par(xpd = TRUE)
         for (i in seq_len(n_car)) {
-          col_tips     <- sapply(datos_ord[[caracteres[i]]], asignar_color,
+          col_tips     <- sapply(datos_ord[[caracteres[i]]], resolve_color,
                                  colores_estado = colores_por_car[[caracteres[i]]],
                                  car = caracteres[i])
           radio_actual <- radio_base + (i - 1L) * incremento_radio
@@ -322,7 +322,7 @@ plot_simple_mapping <- function(filogenia, config) {
         # Edges whose child is a tip are painted with that tip's state color;
         # all other edges (internal) stay gray.
         char1     <- caracteres[1L]
-        col_tips1 <- sapply(datos_ord[[char1]], asignar_color,
+        col_tips1 <- sapply(datos_ord[[char1]], resolve_color,
                             colores_estado = colores_por_car[[char1]], car = char1)
 
         edge_col <- rep("gray70", nrow(filogenia$edge))
@@ -336,7 +336,7 @@ plot_simple_mapping <- function(filogenia, config) {
              type           = tipo_arbol,
              cex            = cex_lbl,
              label.offset   = config$label_offset,
-             edge.width     = config$grosor,
+             edge.width     = config$branch_width,
              edge.color     = edge_col,
              tip.color      = col_lbl,
              show.tip.label = show_lbl,
@@ -352,7 +352,7 @@ plot_simple_mapping <- function(filogenia, config) {
              type           = tipo_arbol,
              cex            = cex_lbl,
              label.offset   = config$label_offset,
-             edge.width     = config$grosor,
+             edge.width     = config$branch_width,
              tip.color      = col_lbl,
              show.tip.label = show_lbl,
              font           = 3L,
@@ -384,7 +384,7 @@ plot_simple_mapping <- function(filogenia, config) {
 
         fig_x <- fig_y <- fig_col <- NULL
         for (i in seq_along(caracteres)) {
-          col_tips <- sapply(datos_ord[[caracteres[i]]], asignar_color,
+          col_tips <- sapply(datos_ord[[caracteres[i]]], resolve_color,
                              colores_estado = colores_por_car[[caracteres[i]]],
                              car = caracteres[i])
           fig_x  <- c(fig_x,   rep(x_columnas[i], n_tips))
@@ -402,18 +402,18 @@ plot_simple_mapping <- function(filogenia, config) {
 
 
   # ── PHASE 1: off-screen probe ───────────────────────────────────────────────
-  .fan_coords_explorador <- NULL
+  .fan_coords_probe <- NULL
   computed_lim <- list(x = NULL, y = NULL)
 
   if (tipo_arbol == "fan") {
     prev_dev <- dev.cur()
     pdf(NULL, width = 7, height = 7)
-    .fan_coords_explorador <- tryCatch({
+    .fan_coords_probe <- tryCatch({
       plot(filogenia,
            type           = "fan",
            cex            = cex_aj,
            label.offset   = config$label_offset,
-           edge.width     = config$grosor,
+           edge.width     = config$branch_width,
            tip.color      = "transparent",
            show.tip.label = FALSE,
            no.margin      = TRUE)
@@ -443,7 +443,7 @@ plot_simple_mapping <- function(filogenia, config) {
            type           = tipo_arbol,
            cex            = cex_lbl,
            label.offset   = config$label_offset,
-           edge.width     = config$grosor,
+           edge.width     = config$branch_width,
            tip.color      = col_lbl,
            show.tip.label = show_lbl,
            font           = 3L)
@@ -547,18 +547,18 @@ init_edge_colors <- function(filogenia) {
 
 #' Injects the Fitch ambiguity entry into a state->color vector (Fitch only)
 #'
-#' When the selected algorithm is Fitch (config$algoritmo == 2), appends
+#' When the selected algorithm is Fitch (config$algorithm == "fitch"), appends
 #' an "Ambiguous / Missing" entry with the color from
 #' \code{.get_fitch_ambig_color()} to \code{colores_estado} so the legend
 #' always shows what the ambiguous branches/figures mean.
 #' For any other algorithm the vector is returned unchanged.
 #'
 #' @param colores_estado Named character vector state -> color.
-#' @param config         Configuration list (uses config$algoritmo).
+#' @param config         Configuration list (uses config$algorithm).
 #' @return Possibly extended named character vector.
 #' @keywords internal
 .add_fitch_ambig_to_legend <- function(colores_estado, config) {
-  if (!isTRUE(config$algoritmo == 2L)) return(colores_estado)
+  if (!identical(config$algorithm, "fitch")) return(colores_estado)
   c(colores_estado, c("Ambiguous / Missing" = .get_fitch_ambig_color(config)))
 }
 
@@ -617,7 +617,7 @@ init_edge_colors <- function(filogenia) {
   valor <- as.character(valor)
   if (!is.na(valor) && valor %in% names(colores_estado)) return(colores_estado[[valor]])
   if (is.na(valor) || valor %in% c("", "?", "-")) {
-    if (isTRUE(config$algoritmo == 2L)) return(.get_fitch_ambig_color(config))
+    if (identical(config$algorithm, "fitch")) return(.get_fitch_ambig_color(config))
     sym <- if (is.na(valor) || valor == "") "?" else valor
     mc  <- config$missing_colors[[car]]
     if (!is.null(mc) && sym %in% names(mc)) return(unname(mc[[sym]]))
@@ -637,13 +637,13 @@ init_edge_colors <- function(filogenia) {
 #' @return Named vector label -> color, or \code{NULL}.
 #' @keywords internal
 .missing_legend_entries <- function(config, car) {
-  if (isTRUE(config$algoritmo == 2L)) return(NULL)
+  if (identical(config$algorithm, "fitch")) return(NULL)
   mc <- config$missing_colors[[car]]
   if (is.null(mc)) return(NULL)
-  vals    <- as.character(config$datos_ord[[car]])
+  vals    <- as.character(config$aligned_data[[car]])
   present <- c("?" = any(is.na(vals) | vals %in% c("", "?")), "-" = any(vals %in% "-"))
   syms    <- intersect(names(mc), names(present)[present])
-  syms    <- setdiff(syms, names(config$colores_por_caracter[[car]]))
+  syms    <- setdiff(syms, names(config$colors_by_character[[car]]))
   if (length(syms) == 0L) return(NULL)
   labels  <- c("?" = "Missing (?)", "-" = "Inapplicable (-)")
   stats::setNames(unname(mc[syms]), labels[syms])
@@ -674,13 +674,13 @@ init_edge_colors <- function(filogenia) {
 #' @return Updated edge_colors vector.
 apply_ancestral_algorithm <- function(tree, tip_colors, edge_colors, config) {
 
-  if (config$algoritmo == 1) {
+  if (identical(config$algorithm, "majority")) {
     if (!exists("default_algorithm", mode = "function"))
       stop("Function 'default_algorithm' is not available. ",
            "Make sure default_alg.R is part of the package.")
     default_algorithm(tree, tip_colors, edge_colors)
 
-  } else if (config$algoritmo == 2) {
+  } else if (identical(config$algorithm, "fitch")) {
     if (!exists("external_algorithm", mode = "function"))
       stop("Function 'external_algorithm' is not available. ",
            "Make sure fitch.R is part of the package.")
@@ -711,7 +711,7 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
                                     titulo_leyenda = "", colores_estado = NULL) {
   exportar   <- !is.null(config$export_filename)
   fn_export  <- config$export_filename
-  tipo_arbol <- config$tipo_arbol
+  tipo_arbol <- config$tree_type
 
   cat("\n=== Generating plot (Ancestral Reconstruction) ===\n")
 
@@ -729,7 +729,7 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
       filename      = fn_export,
       type          = tipo_arbol,
       format        = config$export_format %||% "png",
-      lwd           = config$grosor,
+      lwd           = config$branch_width,
       width         = config$width,
       height        = config$height,
        ladderize     = config$ladderize %||% FALSE,
@@ -755,7 +755,7 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
     tree           = filogenia,
     color_list     = list(edge_colors),
     type           = tipo_arbol,
-    lwd            = config$grosor,
+    lwd            = config$branch_width,
     ladderize      = config$ladderize %||% FALSE,
       terminal_stretch = config$terminal_stretch %||% 1,
       tip_end          = config$tip_end %||% "round",
@@ -779,7 +779,7 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
 
 #' FULL ANCESTRAL RECONSTRUCTION — orchestrates 3.1 and 3.3
 #'
-#' Dispatches to the appropriate render function based on config$funcion_multi:
+#' Dispatches to the appropriate render function based on config$multi_function:
 #'   1 -> branch superimposition only (plot_superimposed_characters /
 #'         plot_ancestral_branches for single character)
 #'   2 -> ancestral reconstruction on branches PLUS simple terminal figures
@@ -789,17 +789,17 @@ plot_ancestral_branches <- function(filogenia, edge_colors, config,
 #' @param config     Configuration list from setup_mapping_config().
 #' @return Invisible NULL.
 plot_ancestral_reconstruction <- function(filogenia, config) {
-  datos_ord       <- config$datos_ord
-  caracteres      <- config$caracteres
-  colores_por_car <- config$colores_por_caracter
+  datos_ord       <- config$aligned_data
+  caracteres      <- config$characters
+  colores_por_car <- config$colors_by_character
 
-  # funcion_multi == 2: ancestral reconstruction + terminal figures
-  if (!is.null(config$funcion_multi) && config$funcion_multi == 2) {
+  # multi_function == 2: ancestral reconstruction + terminal figures
+  if (!is.null(config$multi_function) && config$multi_function == 2) {
     plot_ancestral_with_terminals(filogenia, config)
     return(invisible(NULL))
   }
 
-  # funcion_multi == 1 (or undefined): branch superimposition only
+  # multi_function == 1 (or undefined): branch superimposition only
   if (length(caracteres) == 1) {
     car            <- caracteres[1]
     colores_estado <- colores_por_car[[car]]
@@ -831,7 +831,7 @@ plot_ancestral_reconstruction <- function(filogenia, config) {
 #'
 #' Combines two visualization layers in a single plot:
 #'   Layer 1 — Branches painted with the ancestral reconstruction result
-#'             (using the algorithm selected in config$algoritmo).
+#'             (using the algorithm selected in config$algorithm).
 #'   Layer 2 — Colored figures (circles or squares) at the tips showing the
 #'             observed tip states (equivalent to the simple mapping squares).
 #'
@@ -841,18 +841,18 @@ plot_ancestral_reconstruction <- function(filogenia, config) {
 #'
 #' @param filogenia  phylo object.
 #' @param config     Configuration list from setup_mapping_config().
-#'                   Must contain: datos_ord, caracteres, colores_por_caracter,
-#'                   algoritmo, tipo_arbol, grosor, pch_figura, tam_figura,
+#'                   Must contain: aligned_data, characters, colors_by_character,
+#'                   algorithm, tree_type, branch_width, figure_pch, figure_size,
 #'                   and optionally export_filename / export_format.
 #' @return Invisible NULL. Draws on the active graphics device.
 plot_ancestral_with_terminals <- function(filogenia, config) {
 
-  datos_ord       <- config$datos_ord
-  caracteres      <- config$caracteres
-  colores_por_car <- config$colores_por_caracter
-  tipo_arbol      <- config$tipo_arbol
-  pch_fig         <- config$pch_figura %||% 22L   # 22 = square
-  tam_fig         <- config$tam_figura %||% 1
+  datos_ord       <- config$aligned_data
+  caracteres      <- config$characters
+  colores_por_car <- config$colors_by_character
+  tipo_arbol      <- config$tree_type
+  pch_fig         <- config$figure_pch %||% 22L   # 22 = square
+  tam_fig         <- config$figure_size %||% 1
   exportar        <- !is.null(config$export_filename)
   fn_export       <- config$export_filename
   n_tips          <- Ntip(filogenia)
@@ -860,7 +860,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
   # Missing ("?") and inapplicable ("-") tips use the same color on figures and
   # branches: the Fitch ambiguity color, or the per-character colors chosen for
   # the depth-weighted majority (see .ancestral_tip_color()).
-  resolver_color <- function(valor, colores_estado, car)
+  resolve_color <- function(valor, colores_estado, car)
     .ancestral_tip_color(valor, colores_estado, config, car)
 
   cat("\n=== Generating plot (Ancestral Reconstruction + Terminal Figures) ===\n")
@@ -868,7 +868,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
   # ── Step 1: compute ancestral edge colors for each character ────────────────
   lista_ec <- lapply(caracteres, function(car) {
     col_e      <- colores_por_car[[car]]
-    tip_colors <- sapply(datos_ord[[car]], resolver_color, colores_estado = col_e, car = car)
+    tip_colors <- sapply(datos_ord[[car]], resolve_color, colores_estado = col_e, car = car)
     ec         <- init_edge_colors(filogenia)
     ec         <- apply_ancestral_algorithm(filogenia, tip_colors, ec, config)
     ec
@@ -878,7 +878,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
   ley_data <- .build_legend_data(colores_por_car, caracteres)
 
   # For Fitch: append the ambiguity entry to every character block (Fitch-only)
-  if (isTRUE(config$algoritmo == 2L)) {
+  if (identical(config$algorithm, "fitch")) {
     ambig_col <- .get_fitch_ambig_color(config)
     ambig_label <- "Ambiguous / Missing"
     for (nm in names(ley_data$by_char)) {
@@ -898,7 +898,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
   # received from the export_multimapr_tree engine, which already computed them
   # with the correct scale factors. When called from screen (NULL) they are
   # read from .PlotPhyloEnv and adjust_cex() respectively.
-  .superponer_figuras_terminales <- function(pp       = NULL,
+  .overlay_tip_figures <- function(pp       = NULL,
                                              cex_aj   = NULL,
                                              lbl_off  = NULL,
                                              R_tips   = NULL,   # radius of each terminal (fan)
@@ -944,7 +944,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       gap_tan          <- incremento_radio * 0.55
 
       for (i in seq_len(n_car_ov)) {
-        col_tips     <- sapply(datos_ord[[caracteres[i]]], resolver_color,
+        col_tips     <- sapply(datos_ord[[caracteres[i]]], resolve_color,
                                colores_estado = colores_por_car[[caracteres[i]]],
                                car = caracteres[i])
         radio_actual <- radio_base + (i - 1L) * incremento_radio
@@ -1018,7 +1018,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
 
       # ── Figures per column ────────────────────────────────────────────────────
       for (i in seq_along(caracteres)) {
-        col_tips <- sapply(datos_ord[[caracteres[i]]], resolver_color,
+        col_tips <- sapply(datos_ord[[caracteres[i]]], resolve_color,
                            colores_estado = colores_por_car[[caracteres[i]]],
                            car = caracteres[i])
         points(rep(x_columnas[i], n_tips), yy_tip,
@@ -1045,10 +1045,10 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       filename        = fn_export,
       type            = tipo_arbol,
       format          = config$export_format %||% "png",
-      lwd             = config$grosor,
+      lwd             = config$branch_width,
       width           = config$width,
       height          = config$height,
-      offset_range    = config$rango_desfase %||% 0.1,
+      offset_range    = config$offset_range %||% 0.1,
       tip_end         = config$tip_end %||% "round",
       branch_angle    = config$branch_angle %||% 45,
       show_labels     = config$show_labels %||% TRUE,
@@ -1066,7 +1066,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
       header_labels   = caracteres,
       overlay_fn      = function(pp, cex_aj, label_offset_aj,
                                  R_tips = NULL, gap_u = NULL) {
-        .superponer_figuras_terminales(pp      = pp,
+        .overlay_tip_figures(pp      = pp,
                                        cex_aj  = cex_aj,
                                        lbl_off = label_offset_aj,
                                        R_tips  = R_tips,
@@ -1083,8 +1083,8 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
     tree            = filogenia,
     color_list      = lista_ec,
     type            = tipo_arbol,
-    lwd             = config$grosor,
-    offset_range    = config$rango_desfase %||% 0.1,
+    lwd             = config$branch_width,
+    offset_range    = config$offset_range %||% 0.1,
     tip_end         = config$tip_end %||% "round",
     branch_angle    = config$branch_angle %||% 45,
     show_labels     = config$show_labels %||% TRUE,
@@ -1100,7 +1100,7 @@ plot_ancestral_with_terminals <- function(filogenia, config) {
     header_labels   = caracteres,
     overlay_fn      = function(pp, cex_aj, label_offset_aj,
                                R_tips = NULL, gap_u = NULL) {
-      .superponer_figuras_terminales(pp      = pp,
+      .overlay_tip_figures(pp      = pp,
                                      cex_aj  = cex_aj,
                                      lbl_off = label_offset_aj,
                                      R_tips  = R_tips,
@@ -1148,18 +1148,18 @@ plot_superimposed_characters <- function(filogenia, config,
                                          legend_spacing   = 0.06,
                                          x_limit          = NULL) {
 
-  datos_ord       <- config$datos_ord
-  caracteres      <- config$caracteres
-  colores_por_car <- config$colores_por_caracter
-  tipo_arbol      <- config$tipo_arbol
-  grosor1         <- config$grosor %||% 2
+  datos_ord       <- config$aligned_data
+  caracteres      <- config$characters
+  colores_por_car <- config$colors_by_character
+  tipo_arbol      <- config$tree_type
+  grosor1         <- config$branch_width %||% 2
 
-  resolver_color <- function(valor, colores_estado, car)
+  resolve_color <- function(valor, colores_estado, car)
     .ancestral_tip_color(valor, colores_estado, config, car)
 
   lista_ec <- lapply(caracteres, function(car) {
     col_e      <- colores_por_car[[car]]
-    tip_colors <- sapply(datos_ord[[car]], resolver_color, colores_estado = col_e, car = car)
+    tip_colors <- sapply(datos_ord[[car]], resolve_color, colores_estado = col_e, car = car)
     ec         <- init_edge_colors(filogenia)
     ec         <- apply_ancestral_algorithm(filogenia, tip_colors, ec, config)
     ec
@@ -1170,7 +1170,7 @@ plot_superimposed_characters <- function(filogenia, config,
   ley_data  <- .build_legend_data(colores_por_car, caracteres)
 
   # For Fitch: append the ambiguity entry to every character block (Fitch-only)
-  if (isTRUE(config$algoritmo == 2L)) {
+  if (identical(config$algorithm, "fitch")) {
     ambig_col <- .get_fitch_ambig_color(config)
     ambig_label <- "Ambiguous / Missing"
     for (nm in names(ley_data$by_char)) {
@@ -1194,7 +1194,7 @@ plot_superimposed_characters <- function(filogenia, config,
       lwd             = grosor1,
       width           = config$width,
       height          = config$height,
-      offset_range    = config$rango_desfase %||% 0.1,
+      offset_range    = config$offset_range %||% 0.1,
       use_edge_length = isTRUE(config$use_edge_length),
        ladderize       = config$ladderize %||% FALSE,
        terminal_stretch = config$terminal_stretch %||% 1,
@@ -1218,7 +1218,7 @@ plot_superimposed_characters <- function(filogenia, config,
     color_list      = lista_ec,
     type            = tipo_arbol,
     lwd             = grosor1,
-    offset_range    = config$rango_desfase %||% 0.1,
+    offset_range    = config$offset_range %||% 0.1,
     use_edge_length = isTRUE(config$use_edge_length),
     ladderize       = config$ladderize %||% FALSE,
       terminal_stretch = config$terminal_stretch %||% 1,

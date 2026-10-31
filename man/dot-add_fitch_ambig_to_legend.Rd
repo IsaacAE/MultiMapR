@@ -9,13 +9,13 @@
 \arguments{
 \item{colores_estado}{Named character vector state -> color.}
 
-\item{config}{Configuration list (uses config$algoritmo).}
+\item{config}{Configuration list (uses config$algorithm).}
 }
 \value{
 Possibly extended named character vector.
 }
 \description{
-When the selected algorithm is Fitch (config$algoritmo == 2), appends
+When the selected algorithm is Fitch (config$algorithm == "fitch"), appends
 an "Ambiguous / Missing" entry with the color from
 \code{.get_fitch_ambig_color()} to \code{colores_estado} so the legend
 always shows what the ambiguous branches/figures mean.

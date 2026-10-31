@@ -128,15 +128,15 @@
   config$node_size  <- node_size
   # NULL keeps what the config already carries (e.g. set by the interface)
   if (!is.null(missing_colors))
-    config$missing_colors <- .normalize_missing_colors(missing_colors, config$caracteres)
+    config$missing_colors <- .normalize_missing_colors(missing_colors, config$characters)
 
   # -- Branch width (parameter overrides menu default of 2) ------------------
   if (!is.numeric(branch_width) || length(branch_width) != 1L || branch_width <= 0)
     stop("`branch_width` must be a positive number.")
-  config$grosor <- branch_width
-  offset_factor <- switch(config$tipo_arbol %||% "phylogram",
+  config$branch_width <- branch_width
+  offset_factor <- switch(config$tree_type %||% "phylogram",
                           "phylogram" = 0.012, "cladogram" = 0.012, "fan" = 0.003, 0.012)
-  config$rango_desfase <- max(0.05, branch_width * offset_factor)
+  config$offset_range <- max(0.05, branch_width * offset_factor)
 
   # -- Branch lengths ----------------------------------------------------------
   # use_edge_length = NULL  -> respect menu choice stored in config
@@ -349,9 +349,9 @@ execute_phylogeny <- function(phylogeny, character_data,
 
     # Resolve named palette if the user passed a single string
     if (is.character(palette) && length(palette) == 1L &&
-        exists("PALETAS_PREDEFINIDAS", mode = "list") &&
-        palette %in% names(PALETAS_PREDEFINIDAS)) {
-      palette <- PALETAS_PREDEFINIDAS[[palette]]
+        exists("PRESET_PALETTES", mode = "list") &&
+        palette %in% names(PRESET_PALETTES)) {
+      palette <- PRESET_PALETTES[[palette]]
     }
 
     # Validate the user-supplied ambiguity color, if any (applies to missing
@@ -415,7 +415,7 @@ execute_phylogeny <- function(phylogeny, character_data,
       } else if (next_action == "algorithm") {
         algo_result <- prompt_ancestral_algorithm()
         if (is.null(algo_result)) break
-        config$algoritmo  <- algo_result$algoritmo
+        config$algorithm  <- algo_result$algorithm
         config$fitch_mode <- algo_result$fitch_mode
       }
     }

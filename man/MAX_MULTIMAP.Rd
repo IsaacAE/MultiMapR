@@ -5,7 +5,7 @@
 \alias{MAX_MULTIMAP}
 \title{Maximum number of characters superimposed in one multimapping
 (ancestral reconstruction). One sequential gradient per slot in
-\code{GAMAS_MULTIMAPEO}.}
+\code{MULTIMAP_RAMPS}.}
 \format{
 An object of class \code{integer} of length 1.
 }
@@ -15,6 +15,6 @@ MAX_MULTIMAP
 \description{
 Maximum number of characters superimposed in one multimapping
 (ancestral reconstruction). One sequential gradient per slot in
-\code{GAMAS_MULTIMAPEO}.
+\code{MULTIMAP_RAMPS}.
 }
 \keyword{datasets}

@@ -18,7 +18,7 @@ setup_mapping_config(
 \item{character_data}{Data.frame with a \code{"Species"} column and characters.}
 
 \item{use_palettes}{Logical. If \code{TRUE}, colors are assigned automatically
-from \code{PALETAS_ACCESIBLES}; color prompts are skipped but
+from \code{ACCESSIBLE_PALETTES}; color prompts are skipped but
 state-selection prompts are still shown interactively.}
 
 \item{user_palette}{Optional character vector of colors supplied directly by

@@ -51,7 +51,7 @@
 #' @noRd
 .gui_palette_row <- function(tr, key) {
   tags <- shiny::tags
-  cols <- if (identical(key, "auto")) PALETAS_ACCESIBLES$okabe else .gui_palettes()[[key]]
+  cols <- if (identical(key, "auto")) ACCESSIBLE_PALETTES$okabe else .gui_palettes()[[key]]
   cols <- .gui_hex(cols)
   tags$span(class = "mm-pal",
             .gui_t(.GUI_PALETTE_KEYS[[key]], tr, class = "mm-pal-name"),
