@@ -86,7 +86,7 @@ length 1 and the topology is preserved. Default \code{1}.}
 \item{tip_end}{Style of the free branch ends (any topology),
 \code{"round"} (default), \code{"butt"} or \code{"square"}.
 Only the tips are affected: at internal nodes the
-colour bands always meet in closed miter joins
+color bands always meet in closed miter joins
 (cladogram) or a flush butt join (phylogram/fan).}
 
 \item{branch_angle}{Cladogram only. Angle of every branch from the horizontal,

@@ -8,6 +8,14 @@
 \description{
 Maps and visualizes discrete morphological, ecological, or molecular characters on phylogenetic trees. Supports simple terminal mapping and ancestral state reconstruction (depth-weighted majority and Fitch parsimony with ACCTRAN, DELTRAN, and Unambiguous modes) across phylogram, cladogram, and fan topologies. Exports publication-ready PNG and PDF figures.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/IsaacAE/MultiMapR}
+  \item Report bugs at \url{https://github.com/IsaacAE/MultiMapR/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Kevin Isaac Alcántara Estrada \email{isaac.ae@ciencias.unam.mx}
 

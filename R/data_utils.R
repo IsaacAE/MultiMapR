@@ -75,11 +75,11 @@ adjust_cex <- function(phylogeny, min_cex = 0.2, config = NULL) {
   all_colors <- character(0)
 
   for (char in characters) {
-    state_cols  <- colors_by_char[[char]]
-    states <- names(state_cols)
-    by_char[[char]] <- list(labels = states, colors = unname(state_cols))
+    char_state_colors  <- colors_by_char[[char]]
+    states <- names(char_state_colors)
+    by_char[[char]] <- list(labels = states, colors = unname(char_state_colors))
     all_labels <- c(all_labels, states)
-    all_colors <- c(all_colors, unname(state_cols))
+    all_colors <- c(all_colors, unname(char_state_colors))
   }
 
   list(by_char = by_char, labels = all_labels, colors = all_colors)

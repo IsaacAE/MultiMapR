@@ -32,8 +32,8 @@ CHAR_STATS_COLORS <- c(scored = "#009E73", missing = "#E69F00", inapplicable = "
 #' Classifies each cell of a character column as scored/missing/inapplicable
 #' @noRd
 .classify_character_values <- function(vals) {
-  vals      <- as.character(vals)
-  vals_trim <- trimws(vals)
+  vals       <- as.character(vals)
+  vals_trim  <- trimws(vals)
   is_missing <- is.na(vals) | vals_trim %in% c("", "?")
   is_inapp   <- !is_missing & vals_trim == "-"
   ifelse(is_missing, "missing", ifelse(is_inapp, "inapplicable", "scored"))
@@ -212,14 +212,14 @@ plot_character_stats <- function(character_data, characters = NULL,
   )
   rownames(st) <- NULL
 
-  n_char <- nrow(st)
+  n_chars <- nrow(st)
   mat <- t(as.matrix(st[, c("n_scored", "n_missing", "n_inapplicable")]))
   rownames(mat) <- c("scored", "missing", "inapplicable")
   colnames(mat) <- st$character
   storage.mode(mat) <- "numeric"
   # barplot(horiz=TRUE) draws its first column at the bottom; reverse the
   # columns so the first row of `st` (as sorted above) ends up on top.
-  mat <- mat[, rev(seq_len(n_char)), drop = FALSE]
+  mat <- mat[, rev(seq_len(n_chars)), drop = FALSE]
 
   draw <- function() {
     left_mar <- max(6, max(nchar(colnames(mat))) * 0.55 + 2)
@@ -227,7 +227,7 @@ plot_character_stats <- function(character_data, characters = NULL,
     on.exit(par(old_par))
 
     barplot(mat, horiz = TRUE, col = colors[rownames(mat)], border = border,
-            lwd = 0.6, las = 1, cex.names = min(0.9, max(0.35, 30 / n_char)),
+            lwd = 0.6, las = 1, cex.names = min(0.9, max(0.35, 30 / n_chars)),
             xlab = "Number of taxa",
             main = "Character data completeness")
 
@@ -241,7 +241,7 @@ plot_character_stats <- function(character_data, characters = NULL,
 
   if (!is.null(export_filename)) {
     w_in <- width  %||% 8
-    h_in <- height %||% max(3, 0.28 * n_char + 1.5)
+    h_in <- height %||% max(3, 0.28 * n_chars + 1.5)
     prev_dev <- dev.cur()
     .emtree_open_device(export_filename, export_format, w_in, h_in)
     draw()
@@ -257,17 +257,17 @@ plot_character_stats <- function(character_data, characters = NULL,
 #' Page layout (in inches) of the taxon x character heatmap
 #' @noRd
 .completeness_layout <- function(species, characters, cell_in = 0.2) {
-  n_taxa <- length(species); n_char <- length(characters)
-  ch_w   <- 0.075                                # ~ width of one glyph at cex 0.8
-  sp_w   <- max(nchar(species))    * ch_w + 0.2
-  cl_h   <- max(nchar(characters)) * ch_w + 0.2
-  right_labels <- n_char > 15                    # repeat taxa on the right
+  n_taxa       <- length(species); n_chars <- length(characters)
+  ch_w         <- 0.075                                # ~ width of one glyph at cex 0.8
+  sp_w         <- max(nchar(species))    * ch_w + 0.2
+  cl_h         <- max(nchar(characters)) * ch_w + 0.2
+  right_labels <- n_chars > 15                    # repeat taxa on the right
   top_labels   <- n_taxa > 20                    # repeat characters on top
-  head_h <- 0.7                                  # title + legend
-  mai <- c(cl_h, sp_w, head_h + if (top_labels) cl_h else 0.1,
+  head_h       <- 0.7                                  # title + legend
+  mai          <- c(cl_h, sp_w, head_h + if (top_labels) cl_h else 0.1,
            if (right_labels) sp_w else 0.25)
   list(mai = mai,
-       width  = n_char * cell_in + mai[2] + mai[4],
+       width  = n_chars * cell_in + mai[2] + mai[4],
        height = n_taxa * cell_in + mai[1] + mai[3],
        right_labels = right_labels, top_labels = top_labels)
 }
@@ -339,14 +339,14 @@ plot_character_completeness <- function(character_data, characters = NULL,
     as.character(seq_len(nrow(character_data)))
   }
   n_taxa <- length(species)
-  n_char <- length(characters)
+  n_chars <- length(characters)
 
   vals <- vapply(characters, function(ch) {
     v <- trimws(as.character(character_data[[ch]]))
     v[is.na(v) | v == ""] <- "?"
     v
   }, character(n_taxa))
-  vals <- matrix(vals, nrow = n_taxa, ncol = n_char)
+  vals <- matrix(vals, nrow = n_taxa, ncol = n_chars)
   cls  <- .classify_character_values(vals)          # column-major, like `vals`
   fill <- unname(colors[cls])
   ink  <- .contrast_ink(fill)
@@ -365,30 +365,30 @@ plot_character_completeness <- function(character_data, characters = NULL,
     on.exit(par(old_par))
 
     plot.new()
-    plot.window(xlim = c(0, n_char), ylim = c(0, n_taxa), xaxs = "i", yaxs = "i")
+    plot.window(xlim = c(0, n_chars), ylim = c(0, n_taxa), xaxs = "i", yaxs = "i")
     pin    <- par("pin")
-    cell_w <- pin[1] / n_char
+    cell_w <- pin[1] / n_chars
     cell_h <- pin[2] / n_taxa
     line_h <- par("cin")[2]                             # text line height at cex 1
 
-    xl <- rep(seq_len(n_char) - 1, each = n_taxa)
-    yb <- rep(n_taxa - seq_len(n_taxa), times = n_char)
+    xl <- rep(seq_len(n_chars) - 1, each = n_taxa)
+    yb <- rep(n_taxa - seq_len(n_taxa), times = n_chars)
     # Outlines on cells narrower than ~1.5 mm would just grey the whole plot.
     rect(xl, yb, xl + 1, yb + 1, col = fill,
          border = if (min(cell_w, cell_h) < 0.06) NA else border, lwd = 0.6)
 
     if (guide_every > 0) {
       guide_col <- "grey10"
-      if (n_char > guide_every) {
-        gx <- seq(guide_every, n_char - 1, by = guide_every)
+      if (n_chars > guide_every) {
+        gx <- seq(guide_every, n_chars - 1, by = guide_every)
         segments(gx, 0, gx, n_taxa, col = guide_col, lwd = 1.8)
       }
       if (n_taxa > guide_every) {
         gy <- n_taxa - seq(guide_every, n_taxa - 1, by = guide_every)
-        segments(0, gy, n_char, gy, col = guide_col, lwd = 1.8)
+        segments(0, gy, n_chars, gy, col = guide_col, lwd = 1.8)
       }
     }
-    rect(0, 0, n_char, n_taxa, border = "grey15", lwd = 1.2)
+    rect(0, 0, n_chars, n_taxa, border = "grey15", lwd = 1.2)
 
     # State written inside each cell
     val_cex <- min(0.8, 0.75 * cell_h / line_h,
@@ -409,7 +409,7 @@ plot_character_completeness <- function(character_data, characters = NULL,
     # Character labels (bottom, and top on tall matrices)
     ch_cex <- min(0.8, 0.9 * cell_w / line_h)
     if (isTRUE(show_char_labels) || (is.null(show_char_labels) && ch_cex >= 0.3)) {
-      ch_at <- seq_len(n_char) - 0.5
+      ch_at <- seq_len(n_chars) - 0.5
       mtext(characters, side = 1, at = ch_at, las = 2, line = 0.3, cex = ch_cex, adj = 1)
       if (layout$top_labels)
         mtext(characters, side = 3, at = ch_at, las = 2, line = 0.3, cex = ch_cex, adj = 0)

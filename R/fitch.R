@@ -227,18 +227,18 @@ external_algorithm <- function(tree, tip_colors, edge_colors, config = NULL) {
     palette <- setNames(as.character(tip_colors), tip_states)
     palette <- palette[!duplicated(names(palette))]
     palette <- palette[names(palette) != "?"]
-    ambiguous_color <- config$ambiguity_color %||% FITCH_AMBIG_COLOR
+    ambiguity_color <- config$ambiguity_color %||% FITCH_AMBIG_COLOR
   } else {
-    unique_colors  <- unique(tip_colors[tip_colors != "gray70"])
-    state_labels   <- as.character(seq_len(length(unique_colors)) - 1L)
-    palette        <- setNames(unique_colors, state_labels)
-    color_to_state <- setNames(state_labels, unique_colors)
-    tip_states <- vapply(tip_colors, function(col) {
+    unique_colors   <- unique(tip_colors[tip_colors != "gray70"])
+    state_labels    <- as.character(seq_len(length(unique_colors)) - 1L)
+    palette         <- setNames(unique_colors, state_labels)
+    color_to_state  <- setNames(state_labels, unique_colors)
+    tip_states      <- vapply(tip_colors, function(col) {
       if (col == "gray70" || is.na(col)) "?"
       else color_to_state[col]
     }, character(1))
     names(tip_states) <- NULL
-    ambiguous_color   <- config$ambiguity_color %||% FITCH_AMBIG_COLOR
+    ambiguity_color   <- config$ambiguity_color %||% FITCH_AMBIG_COLOR
   }
 
   down_result <- .fitch_downpass(tree, tip_states)
@@ -251,7 +251,7 @@ external_algorithm <- function(tree, tip_colors, edge_colors, config = NULL) {
     if (!is.na(child_state) && child_state %in% names(palette)) {
       edge_colors[i] <- palette[child_state]
     } else {
-      edge_colors[i] <- ambiguous_color
+      edge_colors[i] <- ambiguity_color
     }
   }
 
@@ -263,7 +263,7 @@ external_algorithm <- function(tree, tip_colors, edge_colors, config = NULL) {
   attr(edge_colors, "root_color") <- if (!is.na(root_state) && root_state %in% names(palette)) {
     unname(palette[root_state])
   } else {
-    ambiguous_color
+    ambiguity_color
   }
 
   edge_colors

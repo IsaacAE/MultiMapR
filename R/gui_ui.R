@@ -404,14 +404,14 @@
             .gui_label("node_figure", tr),
             tags$div(class = "mm-btns mm-shapes",
                      shiny::radioButtons("node_shape", NULL, inline = TRUE,
-                                         choiceNames = list(shape_choice("●", "circle"),
-                                                            shape_choice("■", "square"),
-                                                            shape_choice("◆", "diamond"),
-                                                            shape_choice("▲", "triangle"),
-                                                            shape_choice("▼", "triangle_down")),
+                                         choiceNames = list(shape_choice("\u25CF", "circle"),
+                                                            shape_choice("\u25A0", "square"),
+                                                            shape_choice("\u25C6", "diamond"),
+                                                            shape_choice("\u25B2", "triangle"),
+                                                            shape_choice("\u25BC", "triangle_down")),
                                          choiceValues = c("21", "22", "23", "24", "25"))),
             shiny::sliderInput("node_size", t("size"), min = 0.4, max = 3,
-                               value = 1, step = 0.1, pre = "×", ticks = FALSE)))))
+                               value = 1, step = 0.1, pre = "\u00D7", ticks = FALSE)))))
   )
 
   # Step B -- characters
@@ -489,7 +489,7 @@
     shiny::checkboxInput("show_labels", t("show_labels"), TRUE),
     shiny::conditionalPanel("input.show_labels",
       shiny::sliderInput("label_size", t("label_size"), min = 0.4, max = 2.5,
-                         value = 1, step = 0.1, pre = "×", ticks = FALSE),
+                         value = 1, step = 0.1, pre = "\u00D7", ticks = FALSE),
       tags$div(class = "mm-ambig-row mb-3",
                t("label_color", class = "mm-grow"),
                .gui_color_input("label_color", "#000000", label = tr("label_color"),

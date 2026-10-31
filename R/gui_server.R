@@ -368,13 +368,13 @@
     })
 
     output$stats_table <- shiny::renderUI({
-      tr <- trr()
-      d <- dat(); shiny::req(d)
-      st   <- d$stats
-      body <- st[st$character != "TOTAL", ]
-      tot  <- st[st$character == "TOTAL", ]
-      cnt <- function(n, p) sprintf("%d \u00B7 %.0f%%", n, p)
-      th <- function(i, key, num = FALSE, dot = NULL) {
+      tr    <- trr()
+      d     <- dat(); shiny::req(d)
+      st    <- d$stats
+      body  <- st[st$character != "TOTAL", ]
+      tot   <- st[st$character == "TOTAL", ]
+      cnt   <- function(n, p) sprintf("%d \u00B7 %.0f%%", n, p)
+      th    <- function(i, key, num = FALSE, dot = NULL) {
         tags$th(scope = "col", `data-col` = i - 1L, `data-type` = if (num) "num" else "txt",
                 class = if (num) "mm-num", `aria-sort` = "none",
                 tags$button(type = "button",
@@ -458,14 +458,14 @@
 
     # Interactive taxon x character matrix (hover highlights row + column, see multimapr.js)
     output$matrix_table <- shiny::renderUI({
-      tr <- trr()
-      d <- dat(); shiny::req(d)
-      esc     <- htmltools::htmlEscape
-      species <- as.character(d$aligned$Species)
-      n_show  <- min(length(d$chars), max(1L, floor(60000 / max(1L, length(species)))))
-      chars   <- d$chars[seq_len(n_show)]
-      picked  <- shiny::isolate(mx_colors())
-      cells <- vapply(chars, function(ch) {
+      tr       <- trr()
+      d        <- dat(); shiny::req(d)
+      esc      <- htmltools::htmlEscape
+      species  <- as.character(d$aligned$Species)
+      n_show   <- min(length(d$chars), max(1L, floor(60000 / max(1L, length(species)))))
+      chars    <- d$chars[seq_len(n_show)]
+      picked   <- shiny::isolate(mx_colors())
+      cells    <- vapply(chars, function(ch) {
         v <- trimws(as.character(d$aligned[[ch]]))
         v[is.na(v) | v == ""] <- "?"
         cls <- c(scored = "mm-c-s", missing = "mm-c-m",
@@ -511,14 +511,14 @@
                                    c(sc[[2]], sc[[3]])[match(special, c("?", "-"))]),
                                  all_st)
       rows <- lapply(all_st, function(st) {
-        lbl <- if (st == "?") paste(st, tr("state_missing"))
+        state_label <- if (st == "?") paste(st, tr("state_missing"))
                else if (st == "-") paste(st, tr("state_inapp")) else st
         tags$div(class = "mm-state",
                  tags$input(type = "color", class = "mm-mx-pick",
                             value = if (!is.null(cur[[st]])) cur[[st]] else base[[st]],
                             `data-char` = ch, `data-state` = st,
                             `aria-label` = tr("state_color", st), title = tr("state_color", st)),
-                 tags$span(class = "mm-state-label", lbl),
+                 tags$span(class = "mm-state-label", state_label),
                  tags$span(class = "mm-state-count", tr("n_tax", sum(vals == st, na.rm = TRUE))))
       })
       shiny::showModal(shiny::modalDialog(
@@ -692,11 +692,11 @@
     mt <- isolate(mode_num())
 
     isolate(lapply(seq_along(sel), function(slot) {
-      ch     <- sel[slot]
-      pfx    <- card_prefix(d, ch)
-      states <- card_states(d, ch)
-      vals   <- as.character(d$aligned[[ch]])
-      srow   <- body[body$character == ch, ]
+      ch       <- sel[slot]
+      pfx      <- card_prefix(d, ch)
+      states   <- card_states(d, ch)
+      vals     <- as.character(d$aligned[[ch]])
+      srow     <- body[body$character == ch, ]
       defaults <- .gui_palette_colors(card_choice(d, ch), length(states), slot, mt, length(sel))
 
       rows <- lapply(seq_along(states), function(si) {
@@ -835,9 +835,9 @@
     empty_chars    <- character(0)
     all_selected   <- TRUE
     for (slot in seq_along(sel)) {
-      ch     <- sel[slot]
-      pfx    <- card_prefix(d, ch)
-      states <- card_states(d, ch)
+      ch       <- sel[slot]
+      pfx      <- card_prefix(d, ch)
+      states   <- card_states(d, ch)
       defaults <- .gui_palette_colors(isolate(card_choice(d, ch)), length(states), slot, mt,
                                       length(sel))
       cols <- vapply(seq_along(states), function(si)
@@ -897,11 +897,11 @@
     }
     ladder <- switch(input$ladderize %||% "TRUE", "TRUE" = TRUE, "right" = "right", FALSE)
     list(status = "ok",
-         tree   = d$tree,
-         config = config,
-         empty  = empty_chars,
+         tree    = d$tree,
+         config  = config,
+         empty   = empty_chars,
          trimmed = if (mt == 2L && length(chars_sel()) > MAX_MULTIMAP) utils::head(chars_sel(), MAX_MULTIMAP),
-         render = list(branch_width     = input$branch_width %||% 2,
+         render  = list(branch_width     = input$branch_width %||% 2,
                        use_edge_length  = uses_lengths(),
                        ladderize        = ladder,
                        terminal_stretch = if (mt == 2L && !uses_lengths())

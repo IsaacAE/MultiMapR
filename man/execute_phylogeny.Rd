@@ -113,7 +113,7 @@ Angle of every branch from the horizontal, in
 degrees (10-80). The default \code{45} makes sibling
 branches meet at right angles; 30-60 is the
 recommended range, since smaller angles move the
-colour lanes' corners away from the nodes.
+color lanes' corners away from the nodes.
 \code{NULL} stretches the tree to the full width of
 the figure.}
 

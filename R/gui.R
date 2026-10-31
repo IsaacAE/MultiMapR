@@ -201,15 +201,15 @@ run_multimapr_app <- function(tree = NULL, characters = NULL,
 #' @noRd
 .gui_palettes <- function() {
   list(okabe  = ACCESSIBLE_PALETTES$okabe,
-       tol    = ACCESSIBLE_PALETTES$tol,
-       plasma = ACCESSIBLE_PALETTES$plasma,
-       reds  = MULTIMAP_RAMPS$reds,
-       greens = MULTIMAP_RAMPS$greens,
-       blues = MULTIMAP_RAMPS$blues,
-       golds = MULTIMAP_RAMPS$golds,
+       tol     = ACCESSIBLE_PALETTES$tol,
+       plasma  = ACCESSIBLE_PALETTES$plasma,
+       reds    = MULTIMAP_RAMPS$reds,
+       greens  = MULTIMAP_RAMPS$greens,
+       blues   = MULTIMAP_RAMPS$blues,
+       golds   = MULTIMAP_RAMPS$golds,
        purples = MULTIMAP_RAMPS$purples,
-       wc    = PRESET_PALETTES$wc,
-       MM1    = PRESET_PALETTES$MM1)
+       wc      = PRESET_PALETTES$wc,
+       MM1     = PRESET_PALETTES$MM1)
 }
 
 #' Dictionary key (or literal name) for each palette

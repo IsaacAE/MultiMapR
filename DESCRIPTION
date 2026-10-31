@@ -13,6 +13,8 @@ Description: Maps and visualizes discrete morphological, ecological, or molecula
     state reconstruction (depth-weighted majority and Fitch parsimony with ACCTRAN,
     DELTRAN, and Unambiguous modes) across phylogram, cladogram, and fan topologies.
     Exports publication-ready PNG and PDF figures.
+URL: https://github.com/IsaacAE/MultiMapR
+BugReports: https://github.com/IsaacAE/MultiMapR/issues
 License: GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

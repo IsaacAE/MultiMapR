@@ -35,11 +35,12 @@ automatically as a dependency.
 ``` r
 library(MultiMapR)
 
+# Example data shipped with the package (NEXUS tree + CSV matrix)
+tree  <- system.file("extdata", "bats_tre.tre", package = "MultiMapR")
+chars <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+
 # Pass file paths directly — the interactive menu opens automatically
-execute_phylogeny(
-  phylogeny      = "arbol_aves.tre",
-  character_data = "matriz_aves.csv"
-)
+execute_phylogeny(phylogeny = tree, character_data = chars)
 ```
 
 Paths can be absolute or relative to your working directory (`getwd()`).
@@ -47,7 +48,7 @@ Paths can be absolute or relative to your working directory (`getwd()`).
 loaded the data:
 
 ``` r
-data <- load_data("arbol_aves.tre", "matriz_aves.csv")
+data <- load_data(tree, chars)
 execute_phylogeny(data$tree, data$characters)
 ```
 
@@ -67,9 +68,9 @@ install.packages(c("shiny", "bslib"))
 
 run_multimapr_app()                       # load files from the "Data" tab
 run_multimapr_app(lang = "es")            # Spanish interface
-run_multimapr_app("arbol_aves.tre", "matriz_aves.csv")   # preload from files
+run_multimapr_app(tree, chars)            # preload from files (paths as in the quick start)
 
-d <- load_data("arbol_aves.tre", "matriz_aves.csv")
+d <- load_data(tree, chars)
 run_multimapr_app(d$tree, d$characters)   # preload R objects
 ```
 
@@ -355,11 +356,10 @@ data.
 ## Figure appearance
 
 The same drawing options are available in `execute_phylogeny()`, in the
-graphical interface (steps D and E) and in `export_multimapr_tree()` /
-`plot_multimapr_screen()`:
+graphical interface (steps D and E) and in `export_multimapr_tree()`:
 
 ``` r
-execute_phylogeny("arbol_aves.tre", "matriz_aves.csv",
+execute_phylogeny(tree, chars,
                   branch_width = 3,
                   tip_end      = "round",  # "round", "butt" (flat) or "square"
                   branch_angle = 45,       # cladogram branch angle; NULL = full width
@@ -430,7 +430,7 @@ never appear too small or overlap.
     │   ├── character_stats.R        ← Missing / inapplicable statistics and plots
     │   ├── default_alg.R            ← Default reconstruction algorithm
     │   ├── fitch.R                  ← Fitch algorithm (ACCTRAN/DELTRAN/Unambiguous),
-    │   │                              exported as external_algorithm()
+    │   │                              provides external_algorithm()
     │   ├── gui.R                    ← run_multimapr_app(), theme, dictionary,
     │   │                              non-reactive helpers of the interface
     │   ├── gui_ui.R                 ← Interface layout and components
@@ -451,8 +451,7 @@ disk; `load_data.R` never draws; `cli_menu.R` only handles console
 input; the three `gui_*.R` files hold no rendering or reading logic of
 their own — they build the same configuration list as
 `setup_mapping_config()` and hand it to `.render_configured_mapping()`.
-Private helpers carry a `.` prefix and are not exported to the
-namespace.
+Everything else is internal and not exported.
 
 ### Interface internals
 
@@ -467,21 +466,19 @@ namespace.
 
 Static texts are emitted as `<span data-i18n="key">`, so the browser can
 swap them when the language changes; server-rendered fragments are
-translated in R with the current language. The layout follows the design
-handoff in `design_handoff_multimapr_gui/`, with two deliberate
-departures: the palettes are the package ones (so figures match the
-console output) and the statistics table is a plain sortable table
-instead of `DT`, to avoid an extra dependency.
+translated in R with the current language. The palettes are the package
+ones (so figures match the console output) and the statistics table is a
+plain sortable table rather than `DT`, to avoid an extra dependency.
 
 ### Internal dispatch
 
 `core_render.R` dispatches ancestral reconstruction via
 `apply_ancestral_algorithm()`:
 
-| `config$algoritmo` | Function called | Config key used |
+| `config$algorithm` | Function called | Config key used |
 |----|----|----|
-| `1` | `default_algorithm(tree, tip_colors, edge_colors)` | — |
-| `2` | `external_algorithm(tree, tip_colors, edge_colors, config)` | `config$fitch_mode` |
+| `"majority"` | `default_algorithm(tree, tip_colors, edge_colors)` | — |
+| `"fitch"` | `external_algorithm(tree, tip_colors, edge_colors, config)` | `config$fitch_mode` |
 
 `config$fitch_mode` is a string (`"acctran"`, `"deltran"`, or
 `"unambiguous"`) set by `cli_menu.R`.
@@ -490,16 +487,16 @@ instead of `DT`, to avoid an extra dependency.
 
 | Function | Description |
 |----|----|
-| `execute_phylogeny(tree, data, ...)` | Main orchestrator. Accepts file paths or in-memory objects. |
+| `execute_phylogeny(phylogeny, character_data, ...)` | Main orchestrator. Accepts file paths or in-memory objects. |
 | `run_multimapr_app(tree, characters, lang, launch.browser, port, ...)` | Opens the graphical interface (Shiny). Both data arguments are optional; `lang` is `"en"` or `"es"`. |
 | `load_data(tree_path, csv_path, ...)` | Loads and validates tree + character matrix. |
-| `read_tree(path, format = "auto")` | Reads a tree file independently. |
+| `read_tree(tree_path, tree_format = "auto")` | Reads a tree file independently. |
 | `read_characters(path, format = "auto", ...)` | Reads a matrix (CSV / TNT / NEXUS) independently. |
-| `read_csv_characters(path, ...)` | Reads a character CSV independently. |
+| `read_csv_characters(csv_path, ...)` | Reads a character CSV independently. |
 | `validate_compatibility(tree, data)` | Checks tip-name/species-name agreement. |
-| `character_stats(data, characters)` | Missing / inapplicable / scored counts per character. |
-| `plot_character_stats(data, ...)` | Stacked bar plot of data completeness per character. |
-| `plot_character_completeness(data, ...)` | Taxon × character completeness heat map. |
+| `character_stats(character_data, characters)` | Missing / inapplicable / scored counts per character. |
+| `plot_character_stats(character_data, ...)` | Stacked bar plot of data completeness per character. |
+| `plot_character_completeness(character_data, ...)` | Taxon × character completeness heat map. |
 | `export_multimapr_tree(tree, ...)` | Low-level export engine (PNG / PDF). |
 
 ## FAQ
@@ -564,7 +561,7 @@ figures and presentations that are friendly to colorblind people.
 
 ## Citation
 
-    Alcántara Estrada, K. I., Linares Ríos, J. & Díaz Cruz, J. A. MultiMapR:
+    Alcántara Estrada, K. I., Linares Rios, J. & Díaz Cruz, J. A. MultiMapR:
     Mapping and Visualization of Discrete Characters on Phylogenies.
     R package. https://github.com/IsaacAE/MultiMapR
 

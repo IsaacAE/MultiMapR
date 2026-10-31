@@ -234,11 +234,11 @@
 #' Measures the space occupied by the legend in data coordinates using `legend(..., plot = FALSE)`, which calculates the rect without rendering
 #' @noRd
 .emtree_measure_legend <- function(corner,
-                                   legend_by_char = NULL,
-                                   legend_labels  = NULL,
-                                   legend_title   = NULL,
-                                   cex_legend        = 0.8,
-                                   legend_layout  = "vertical") {
+                                   legend_by_char  = NULL,
+                                   legend_labels   = NULL,
+                                   legend_title    = NULL,
+                                   cex_legend      = 0.8,
+                                   legend_layout   = "vertical") {
 
   going_down <- grepl("top",   corner)
   on_right   <- grepl("right", corner)
@@ -293,13 +293,13 @@
 #' Draws the legend in the reserved corner of the margin
 #' @noRd
 .emtree_draw_legend <- function(corner,
-                                legend_by_char = NULL,
-                                legend_labels  = NULL,
-                                legend_colors  = NULL,
-                                legend_title   = NULL,
-                                pch            = 15,
-                                cex_legend        = 0.8,
-                                legend_layout  = "vertical") {
+                                legend_by_char  = NULL,
+                                legend_labels   = NULL,
+                                legend_colors   = NULL,
+                                legend_title    = NULL,
+                                pch             = 15,
+                                cex_legend      = 0.8,
+                                legend_layout   = "vertical") {
 
   old_xpd <- par("xpd")
   par(xpd = NA)
@@ -534,10 +534,10 @@
   lend_code  <- .emtree_lend_code(tip_end)
 
   # Work in inches so perpendicular distances are isotropic on the device
-  usr <- par("usr"); pin <- par("pin")
-  sx  <- (usr[2L] - usr[1L]) / pin[1L]
-  sy  <- (usr[4L] - usr[3L]) / pin[2L]
-  xx  <- pp$xx
+  usr          <- par("usr"); pin <- par("pin")
+  sx           <- (usr[2L] - usr[1L]) / pin[1L]
+  sy           <- (usr[4L] - usr[3L]) / pin[2L]
+  xx           <- pp$xx
   branch_angle <- .emtree_branch_angle(branch_angle)
   if (!is.null(branch_angle)) {
     dxe   <- xx[child_idx] - xx[parent_idx]
@@ -578,7 +578,7 @@
   collinear <- !is.na(entry) &
     (ux * ux[entry] + uy * uy[entry]) > cos(2 * pi / 180)
   collinear[is.na(collinear)] <- FALSE
-  draw  <- order(depth[parent_idx], collinear)
+  draw        <- order(depth[parent_idx], collinear)
   is_tip_edge <- child_idx <= n_tips
   continues   <- child_idx %in% parent_idx[collinear]   # edge has a straight continuation
 
@@ -652,11 +652,11 @@
 
 .emtree_render_fan <- function(pp, tree, color_list, lwd, offsets,
                                tip_end = "round") {
-  xx     <- pp$xx
-  yy     <- pp$yy
-  edges  <- tree$edge
-  n_tips <- Ntip(tree)
-  N      <- length(color_list)
+  xx        <- pp$xx
+  yy        <- pp$yy
+  edges     <- tree$edge
+  n_tips    <- Ntip(tree)
+  N         <- length(color_list)
   lend_code <- .emtree_lend_code(tip_end)
 
   node_angles <- atan2(yy, xx)
@@ -711,10 +711,10 @@
 
       # `tip_end` only styles free tip ends; internal ends keep a butt cap.
       segments(x0  = R_p_new * cos(theta_p_new),
-               y0  = R_p_new * sin(theta_p_new),
-               x1  = R_h_new * cos(theta_h_new),
-               y1  = R_h_new * sin(theta_h_new),
-               col = ec[j], lwd = lwd_i,
+               y0   = R_p_new * sin(theta_p_new),
+               x1   = R_h_new * cos(theta_h_new),
+               y1   = R_h_new * sin(theta_h_new),
+               col  = ec[j], lwd = lwd_i,
                lend = if (h <= n_tips) lend_code else 1L)
     }
 
@@ -821,15 +821,15 @@
   # ncol = ceiling(sqrt(N)); characters fill it row by row from the top-left
   # (N=2 -> 2x1, N=3/4 -> 2x2, N=5 -> 3x2). An incomplete last row stays
   # centered on the node as a whole (empty cells are simply not drawn).
-  usr <- par("usr"); pin <- par("pin")
-  sx  <- (usr[2L] - usr[1L]) / pin[1L]
-  sy  <- (usr[4L] - usr[3L]) / pin[2L]
+  usr     <- par("usr"); pin <- par("pin")
+  sx      <- (usr[2L] - usr[1L]) / pin[1L]
+  sy      <- (usr[4L] - usr[3L]) / pin[2L]
   unit_in <- 0.375 * par("cin")[2L] * 1.05          # figure diameter per unit cex
   step_in <- unit_in * cex
-  ncol <- ceiling(sqrt(N))
-  nrow <- ceiling(N / ncol)
-  cxs  <- rowMeans(matrix(px, ncol = N)) / sx
-  cys  <- rowMeans(matrix(py, ncol = N)) / sy
+  ncol    <- ceiling(sqrt(N))
+  nrow    <- ceiling(N / ncol)
+  cxs     <- rowMeans(matrix(px, ncol = N)) / sx
+  cys     <- rowMeans(matrix(py, ncol = N)) / sy
 
   # Shrink the figures when the grids of two nodes would overlap (dense
   # cladograms): the grids are axis-aligned rectangles ncol x nrow cells, so two
@@ -919,7 +919,7 @@
 #' @param tip_end        Style of the free branch ends (any topology),
 #'                       \code{"round"} (default), \code{"butt"} or \code{"square"}.
 #'                       Only the tips are affected: at internal nodes the
-#'                       colour bands always meet in closed miter joins
+#'                       color bands always meet in closed miter joins
 #'                       (cladogram) or a flush butt join (phylogram/fan).
 #' @param branch_angle   Cladogram only. Angle of every branch from the horizontal,
 #'                       in degrees (10-80; default \code{45}, so siblings meet at
@@ -972,34 +972,34 @@
 export_multimapr_tree <- function(tree,
                                   color_list,
                                   filename,
-                                  type          = "phylogram",
-                                  format        = "png",
-                                  lwd           = 3,
-                                  label_offset  = 0.3,
-                                  offset_range  = 0.1,
-                                  use_edge_length = TRUE,
-                                  ladderize       = FALSE,
+                                  type             = "phylogram",
+                                  format           = "png",
+                                  lwd              = 3,
+                                  label_offset     = 0.3,
+                                  offset_range     = 0.1,
+                                  use_edge_length  = TRUE,
+                                  ladderize        = FALSE,
                                   terminal_stretch = 1,
-                                  tip_end       = "round",
-                                  branch_angle  = 45,
-                                  show_labels   = TRUE,
-                                  label_size    = 1,
-                                  label_color   = "black",
-                                  mar           = c(1, 1, 1, 4),
-                                  width         = NULL,
-                                  height        = NULL,
-                                  legend_by_char = NULL,
-                                  legend_labels  = NULL,
-                                  legend_colors  = NULL,
-                                  legend_corner  = "bottomleft",
-                                  legend_title   = NULL,
-                                  legend_layout  = "vertical",
-                                  overlay_fn      = NULL,
-                                  hide_fan_labels = FALSE,
-                                  header_labels   = NULL,
-                                  node_states     = FALSE,
-                                  node_shape      = "circle",
-                                  node_size       = 1) {
+                                  tip_end          = "round",
+                                  branch_angle     = 45,
+                                  show_labels      = TRUE,
+                                  label_size       = 1,
+                                  label_color      = "black",
+                                  mar              = c(1, 1, 1, 4),
+                                  width            = NULL,
+                                  height           = NULL,
+                                  legend_by_char   = NULL,
+                                  legend_labels    = NULL,
+                                  legend_colors    = NULL,
+                                  legend_corner    = "bottomleft",
+                                  legend_title     = NULL,
+                                  legend_layout    = "vertical",
+                                  overlay_fn       = NULL,
+                                  hide_fan_labels  = FALSE,
+                                  header_labels    = NULL,
+                                  node_states      = FALSE,
+                                  node_shape       = "circle",
+                                  node_size        = 1) {
 
   # Validate arguments
   .emtree_validate_tree(tree)
@@ -1101,9 +1101,9 @@ export_multimapr_tree <- function(tree,
 
   # Render parameters (cex, offsets); computed before opening the final device
   # so the off-screen probe can use them too.
-  cex_base <- max(1 / (1 + n_tips / 50), 0.2)
-  cex_adj   <- cex_base * scale_h
-  cex_lbl  <- cex_adj * label_size   # tip labels only
+  cex_base   <- max(1 / (1 + n_tips / 50), 0.2)
+  cex_adj    <- cex_base * scale_h
+  cex_label  <- cex_adj * label_size   # tip labels only
 
   # Offset proportional to the actual geometric scale of the data (2.5%)
   phy_tmp <- tree
@@ -1122,8 +1122,8 @@ export_multimapr_tree <- function(tree,
     offset_range <- max(0.05, lwd * lwd_factor)
   }
   adjusted_offset_range <- offset_range / scale_h
-  lwd_vec  <- lwd * (0.95 ^ (seq_len(N) - 1L))
-  cex_legend  <- max(0.5, min(1.0, 10 / (n_tips + 10)))
+  lwd_vec               <- lwd * (0.95 ^ (seq_len(N) - 1L))
+  cex_legend            <- max(0.5, min(1.0, 10 / (n_tips + 10)))
 
   mar_base <- c(1, 1, 1, 4)
 
@@ -1136,7 +1136,7 @@ export_multimapr_tree <- function(tree,
          edge.color     = "transparent",
          tip.color      = if (type == "fan") "transparent" else label_color,
          edge.width     = lwd,
-         cex            = cex_lbl,
+         cex            = cex_label,
          label.offset   = label_offset_adj,
          no.margin      = if (type == "fan") FALSE else TRUE,
          show.tip.label = show_labels,
@@ -1163,12 +1163,12 @@ export_multimapr_tree <- function(tree,
 
       if (has_legend) {
         med <- .emtree_measure_legend(
-          corner         = legend_corner,
-          legend_by_char = if (has_grouped_legend) legend_by_char else NULL,
-          legend_labels  = if (!has_grouped_legend) legend_labels else NULL,
-          legend_title   = if (!has_grouped_legend) legend_title  else NULL,
-          cex_legend        = cex_legend,
-          legend_layout  = legend_layout
+          corner          = legend_corner,
+          legend_by_char  = if (has_grouped_legend) legend_by_char else NULL,
+          legend_labels   = if (!has_grouped_legend) legend_labels else NULL,
+          legend_title    = if (!has_grouped_legend) legend_title  else NULL,
+          cex_legend      = cex_legend,
+          legend_layout   = legend_layout
         )
       } else {
         med <- list(dx = 0, dy = 0, on_right = FALSE, going_down = FALSE)
@@ -1180,20 +1180,20 @@ export_multimapr_tree <- function(tree,
         expansion <- max(med$dx, med$dy)
 
         # If the overlay draws rings (hide_fan_labels), the viewport must also fit
-        # them plus the species labels: name_radius = R_max * (1.06 + 0.10 * n_char),
+        # them plus the species labels: radius_labels = R_max * (1.06 + 0.10 * n_chars),
         # plus the estimated width of the longest label.
         if (hide_fan_labels && !is.null(overlay_fn)) {
-          pp_tmp        <- get("last_plot.phylo", envir = .emtree_get_PlotPhyloEnv())
-          xx_t          <- pp_tmp$xx[seq_len(n_tips)]
-          yy_t          <- pp_tmp$yy[seq_len(n_tips)]
-          R_max_ov      <- max(sqrt(xx_t^2 + yy_t^2))
-          n_char_ov     <- length(color_list)   # number of characters = number of histories
-          name_radius   <- R_max_ov * (1.06 + 0.10 * n_char_ov)
-          max_nc        <- max(nchar(tree$tip.label))
-          lbl_est       <- if (show_labels) max_nc * R_max_ov * 0.018 * cex_lbl else 0
-          total_radius  <- name_radius + lbl_est + R_max_ov * 0.05
-          expansion_ov  <- max(0, total_radius - usr[2L])
-          expansion     <- max(expansion, expansion_ov)
+          pp_tmp            <- get("last_plot.phylo", envir = .emtree_get_PlotPhyloEnv())
+          xx_t              <- pp_tmp$xx[seq_len(n_tips)]
+          yy_t              <- pp_tmp$yy[seq_len(n_tips)]
+          R_max_overlay     <- max(sqrt(xx_t^2 + yy_t^2))
+          n_chars_overlay   <- length(color_list)   # number of characters = number of histories
+          radius_labels     <- R_max_overlay * (1.06 + 0.10 * n_chars_overlay)
+          max_nc            <- max(nchar(tree$tip.label))
+          label_w_est       <- if (show_labels) max_nc * R_max_overlay * 0.018 * cex_label else 0
+          radius_total      <- radius_labels + label_w_est + R_max_overlay * 0.05
+          expansion_overlay <- max(0, radius_total - usr[2L])
+          expansion         <- max(expansion, expansion_overlay)
         }
 
         # Symmetric canvas so overlay rings are not clipped in any quadrant.
@@ -1264,16 +1264,16 @@ export_multimapr_tree <- function(tree,
         old_xpd <- par("xpd")
         par(xpd = NA)
         for (j in seq_len(n_tips)) {
-          ang_j  <- angles[j]
-          R_j    <- R_tips[j] + gap_u
+          ang_j      <- angles[j]
+          R_j        <- R_tips[j] + gap_u
           right_side <- cos(ang_j) >= 0
-          srt_j  <- ang_j * 180 / pi
-          adj_j  <- if (right_side) c(0, 0.5) else { srt_j <- srt_j + 180; c(1, 0.5) }
+          srt_j      <- ang_j * 180 / pi
+          adj_j      <- if (right_side) c(0, 0.5) else { srt_j <- srt_j + 180; c(1, 0.5) }
           text(R_j * cos(ang_j),
                R_j * sin(ang_j),
                labels = tree$tip.label[j],
                adj    = adj_j,
-               cex    = cex_lbl,
+               cex    = cex_label,
                col    = label_color,
                font   = 3L,
                srt    = srt_j)
@@ -1285,13 +1285,13 @@ export_multimapr_tree <- function(tree,
     # 6. Legend -- drawn inside the expanded viewport
     if (has_legend) {
       .emtree_draw_legend(
-        corner         = legend_corner,
-        legend_by_char = if (has_grouped_legend) legend_by_char else NULL,
-        legend_labels  = legend_labels,
-        legend_colors  = legend_colors,
-        legend_title   = legend_title,
-        cex_legend        = cex_legend,
-        legend_layout  = legend_layout
+        corner          = legend_corner,
+        legend_by_char  = if (has_grouped_legend) legend_by_char else NULL,
+        legend_labels   = legend_labels,
+        legend_colors   = legend_colors,
+        legend_title    = legend_title,
+        cex_legend      = cex_legend,
+        legend_layout   = legend_layout
       )
     }
 
@@ -1310,8 +1310,8 @@ export_multimapr_tree <- function(tree,
       overlay_fn(pp              = pp,
                  cex_adj          = cex_adj,
                  label_offset_adj = label_offset_adj,
-                 R_tips          = .ov_Rtips,
-                 gap_u           = .ov_gapu)
+                 R_tips           = .ov_Rtips,
+                 gap_u            = .ov_gapu)
     }
 
     dims_origin <- if (!is.null(width) || !is.null(height)) " [custom]" else " [auto]"
@@ -1338,30 +1338,30 @@ export_multimapr_tree <- function(tree,
 #' @noRd
 plot_multimapr_screen <- function(tree,
                                   color_list,
-                                  type          = "phylogram",
-                                  lwd           = 3,
-                                  label_offset  = 0.3,
-                                  offset_range  = 0.1,
-                                  use_edge_length = TRUE,
-                                  ladderize       = FALSE,
+                                  type             = "phylogram",
+                                  lwd              = 3,
+                                  label_offset     = 0.3,
+                                  offset_range     = 0.1,
+                                  use_edge_length  = TRUE,
+                                  ladderize        = FALSE,
                                   terminal_stretch = 1,
-                                  tip_end        = "round",
-                                  branch_angle   = 45,
-                                  show_labels    = TRUE,
-                                  label_size     = 1,
-                                  label_color    = "black",
-                                  legend_by_char = NULL,
-                                  legend_labels  = NULL,
-                                  legend_colors  = NULL,
-                                  legend_corner  = "bottomleft",
-                                  legend_title   = NULL,
-                                  legend_layout  = "vertical",
-                                  overlay_fn      = NULL,
-                                  hide_fan_labels = FALSE,
-                                  header_labels   = NULL,
-                                  node_states     = FALSE,
-                                  node_shape      = "circle",
-                                  node_size       = 1) {
+                                  tip_end          = "round",
+                                  branch_angle     = 45,
+                                  show_labels      = TRUE,
+                                  label_size       = 1,
+                                  label_color      = "black",
+                                  legend_by_char   = NULL,
+                                  legend_labels    = NULL,
+                                  legend_colors    = NULL,
+                                  legend_corner    = "bottomleft",
+                                  legend_title     = NULL,
+                                  legend_layout    = "vertical",
+                                  overlay_fn       = NULL,
+                                  hide_fan_labels  = FALSE,
+                                  header_labels    = NULL,
+                                  node_states      = FALSE,
+                                  node_shape       = "circle",
+                                  node_size        = 1) {
 
   .emtree_validate_tree(tree)
   .emtree_validate_color_list(color_list, nrow(tree$edge))
@@ -1401,9 +1401,9 @@ plot_multimapr_screen <- function(tree,
   scale_h <- 1
   scale_w <- 1
 
-  cex_base <- max(1 / (1 + n_tips / 50), 0.2)
-  cex_adj   <- cex_base * scale_h
-  cex_lbl  <- cex_adj * label_size   # tip labels only
+  cex_base   <- max(1 / (1 + n_tips / 50), 0.2)
+  cex_adj    <- cex_base * scale_h
+  cex_label  <- cex_adj * label_size   # tip labels only
 
   # Offset proportional to actual tree scale (2.5%)
   phy_tmp <- tree
@@ -1427,7 +1427,7 @@ plot_multimapr_screen <- function(tree,
          edge.color     = "transparent",
          tip.color      = if (type == "fan") "transparent" else label_color,
          edge.width     = lwd,
-         cex            = cex_lbl,
+         cex            = cex_label,
          label.offset   = label_offset_adj,
          no.margin      = if (type == "fan") FALSE else TRUE,
          show.tip.label = show_labels,
@@ -1480,7 +1480,7 @@ plot_multimapr_screen <- function(tree,
         srt_j      <- ang_j * 180 / pi
         adj_j      <- if (right_side) c(0, 0.5) else { srt_j <- srt_j + 180; c(1, 0.5) }
         text(R_j * cos(ang_j), R_j * sin(ang_j),
-             labels = tree$tip.label[j], adj = adj_j, cex = cex_lbl,
+             labels = tree$tip.label[j], adj = adj_j, cex = cex_label,
              col = label_color, font = 3L, srt = srt_j)
       }
       par(xpd = old_xpd)
@@ -1493,13 +1493,13 @@ plot_multimapr_screen <- function(tree,
 
   if (has_grouped_legend || has_flat_legend) {
     .emtree_draw_legend(
-      corner         = legend_corner,
-      legend_by_char = legend_by_char,
-      legend_labels  = legend_labels,
-      legend_colors  = legend_colors,
-      legend_title   = legend_title,
-      cex_legend        = cex_legend,
-      legend_layout  = legend_layout
+      corner          = legend_corner,
+      legend_by_char  = legend_by_char,
+      legend_labels   = legend_labels,
+      legend_colors   = legend_colors,
+      legend_title    = legend_title,
+      cex_legend      = cex_legend,
+      legend_layout   = legend_layout
     )
   }
 
@@ -1517,8 +1517,8 @@ plot_multimapr_screen <- function(tree,
     overlay_fn(pp              = pp,
                cex_adj          = cex_adj,
                label_offset_adj = label_offset_adj,
-               R_tips          = .ov_Rtips,
-               gap_u           = .ov_gapu)
+               R_tips           = .ov_Rtips,
+               gap_u            = .ov_gapu)
   }
 
   invisible(NULL)

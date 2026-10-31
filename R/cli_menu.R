@@ -567,12 +567,12 @@ setup_mapping_config <- function(phylogeny, character_data, use_palettes = FALSE
     default_name <- paste0("MultiMapR_",
                            paste(config$characters, collapse = "-"), "_",
                            config$tree_type)
-    fn_str <- readline(prompt = paste0(
+    filename_input <- readline(prompt = paste0(
       "Filename without extension (Enter = '", default_name, "'): "))
-    if (check_exit(fn_str)) return(invisible(NULL))
-    fn <- trimws(fn_str)
-    fn <- sub("\\.(png|pdf)$", "", fn, ignore.case = TRUE)
-    config$export_filename <- if (nzchar(fn)) fn else default_name
+    if (check_exit(filename_input)) return(invisible(NULL))
+    filename <- trimws(filename_input)
+    filename <- sub("\\.(png|pdf)$", "", filename, ignore.case = TRUE)
+    config$export_filename <- if (nzchar(filename)) filename else default_name
 
     # Dimensions
     cat("\nExported file dimensions:\n")

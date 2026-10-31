@@ -1,7 +1,7 @@
 # Package-level imports (written to NAMESPACE by roxygen).
 
-#' @importFrom grDevices adjustcolor colors dev.cur dev.list dev.new dev.off dev.set pdf png
-#' @importFrom graphics  axis barplot legend lines par plot plot.new points rect segments strheight strwidth text
+#' @importFrom grDevices adjustcolor colors dev.cur dev.list dev.new dev.off dev.set dev.size pdf png
+#' @importFrom graphics  axis barplot grconvertX grconvertY legend lines mtext par plot plot.new plot.window points polygon rect segments strheight strwidth text
 #' @importFrom stats     setNames
 #' @importFrom utils     head read.csv
 #' @import ape
@@ -217,7 +217,7 @@
 #'                           degrees (10-80). The default \code{45} makes sibling
 #'                           branches meet at right angles; 30-60 is the
 #'                           recommended range, since smaller angles move the
-#'                           colour lanes' corners away from the nodes.
+#'                           color lanes' corners away from the nodes.
 #'                           \code{NULL} stretches the tree to the full width of
 #'                           the figure.
 #' @param show_labels        Logical. Draw the species names at the tips

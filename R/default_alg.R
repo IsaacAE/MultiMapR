@@ -11,11 +11,11 @@
   result  <- integer(0)
 
   while (length(pending) > 0) {
-    nd      <- pending[1]
-    pending <- pending[-1]
+    nd       <- pending[1]
+    pending  <- pending[-1]
     children <- edges[edges[, 1] == nd, 2]
-    result  <- c(result, children)
-    pending <- c(pending, children)
+    result   <- c(result, children)
+    pending  <- c(pending, children)
   }
   result
 }

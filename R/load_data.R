@@ -245,8 +245,22 @@
 }
 
 
-#' Reads a phylogenetic tree file (Newick, NEXUS or TNT)
-#' @noRd
+#' Read a phylogenetic tree file (Newick, NEXUS or TNT)
+#'
+#' Compatible with files from Mesquite, TNT, WinClada and other programs that
+#' produce non-standard variants of the NEXUS/Newick formats. TNT files using the
+#' \code{tread} / \code{proc-;} syntax are converted to plain Newick before
+#' parsing. Tip labels are trimmed and surrounding quotes are removed. If the file
+#' holds several trees, the first one is used.
+#'
+#' @param tree_path    Path to the tree file.
+#' @param tree_format  \code{"auto"} (default), \code{"newick"} or \code{"nexus"}.
+#' @return A \code{phylo} object.
+#' @examples
+#' tree_file <- system.file("extdata", "bats_tre.tre", package = "MultiMapR")
+#' tree <- read_tree(tree_file)
+#' ape::Ntip(tree)
+#' @export
 read_tree <- function(tree_path, tree_format = "auto") {
   if (!file.exists(tree_path))
     stop(paste0("Tree file not found: '", tree_path, "'"))
@@ -322,8 +336,27 @@ read_tree <- function(tree_path, tree_format = "auto") {
 }
 
 
-#' Reads a character CSV file and prepares it for MultiMapR
-#' @noRd
+#' Read a character CSV file and prepare it for MultiMapR
+#'
+#' Rows may have different numbers of fields (trailing separators are common in
+#' files exported from Excel); columns that are completely empty are discarded.
+#' The header is detected automatically unless \code{header} is given.
+#'
+#' @param csv_path           Path to the CSV file.
+#' @param sep                Field separator (default \code{","}). Use \code{"auto"}
+#'                           to detect ",", ";" or tab. If the given separator yields
+#'                           a single column, the others are tried.
+#' @param species_col        Index or name of the species column (default 1).
+#' @param normalize_spaces   If \code{TRUE}, replaces spaces with "_" in species names
+#'                           (default \code{FALSE}).
+#' @param header             \code{NA} (default, automatic), \code{TRUE} or \code{FALSE}.
+#' @return A data.frame with a \code{Species} column and one column per character
+#'   (named \code{charN} when the file has no header).
+#' @examples
+#' matrix_file <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+#' chars <- read_csv_characters(matrix_file)
+#' dim(chars)
+#' @export
 read_csv_characters <- function(csv_path,
                                 sep               = ",",
                                 species_col       = 1,
@@ -415,9 +448,9 @@ read_tnt_characters <- function(path, normalize_spaces = FALSE) {
 
   dims <- regmatches(body, regexec("^\\s*([0-9]+)\\s+([0-9]+)", body))[[1]]
   if (length(dims) < 3) stop("Could not read 'nchar ntax' after xread.")
-  n_char <- as.integer(dims[2])
-  n_tax  <- as.integer(dims[3])
-  body   <- substring(body, nchar(dims[1]) + 1)
+  n_chars <- as.integer(dims[2])
+  n_tax   <- as.integer(dims[3])
+  body    <- substring(body, nchar(dims[1]) + 1)
 
   end      <- regexpr(";", body, fixed = TRUE)
   mat_txt  <- if (end > 0) substr(body, 1, end - 1) else body
@@ -439,16 +472,16 @@ read_tnt_characters <- function(path, normalize_spaces = FALSE) {
   if (cn > 0) {
     entries <- regmatches(regmatches(rest_txt, cn),
                           gregexpr("\\{[^;]*;", regmatches(rest_txt, cn)))[[1]]
-    idx   <- as.integer(sub("^\\{\\s*([0-9]+).*$", "\\1", entries))
-    parts <- strsplit(trimws(sub(";$", "", sub("^\\{\\s*[0-9]+", "", entries))), "\\s+")
-    char_names   <- rep("", n_char)
-    state_labels <- vector("list", n_char)
-    ok <- !is.na(idx) & idx < n_char
+    idx          <- as.integer(sub("^\\{\\s*([0-9]+).*$", "\\1", entries))
+    parts        <- strsplit(trimws(sub(";$", "", sub("^\\{\\s*[0-9]+", "", entries))), "\\s+")
+    char_names   <- rep("", n_chars)
+    state_labels <- vector("list", n_chars)
+    ok           <- !is.na(idx) & idx < n_chars
     char_names[idx[ok] + 1]   <- vapply(parts[ok], `[`, character(1), 1)
     state_labels[idx[ok] + 1] <- lapply(parts[ok], `[`, -1)
   }
 
-  .matrix_from_sequences(seqs, n_char, n_tax, char_names, state_labels,
+  .matrix_from_sequences(seqs, n_chars, n_tax, char_names, state_labels,
                          normalize_spaces, "TNT")
 }
 
@@ -466,14 +499,14 @@ read_nexus_characters <- function(path, normalize_spaces = FALSE) {
                                    block, perl = TRUE))[[1]]
     if (length(r) < 2) default else r[2]
   }
-  n_char     <- as.integer(opt("nchar", NA))
-  n_tax      <- as.integer(opt("ntax", NA))
-  missing    <- substr(opt("missing", "?"), 1, 1)
-  gap        <- substr(opt("gap", "-"), 1, 1)
-  matchchar  <- opt("matchchar")
-  interleave <- grepl("(?i)\\binterleave\\b(\\s*=\\s*yes)?", block, perl = TRUE) &&
+  n_chars     <- as.integer(opt("nchar", NA))
+  n_tax       <- as.integer(opt("ntax", NA))
+  missing     <- substr(opt("missing", "?"), 1, 1)
+  gap         <- substr(opt("gap", "-"), 1, 1)
+  matchchar   <- opt("matchchar")
+  interleave  <- grepl("(?i)\\binterleave\\b(\\s*=\\s*yes)?", block, perl = TRUE) &&
                 !grepl("(?i)\\binterleave\\s*=\\s*no", block, perl = TRUE)
-  if (is.na(n_char)) stop("NCHAR not declared in the CHARACTERS block.")
+  if (is.na(n_chars)) stop("NCHAR not declared in the CHARACTERS block.")
 
   quoted_tokens <- function(s) {
     tk <- regmatches(s, gregexpr("'(?:[^']|'')*'|[^\\s,]+", s, perl = TRUE))[[1]]
@@ -493,18 +526,18 @@ read_nexus_characters <- function(path, normalize_spaces = FALSE) {
 
   # Character and state names
   char_names   <- NULL
-  state_labels <- vector("list", n_char)
+  state_labels <- vector("list", n_chars)
   cl <- command_text("charlabels")
-  if (!is.null(cl)) char_names <- quoted_tokens(cl)[seq_len(n_char)]
+  if (!is.null(cl)) char_names <- quoted_tokens(cl)[seq_len(n_chars)]
 
   csl <- command_text("charstatelabels")
   if (!is.null(csl)) {
-    char_names <- rep("", n_char)
+    char_names <- rep("", n_chars)
     for (e in command_entries(csl)) {
       halves <- strsplit(e, "/", fixed = TRUE)[[1]]
       tk     <- quoted_tokens(halves[1])
       i      <- suppressWarnings(as.integer(tk[1]))
-      if (is.na(i) || i < 1 || i > n_char) next
+      if (is.na(i) || i < 1 || i > n_chars) next
       char_names[i] <- if (length(tk) > 1) tk[2] else ""
       if (length(halves) > 1) state_labels[[i]] <- quoted_tokens(paste(halves[-1], collapse = "/"))
     }
@@ -515,7 +548,7 @@ read_nexus_characters <- function(path, normalize_spaces = FALSE) {
     for (e in command_entries(sl)) {
       tk <- quoted_tokens(e)
       i  <- suppressWarnings(as.integer(tk[1]))
-      if (!is.na(i) && i >= 1 && i <= n_char) state_labels[[i]] <- tk[-1]
+      if (!is.na(i) && i >= 1 && i <= n_chars) state_labels[[i]] <- tk[-1]
     }
   }
 
@@ -530,7 +563,7 @@ read_nexus_characters <- function(path, normalize_spaces = FALSE) {
   for (ln in mlines) {
     # Wrapped (non-interleaved) rows: keep filling the current taxon
     if (!interleave && !is.null(current) &&
-        length(.tokenize_states(seqs[[current]])) < n_char) {
+        length(.tokenize_states(seqs[[current]])) < n_chars) {
       seqs[[current]] <- paste0(seqs[[current]], gsub("\\s+", "", ln))
       next
     }
@@ -553,24 +586,24 @@ read_nexus_characters <- function(path, normalize_spaces = FALSE) {
     tk
   })
 
-  .matrix_from_sequences(seqs, n_char, n_tax, char_names, state_labels,
+  .matrix_from_sequences(seqs, n_chars, n_tax, char_names, state_labels,
                          normalize_spaces, "NEXUS")
 }
 
 
 #' Turns per-taxon state sequences into the MultiMapR character table
 #' @noRd
-.matrix_from_sequences <- function(seqs, n_char, n_tax, char_names, state_labels,
+.matrix_from_sequences <- function(seqs, n_chars, n_tax, char_names, state_labels,
                                    normalize_spaces, source_label) {
   tokens <- lapply(seqs, function(s) if (length(s) == 1) .tokenize_states(s) else s)
   lens   <- lengths(tokens)
-  bad    <- lens != n_char
+  bad    <- lens != n_chars
   if (any(bad))
     warning(sprintf("%d taxa do not have %d states (%s); padded with '?' or truncated.",
-                    sum(bad), n_char,
+                    sum(bad), n_chars,
                     paste(head(sprintf("%s = %d", names(tokens)[bad], lens[bad]), 5),
                           collapse = ", ")))
-  tokens <- lapply(tokens, function(t) c(t, rep("?", n_char))[seq_len(n_char)])
+  tokens <- lapply(tokens, function(t) c(t, rep("?", n_chars))[seq_len(n_chars)])
 
   if (!is.na(n_tax) && n_tax != length(tokens))
     warning(sprintf("Declared %d taxa but found %d in the matrix.", n_tax, length(tokens)))
@@ -601,8 +634,20 @@ read_nexus_characters <- function(path, normalize_spaces = FALSE) {
 }
 
 
-#' Reads a character matrix in CSV, TNT or NEXUS format
-#' @noRd
+#' Read a character matrix in CSV, TNT or NEXUS format
+#'
+#' @param path              Path to the matrix file.
+#' @param format            \code{"auto"} (default), \code{"csv"}, \code{"tnt"} or
+#'                          \code{"nexus"}.
+#' @param sep,species_col,header  Only used for CSV files (see
+#'                          \code{\link{read_csv_characters}}).
+#' @param normalize_spaces  Replace spaces with "_" in species names.
+#' @return A data.frame with a \code{Species} column and one column per character.
+#' @examples
+#' matrix_file <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+#' chars <- read_characters(matrix_file)
+#' dim(chars)
+#' @export
 read_characters <- function(path,
                             format           = "auto",
                             sep              = ",",
@@ -649,8 +694,19 @@ read_characters <- function(path,
 }
 
 
-#' Checks that the CSV names match the tree tip.labels
-#' @noRd
+#' Check that the matrix species names match the tree tip labels
+#'
+#' @param tree     A \code{phylo} object.
+#' @param data     Data.frame with a \code{Species} column.
+#' @param strict   If \code{TRUE}, raises an error on any discrepancy; if
+#'                 \code{FALSE} (default) it only warns and returns the unmatched names.
+#' @return Invisibly, the vector of matrix names not found in the tree.
+#' @examples
+#' tree_file <- system.file("extdata", "bats_tre.tre", package = "MultiMapR")
+#' matrix_file <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+#' d <- load_data(tree_file, matrix_file)
+#' validate_compatibility(d$tree, d$characters)
+#' @export
 validate_compatibility <- function(tree, data, strict = FALSE) {
   tips            <- tree$tip.label
   sp              <- data$Species
@@ -683,8 +739,39 @@ validate_compatibility <- function(tree, data, strict = FALSE) {
 
 # MAIN FUNCTION
 
-#' Loads a tree and a character matrix ready to use with MultiMapR
-#' @noRd
+#' Load a tree and a character matrix ready to use with MultiMapR
+#'
+#' Automatically detects the tree format (Newick, NEXUS, TNT \code{tread}), the
+#' matrix format (CSV, TNT \code{xread}, NEXUS CHARACTERS block), the presence of a
+#' CSV header and its separator problems (trailing separators, ";" or tab instead
+#' of ","), a UTF-8 BOM (files exported from Excel), and species names that differ
+#' from the tips only in spaces vs "_", quotes or letter case (they are renamed to
+#' the tree labels). Character states are preserved as text.
+#'
+#' @param tree_path          Path to the tree file (.tre, .nwk, .nex, .nexus, ...).
+#' @param csv_path           Path to the character matrix (.csv, .tnt, .nex, ...).
+#' @param sep                CSV field separator (default \code{","}; \code{"auto"}
+#'                           detects it).
+#' @param species_col        Species column: integer index or column name (default 1).
+#' @param normalize_spaces   If \code{TRUE}, converts spaces to "_" in species names
+#'                           (useful when the tree uses "_" and the matrix uses " ").
+#' @param tree_format        \code{"auto"} (default), \code{"newick"} or \code{"nexus"}.
+#' @param strict             If \code{TRUE}, raises an error on tree/matrix discrepancies
+#'                           (default \code{FALSE}).
+#' @param matrix_format      \code{"auto"} (default), \code{"csv"}, \code{"tnt"} or
+#'                           \code{"nexus"}.
+#' @param header             CSV header: \code{NA} (default, automatic), \code{TRUE} or
+#'                           \code{FALSE}.
+#'
+#' @return A list with \code{tree} (a \code{phylo} object) and \code{characters}
+#'   (a data.frame with a \code{Species} column and one column per character).
+#' @examples
+#' tree_file <- system.file("extdata", "bats_tre.tre", package = "MultiMapR")
+#' matrix_file <- system.file("extdata", "bats_matrix.csv", package = "MultiMapR")
+#' d <- load_data(tree_file, matrix_file)
+#' str(d$tree)
+#' dim(d$characters)
+#' @export
 load_data <- function(tree_path,
                       csv_path,
                       sep               = ",",
